@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Bubble",
+    "slug": "bubble",
+    "scheme": "bubble",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FAF7F2",
+    "plugins": ["expo-router", ["expo-image-picker", { "photosPermission": "Choose a photo for a Bubble cover or Photo item.", "cameraPermission": false, "microphonePermission": false }]],
+    "experiments": { "typedRoutes": true }
+  }
+}
