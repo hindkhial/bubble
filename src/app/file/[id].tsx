@@ -1,6 +1,11 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useState } from 'react';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { EditContentSheet } from '../../components/EditContentSheet';
+import { ManagementMenu } from '../../components/ManagementMenu';
+import { checklistProgress } from '../../data/sample';
 import { useContent } from '../../state/Content';
 import { colors, spacing } from '../../theme/tokens';
 
@@ -8,27 +13,33 @@ export default function FileDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { bubbleById, itemById } = useContent();
+  const { bubbleById, itemById, updateNote, deleteNote, updateChecklist, toggleChecklistRow, deleteChecklist } = useContent();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const afterMenuCloses = (action: () => void) => {
+    setMenuOpen(false);
+    if (Platform.OS === 'web') action();
+    else setTimeout(action, 350);
+  };
   const item = itemById(id);
   const bubble = item ? bubbleById(item.bubbleId) : undefined;
 
   if (!item || !bubble) {
-    return (
-      <SafeAreaView style={styles.screen}>
-        <View style={styles.missing}>
-          <Text style={styles.title}>File not found</Text>
-          <Pressable accessibilityRole="button" onPress={() => router.replace('/')}><Text style={styles.pathLink}>Go Home</Text></Pressable>
-        </View>
-      </SafeAreaView>
-    );
+    return <Redirect href="/" />;
   }
+  const isChecklist = item.type === 'CHECKLIST';
+  const manageable = item.type === 'NOTE' || isChecklist;
+  const rows = item.rows ?? [];
+  const progress = checklistProgress(rows);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.toolbar}>
           <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace(`/bubble/${bubble.id}`)} style={styles.backButton}><Text style={styles.backArrow}>‹</Text></Pressable>
-          <Text style={styles.toolbarTitle} numberOfLines={1}>{item.type === 'NOTE' ? 'Note' : 'Photo'}</Text>
+          <Text style={styles.toolbarTitle} numberOfLines={1}>{item.type === 'NOTE' ? 'Note' : isChecklist ? 'Checklist' : 'Photo'}</Text>
+          {manageable && <Pressable accessibilityRole="button" accessibilityLabel={`Manage ${item.title} ${isChecklist ? 'checklist' : 'note'}`} onPress={() => setMenuOpen(true)} style={styles.manageButton}><Text style={styles.manageText}>···</Text></Pressable>}
         </View>
         <View style={styles.path}>
           <Pressable accessibilityRole="button" onPress={() => router.replace('/')}><Text style={styles.pathLink}>Home</Text></Pressable>
@@ -44,11 +55,20 @@ export default function FileDetailScreen() {
           </View>
         ) : null}
 
-        <View style={styles.typeBadge}><Text style={styles.typeText}>{item.type === 'NOTE' ? '✎  NOTE' : '▧  PHOTO'}</Text></View>
+        <View style={styles.typeBadge}><Text style={styles.typeText}>{item.type === 'NOTE' ? '✎  NOTE' : isChecklist ? '☑  CHECKLIST' : '▧  PHOTO'}</Text></View>
         <Text style={styles.title}>{item.title}</Text>
         <Text style={styles.meta}>{item.meta}</Text>
-        {item.body ? <View style={styles.bodyCard}><Text selectable style={styles.body}>{item.body}</Text></View> : null}
+        {isChecklist ? <View style={styles.bodyCard}>
+          <Text style={styles.progress}>{progress.done} of {progress.total} done</Text>
+          {rows.map((row) => <Pressable key={row.id} accessibilityRole="checkbox" accessibilityLabel={row.text} accessibilityState={{ checked: row.done }} onPress={() => toggleChecklistRow(item.id, row.id)} style={styles.checklistRow}>
+            <View style={[styles.checkbox, row.done && styles.checkboxDone]}><Text style={styles.checkmark}>{row.done ? '✓' : ''}</Text></View>
+            <Text style={[styles.rowText, row.done && styles.rowDone]}>{row.text}</Text>
+          </Pressable>)}
+        </View> : item.body ? <View style={styles.bodyCard}><Text selectable style={styles.body}>{item.body}</Text></View> : null}
       </ScrollView>
+      {manageable && <ManagementMenu visible={menuOpen} title={item.title} onClose={() => setMenuOpen(false)} onEdit={() => afterMenuCloses(() => setEditing(true))} onDelete={() => afterMenuCloses(() => setConfirmDelete(true))} />}
+      {manageable && editing && <EditContentSheet entry={item} onClose={() => setEditing(false)} onSave={(draft) => { if (isChecklist) updateChecklist(item.id, draft); else updateNote(item.id, draft); setEditing(false); }} />}
+      <ConfirmDialog visible={confirmDelete} title={`Delete ${item.title}?`} message={`This ${isChecklist ? 'checklist' : 'note'} will be removed from its Bubble. This cannot be undone.`} confirmLabel={`Delete ${isChecklist ? 'checklist' : 'note'}`} onCancel={() => setConfirmDelete(false)} onConfirm={() => { setConfirmDelete(false); if (isChecklist) deleteChecklist(item.id); else deleteNote(item.id); router.replace(`/bubble/${bubble.id}`); }} />
     </SafeAreaView>
   );
 }
@@ -59,6 +79,8 @@ const styles = StyleSheet.create({
   toolbar: { height: 50, alignItems: 'center', justifyContent: 'center' },
   backButton: { position: 'absolute', left: 0, width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
   backArrow: { color: colors.text, fontSize: 35, lineHeight: 38, marginTop: -4 },
+  manageButton: { position: 'absolute', right: 0, width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  manageText: { color: colors.action, fontSize: 26, lineHeight: 27, fontWeight: '700', marginTop: -9 },
   toolbarTitle: { color: colors.text, fontSize: 16, fontWeight: '700', maxWidth: '65%' },
   path: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 7, marginBottom: 20, overflow: 'hidden' },
   pathLink: { color: colors.muted, fontSize: 13 },
@@ -72,5 +94,12 @@ const styles = StyleSheet.create({
   meta: { color: colors.muted, fontSize: 13, marginTop: 8, marginBottom: 22 },
   bodyCard: { backgroundColor: colors.surface, borderRadius: 24, borderWidth: 1, borderColor: colors.border, padding: 20 },
   body: { color: colors.text, fontSize: 16, lineHeight: 25 },
+  progress: { color: colors.action, fontSize: 14, fontWeight: '700', marginBottom: 10 },
+  checklistRow: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: 1, borderColor: colors.border, paddingVertical: 9 },
+  checkbox: { width: 40, height: 40, borderRadius: 14, borderWidth: 2, borderColor: colors.action, alignItems: 'center', justifyContent: 'center' },
+  checkboxDone: { backgroundColor: colors.lavender },
+  checkmark: { color: colors.action, fontSize: 21, fontWeight: '700' },
+  rowText: { flex: 1, color: colors.text, fontSize: 15, lineHeight: 22 },
+  rowDone: { textDecorationLine: 'line-through', color: colors.muted },
   missing: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 20 },
 });

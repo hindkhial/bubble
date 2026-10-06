@@ -1,9 +1,13 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useState } from 'react';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AddPreview } from '../../components/AddPreview';
 import { CollectionGrid } from '../../components/CollectionGrid';
 import { CoverPhoto } from '../../components/CoverPhoto';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { EditContentSheet } from '../../components/EditContentSheet';
+import { ManagementMenu } from '../../components/ManagementMenu';
 import { useContent } from '../../state/Content';
 import { colors, spacing } from '../../theme/tokens';
 
@@ -11,18 +15,19 @@ export default function BubbleDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { bubbleById, bubbleCountLabel, collectionContents } = useContent();
+  const { bubbleById, bubbleCountLabel, collectionContents, updateBubble, deleteBubble } = useContent();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const afterMenuCloses = (action: () => void) => {
+    setMenuOpen(false);
+    if (Platform.OS === 'web') action();
+    else setTimeout(action, 350);
+  };
   const bubble = bubbleById(id);
 
   if (!bubble) {
-    return (
-      <SafeAreaView style={styles.screen}>
-        <View style={styles.missing}>
-          <Text style={styles.title}>Bubble not found</Text>
-          <Pressable accessibilityRole="button" onPress={() => router.replace('/')}><Text style={styles.backText}>Go Home</Text></Pressable>
-        </View>
-      </SafeAreaView>
-    );
+    return <Redirect href="/" />;
   }
 
   const contents = collectionContents(bubble.id);
@@ -34,7 +39,7 @@ export default function BubbleDetailScreen() {
         <View style={styles.toolbar}>
           <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace('/')} style={styles.backButton}><Text style={styles.backArrow}>‹</Text></Pressable>
           <Text style={styles.toolbarTitle} numberOfLines={1}>{bubble.title}</Text>
-          <View style={styles.toolbarSpacer} />
+          <Pressable accessibilityRole="button" accessibilityLabel={`Manage ${bubble.title} Bubble`} onPress={() => setMenuOpen(true)} style={styles.manageButton}><Text style={styles.manageText}>···</Text></Pressable>
         </View>
         <View style={styles.path}>
           <Pressable accessibilityRole="button" onPress={() => router.replace('/')}><Text style={styles.pathText}>Home</Text></Pressable>
@@ -52,6 +57,9 @@ export default function BubbleDetailScreen() {
         )}
       </ScrollView>
       <View style={styles.bottom}><Text style={styles.sampleLabel}>Demo · resets on restart</Text><AddPreview parentId={bubble.id} /></View>
+      <ManagementMenu visible={menuOpen} title={bubble.title} onClose={() => setMenuOpen(false)} onEdit={() => afterMenuCloses(() => setEditing(true))} onDelete={() => afterMenuCloses(() => setConfirmDelete(true))} />
+      {editing && <EditContentSheet entry={bubble} onClose={() => setEditing(false)} onSave={(draft) => { updateBubble(bubble.id, draft); setEditing(false); }} />}
+      <ConfirmDialog visible={confirmDelete} title={`Delete ${bubble.title}?`} message="This will delete this Bubble and everything inside it, including nested Bubbles and files. This cannot be undone." confirmLabel="Delete Bubble" onCancel={() => setConfirmDelete(false)} onConfirm={() => { const destination = bubble.parentId ? `/bubble/${bubble.parentId}` as const : '/' as const; setConfirmDelete(false); deleteBubble(bubble.id); router.replace(destination); }} />
     </SafeAreaView>
   );
 }
@@ -63,7 +71,8 @@ const styles = StyleSheet.create({
   backButton: { position: 'absolute', left: 0, width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   backArrow: { color: colors.text, fontSize: 35, lineHeight: 38, marginTop: -4 },
   toolbarTitle: { color: colors.text, fontSize: 16, fontWeight: '700', maxWidth: '65%' },
-  toolbarSpacer: { position: 'absolute', right: 0, width: 44 },
+  manageButton: { position: 'absolute', right: 0, width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  manageText: { color: colors.action, fontSize: 26, lineHeight: 27, fontWeight: '700', marginTop: -9 },
   path: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 7, marginBottom: 13, overflow: 'hidden' },
   pathText: { color: colors.muted, fontSize: 13 },
   pathChevron: { color: colors.muted, fontSize: 18 },

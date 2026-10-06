@@ -1,6 +1,6 @@
 # Bubble mobile interface milestone
 
-An Expo and TypeScript mobile app showing the Home screen and nested Bubble detail screens. It starts with sample content from `src/data/sample.ts`; synthetic local photos in `assets/covers/` are sample covers. Add creates Bubbles, notes, and photos in temporary app state. You can choose a device photo as a Bubble cover or create a Photo item. New content resets when the app restarts; no account or server is connected.
+An Expo and TypeScript mobile app showing Home, nested Bubbles, files, and a private You screen. It starts with sample content from `src/data/sample.ts`; synthetic local photos in `assets/covers/` are sample covers. Add creates Bubbles, notes, photos, and checklists in temporary app state. You can choose a device photo as a Bubble cover or create a Photo item. Content and profile changes reset when the app restarts; no account or server is connected.
 
 ## Run
 
@@ -22,4 +22,4 @@ pnpm typecheck
 pnpm export:mobile
 ```
 
-Tap a Home Bubble to open it, tap child Bubbles or files to navigate deeper, and use Back or the parent path to return. Add lets you create a Bubble, note, or photo. Search and You are labeled in the shell but become active in later milestones.
+Tap a Home Bubble to open it, tap child Bubbles or files to navigate deeper, and use Back or the parent path to return. Add lets you create a Bubble, note, photo, or checklist. The Home avatar and You tab open the private demo profile, where you can edit its name and avatar color. Search remains a placeholder.

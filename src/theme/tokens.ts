@@ -4,6 +4,8 @@ export const colors = {
   lavender: '#E8DEF3',
   lavenderDeep: '#D9C8E9',
   lavenderSoft: '#F3ECFA',
+  rose: '#F2E0E6',
+  sage: '#E2EBE4',
   action: '#6E557C',
   text: '#342E38',
   muted: '#766D79',

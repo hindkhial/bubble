@@ -2,13 +2,18 @@ import { createContext, useContext, useMemo, useRef, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import type { ImageSourcePropType } from 'react-native';
 import { bubbles as seedBubbles, items as seedItems } from '../data/sample';
-import type { Bubble, CollectionEntry, SampleItem } from '../data/sample';
+import type { Bubble, ChecklistRow, CollectionEntry, SampleItem } from '../data/sample';
 
 type NewBubble = { title: string; description: string; parentId: string | null; color: string; cover?: ImageSourcePropType; cardImageRatio?: number };
 type NewNote = { title: string; body: string; bubbleId: string };
 type NewPhoto = { title: string; description: string; bubbleId: string; image: ImageSourcePropType; cardImageRatio: number };
+type ChecklistChanges = { title: string; rows: ChecklistRow[] };
+type NewChecklist = ChecklistChanges & { bubbleId: string };
+type BubbleChanges = { title: string; description: string; color: string };
+type NoteChanges = { title: string; body: string };
 type ContentContextValue = {
   bubbles: Bubble[];
+  items: SampleItem[];
   bubbleById: (id: string) => Bubble | undefined;
   itemById: (id: string) => SampleItem | undefined;
   childBubbles: (parentId: string | null) => Bubble[];
@@ -17,22 +22,29 @@ type ContentContextValue = {
   createBubble: (input: NewBubble) => Bubble;
   createNote: (input: NewNote) => SampleItem;
   createPhoto: (input: NewPhoto) => SampleItem;
+  createChecklist: (input: NewChecklist) => SampleItem;
+  updateBubble: (id: string, changes: BubbleChanges) => void;
+  updateNote: (id: string, changes: NoteChanges) => void;
+  updateChecklist: (id: string, changes: ChecklistChanges) => void;
+  toggleChecklistRow: (itemId: string, rowId: string) => void;
+  deleteBubble: (id: string) => void;
+  deleteNote: (id: string) => void;
+  deleteChecklist: (id: string) => void;
 };
 
 const ContentContext = createContext<ContentContextValue | null>(null);
 
 export function ContentProvider({ children }: PropsWithChildren) {
-  const [createdBubbles, setCreatedBubbles] = useState<Bubble[]>([]);
-  const [createdItems, setCreatedItems] = useState<SampleItem[]>([]);
+  const [bubbles, setBubbles] = useState<Bubble[]>(() => [...seedBubbles]);
+  const [items, setItems] = useState<SampleItem[]>(() => [...seedItems]);
   const sequence = useRef(0);
-  const bubbles = useMemo(() => [...seedBubbles, ...createdBubbles], [createdBubbles]);
-  const items = useMemo(() => [...seedItems, ...createdItems], [createdItems]);
 
   const value = useMemo<ContentContextValue>(() => {
     const childBubbles = (parentId: string | null) => bubbles.filter((bubble) => bubble.parentId === parentId);
     const bubbleItems = (bubbleId: string) => items.filter((item) => item.bubbleId === bubbleId);
     return {
       bubbles,
+      items,
       bubbleById: (id) => bubbles.find((bubble) => bubble.id === id),
       itemById: (id) => items.find((item) => item.id === id),
       childBubbles,
@@ -51,7 +63,7 @@ export function ContentProvider({ children }: PropsWithChildren) {
           title: title.trim(), description: description.trim(), parentId, color, cover,
           order: Date.now() + sequence.current / 1000, cardImageRatio: cardImageRatio ?? 1,
         };
-        setCreatedBubbles((current) => [...current, bubble]);
+        setBubbles((current) => [...current, bubble]);
         return bubble;
       },
       createNote: ({ title, body, bubbleId }) => {
@@ -63,7 +75,7 @@ export function ContentProvider({ children }: PropsWithChildren) {
           preview: cleanBody.replace(/\s+/g, ' ').slice(0, 160),
           body: cleanBody, meta: 'Note · Just now',
         };
-        setCreatedItems((current) => [...current, item]);
+        setItems((current) => [...current, item]);
         return item;
       },
       createPhoto: ({ title, description, bubbleId, image, cardImageRatio }) => {
@@ -74,9 +86,51 @@ export function ContentProvider({ children }: PropsWithChildren) {
           preview: description.trim(), body: description.trim(),
           meta: 'Photo · Just now', image, cardImageRatio,
         };
-        setCreatedItems((current) => [...current, item]);
+        setItems((current) => [...current, item]);
         return item;
       },
+      createChecklist: ({ title, rows, bubbleId }) => {
+        const item: SampleItem = {
+          id: `new-checklist-${Date.now()}-${++sequence.current}`,
+          bubbleId, type: 'CHECKLIST', order: Date.now() + sequence.current / 1000,
+          title: title.trim() || 'Untitled checklist', preview: '', body: '',
+          meta: 'Checklist · Just now', rows: rows.filter((row) => row.text.trim()).map((row) => ({ ...row })),
+        };
+        setItems((current) => [...current, item]);
+        return item;
+      },
+      updateBubble: (id, changes) => setBubbles((current) => current.map((bubble) =>
+        bubble.id === id ? { ...bubble, title: changes.title.trim(), description: changes.description.trim(), color: changes.color } : bubble)),
+      updateNote: (id, changes) => setItems((current) => current.map((item) => {
+        if (item.id !== id || item.type !== 'NOTE') return item;
+        const body = changes.body.trim();
+        return { ...item, title: changes.title.trim() || 'Untitled note', body, preview: body.replace(/\s+/g, ' ').slice(0, 160) };
+      })),
+      updateChecklist: (id, changes) => setItems((current) => current.map((item) =>
+        item.id === id && item.type === 'CHECKLIST'
+          ? { ...item, title: changes.title.trim() || 'Untitled checklist', rows: changes.rows.filter((row) => row.text.trim()).map((row) => ({ ...row })) }
+          : item)),
+      toggleChecklistRow: (itemId, rowId) => setItems((current) => current.map((item) =>
+        item.id === itemId && item.type === 'CHECKLIST'
+          ? { ...item, rows: (item.rows ?? []).map((row) => row.id === rowId ? { ...row, done: !row.done } : row) }
+          : item)),
+      deleteBubble: (id) => {
+        const descendants = new Set([id]);
+        let changed = true;
+        while (changed) {
+          changed = false;
+          for (const bubble of bubbles) {
+            if (bubble.parentId && descendants.has(bubble.parentId) && !descendants.has(bubble.id)) {
+              descendants.add(bubble.id);
+              changed = true;
+            }
+          }
+        }
+        setBubbles((current) => current.filter((bubble) => !descendants.has(bubble.id)));
+        setItems((current) => current.filter((item) => !descendants.has(item.bubbleId)));
+      },
+      deleteNote: (id) => setItems((current) => current.filter((item) => item.id !== id || item.type !== 'NOTE')),
+      deleteChecklist: (id) => setItems((current) => current.filter((item) => item.id !== id || item.type !== 'CHECKLIST')),
     };
   }, [bubbles, items]);
 

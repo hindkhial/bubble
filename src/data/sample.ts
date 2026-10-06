@@ -14,7 +14,7 @@ export type Bubble = {
 export type SampleItem = {
   id: string;
   bubbleId: string;
-  type: 'NOTE' | 'PHOTO';
+  type: 'NOTE' | 'PHOTO' | 'CHECKLIST';
   order: number;
   title: string;
   preview: string;
@@ -22,7 +22,13 @@ export type SampleItem = {
   meta: string;
   image?: ImageSourcePropType;
   cardImageRatio?: number;
+  rows?: ChecklistRow[];
 };
+
+export type ChecklistRow = { id: string; text: string; done: boolean };
+let rowSequence = 0;
+export const newChecklistRow = (): ChecklistRow => ({ id: `row-${Date.now()}-${++rowSequence}`, text: '', done: false });
+export const checklistProgress = (rows: ChecklistRow[]) => ({ done: rows.filter((row) => row.done).length, total: rows.length });
 
 export const bubbles: Bubble[] = [
   { id: 'books', title: 'Books', description: 'Stories to stay with a little longer.', parentId: null, order: 10, cover: require('../../assets/covers/books.png'), cardImageRatio: 1.18 },
