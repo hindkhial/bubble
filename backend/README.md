@@ -1,6 +1,6 @@
-# Bubble backend — Milestones 01–02
+# Bubble backend — Milestones 01–03
 
-Java 21 and Spring Boot 4.1.1, with Spring MVC, Jakarta Bean Validation, Maven, JUnit **5** and Mockito. Milestone 02 adds PostgreSQL, Flyway and JPA repositories. There is no authentication, notes/list API, frontend connection, or deployment. Actuator is intentionally omitted: the small public health endpoint is sufficient and no internal management endpoints are exposed.
+Java 21 and Spring Boot 4.1.1, with Spring MVC, Jakarta Bean Validation, Maven, JUnit **5** and Mockito. Milestone 02 adds PostgreSQL, Flyway and JPA repositories. Milestone 03 adds session authentication. There is no notes/list API, frontend connection, or deployment. Actuator is intentionally omitted: the small public health endpoint is sufficient and no internal management endpoints are exposed.
 
 ## Requirements
 
@@ -65,7 +65,7 @@ export CORS_ALLOWED_ORIGINS=http://localhost:8081,http://127.0.0.1:8081
 mvn spring-boot:run
 ```
 
-Before any future production use, explicitly activate `prod` and set exact approved origins. CORS permits only GET for `/api/v1/**`, with Accept/Content-Type headers and no credentials. Spring handles OPTIONS preflights. No wildcard production origins are allowed. CORS is a browser policy, **not authentication**; clients such as curl can call the public health endpoint.
+Before any future production use, explicitly activate `prod` and set exact approved origins. CORS permits GET and POST for `/api/v1/**`, with Accept/Content-Type/X-CSRF-TOKEN headers and credentials for exact approved origins. Spring handles OPTIONS preflights. No wildcard production origins are allowed. CORS is a browser policy, **not authentication**; clients such as curl can call the public health endpoint.
 
 Request headers are limited to 16 KiB, form posts and Tomcat's request swallowing to 1 MiB, and multipart upload parsing is disabled. The body filter enforces its configured byte limit, including chunked bodies, for the current synchronous Servlet architecture. Streaming/asynchronous uploads are intentionally not supported yet. Framework client errors, validation failures and unexpected server failures have small sanitized JSON responses; stack traces and implementation messages are not sent to clients. Unexpected failures are logged server-side for diagnosis.
 
@@ -101,16 +101,16 @@ backend/
   src/test/resources/application-test.yml
 ```
 
-Service and repository packages will be introduced when real business logic and persistence exist; there are no empty placeholder classes. The committed frontend tree is retained untouched as the shared starting snapshot. All backend changes are confined to `backend/` on the `backend` branch; do not merge into `frontend` automatically.
+Services, repositories and security packages implement persistence and authentication. The committed frontend tree is retained untouched as the shared starting snapshot. All backend changes are confined to `backend/` on the `backend` branch; do not merge into `frontend` automatically.
 
 ## Planned milestones
 
 1. This foundation: application setup, health, validation and errors, CORS, tests.
 2. Completed: PostgreSQL, Flyway schema migration and Spring Data JPA.
-3. Spring Security and account/authentication design, then authenticated notes/lists APIs.
+3. Completed: Spring Security and session-based registration/login/logout. Authenticated notes/lists APIs remain future work.
 4. Frontend integration, ownership/privacy rules and a separately agreed synchronization model.
 
-No password handling, JWTs, authentication server or cloud services are implemented here. Runtime hardening, authentication, rate limiting, TLS/deployment and asynchronous upload support remain future work; this milestone is a local foundation, not a production deployment.
+No JWTs or cloud services are introduced. Rate limiting, production TLS/deployment hardening and asynchronous uploads remain future work.
 
 
 ## Milestone 02 — PostgreSQL and JPA
@@ -150,7 +150,7 @@ All IDs are UUIDs and timestamps are PostgreSQL `TIMESTAMPTZ` / Java `Instant`. 
 
 `new User(email, displayName)` creates its profile in the same persistence operation. The database guarantees at most one profile per user; raw administrative SQL must preserve the application invariant of creating both together. Cascade **PERSIST/MERGE** is limited to user→profile and checklist→items. There is no cascade REMOVE or orphan removal. All foreign keys use `ON DELETE RESTRICT`, so parent deletion cannot silently remove personal data. Explicit deletion/reordering workflows will be designed with future services; reordering must avoid temporarily duplicated positions.
 
-`password_hash` is nullable. There is no plaintext password field, password setter, hashing flow, login, or signup. New users have no password. Authentication will introduce an approved hash format and controlled mutation later. Entities have no generated `toString` that could print private note/password data and are not exposed through controllers. Database conflict responses are sanitized; SQL/bind/error logging is disabled to avoid accidental row-content disclosure.
+`password_hash` remains nullable for legacy Milestone 02 records. Milestone 03 registration sets a controlled BCrypt hash; legacy users without hashes cannot log in. No plaintext password field exists. Entities have no generated `toString` that could print private note/password data and are not exposed through controllers. Database conflict responses are sanitized; SQL/bind/error logging is disabled to avoid accidental row-content disclosure.
 
 ### Repositories
 
@@ -173,4 +173,72 @@ Tests use Testcontainers 2.x with PostgreSQL 17 (`postgres:17-alpine`). They run
 
 If Docker is unavailable, provision a **dedicated disposable PostgreSQL database**, then export `BUBBLE_TEST_DB_URL`, `BUBBLE_TEST_DB_USERNAME` and `BUBBLE_TEST_DB_PASSWORD` before `mvn clean verify`. The test helper accepts only PostgreSQL URLs. Never point tests at personal/production data: tests apply migrations and insert test records. Testcontainers automatically stops/removes its disposable database; the explicitly supplied external database remains the developer's responsibility.
 
-Java/JUnit/Maven requirements from Milestone 01 remain unchanged. No service/controller APIs, security flows, deployment or cloud infrastructure were added.
+Java/JUnit/Maven requirements from Milestone 01 remain unchanged. Milestone 02 introduced no service/controller APIs. Milestone 03 authentication is described below; no deployment or cloud infrastructure has been added.
+
+## Milestone 03 — Authentication
+
+### Browser/session design
+
+Accounts are optional for the separate offline frontend; this milestone does not connect or modify it. Authentication uses Spring Security's DAO provider and server-managed sessions, with BCrypt cost 12. Registration atomically creates User/Profile and relies on the database unique constraint to handle duplicate races. Email is trimmed and lowercased. Passwords require at least 12 Unicode characters and at most 72 UTF-8 bytes; passwords are never trimmed. Names must be nonblank and at most 80 characters.
+
+Production is designed for a **same-site HTTPS browser deployment**, ideally one origin with `/api` reverse-proxied to this backend. The `BUBBLE_SESSION` cookie is HttpOnly, SameSite=Lax, path `/`, Secure by default, with a 30-minute idle timeout. Only `local` and `test` disable Secure for HTTP development. Activate `prod` explicitly before deployment. Sessions are held in server memory: server restarts log users out, and multiple instances need a separately designed shared session solution.
+
+Development allows the configured localhost:8081 origins to make credentialed requests to localhost:8080. Use the same hostname on both sides (do not mix localhost and 127.0.0.1). Cross-origin browser requests need `credentials: "include"`. CORS origins are exact and restricted; this is **not a cross-site deployment design**. A future cross-site frontend needs an explicit review of cookie and CSRF policy; do not simply change SameSite or disable CSRF.
+
+### Endpoints and request flow
+
+| Method | Path | Result |
+| --- | --- | --- |
+| GET | `/api/v1/auth/csrf` | Public `{headerName, token}` and session cookie |
+| POST | `/api/v1/auth/register` | 201 safe account DTO; does not automatically log in |
+| POST | `/api/v1/auth/login` | 200 safe account DTO and authenticated session |
+| POST | `/api/v1/auth/logout` | 204, invalidates session and clears cookie |
+| GET | `/api/v1/users/me` | Authenticated account `{id,email,displayName,createdAt}` |
+
+GET `/api/v1/health` remains public. All other routes require authentication. Form login, HTTP Basic and request caching are disabled. State-changing requests, **including registration and login**, require a valid `X-CSRF-TOKEN` header and the cookie from GET `/auth/csrf`. The JSON token supports Spring's default masked-token handling. Login rotates the session ID and CSRF token; fetch a fresh CSRF token after login and logout. GET logout never logs out.
+
+Local manual test (with a private cookie jar):
+
+```sh
+umask 077
+curl -c cookies.txt http://localhost:8080/api/v1/auth/csrf
+# Copy the returned token into CSRF_TOKEN without logging it.
+# Prepare a private registration.json with email, password, displayName.
+curl -b cookies.txt -c cookies.txt -H 'Content-Type: application/json' \
+  -H "X-CSRF-TOKEN: $CSRF_TOKEN" --data-binary @registration.json \
+  http://localhost:8080/api/v1/auth/register
+# Prepare a private login.json with email and password; use the same CSRF flow.
+curl -b cookies.txt -c cookies.txt -H 'Content-Type: application/json' \
+  -H "X-CSRF-TOKEN: $CSRF_TOKEN" --data-binary @login.json \
+  http://localhost:8080/api/v1/auth/login
+curl -b cookies.txt http://localhost:8080/api/v1/users/me
+curl -b cookies.txt -c cookies.txt http://localhost:8080/api/v1/auth/csrf
+# Replace CSRF_TOKEN with this fresh token before logout.
+curl -b cookies.txt -c cookies.txt -X POST -H "X-CSRF-TOKEN: $CSRF_TOKEN" \
+  http://localhost:8080/api/v1/auth/logout
+# Remove private request files and cookie jar when finished; never commit them.
+```
+
+Validation returns 400, duplicate registration returns sanitized 409, invalid credentials and unauthenticated access return 401, and invalid CSRF/forbidden access returns 403. Credential failures use the same generic message. Responses never serialize entities or password hashes. DTO string representations redact credentials; authenticated principals erase their password hash after authentication. Client-provided user IDs do not select `/users/me` identity.
+
+### Verification and limitations
+
+Run `mvn clean verify` with Docker running. Real HTTP tests exercise the actual security chain and PostgreSQL: normalized registration, hash matching, atomic User/Profile creation, duplicate races, invalid input, successful/failed login, legacy users, session fixation protection, CSRF and token rotation, protected identity, logout/cookie clearing, replay rejection, and cookie/cache attributes. Existing database and HTTP checks remain enabled. No separate Java linter is configured.
+
+No schema migration is needed: V1 already contains `password_hash`; its applied checksum is unchanged. Existing records and frontend files are preserved. Legacy users with null hashes need a future explicitly authorized password setup flow; no default credentials are assigned.
+
+Before public deployment, add and review abuse/rate limiting, account/email verification, password recovery/change, MFA policy, TLS/proxy trust configuration, least-privilege DB roles and operational session management. Duplicate registration's 409 reveals that an address is registered; login remains generic. No password reset emails, third-party login, cloud services, notes/list APIs, or frontend login screens are implemented.
+
+### Changed files
+
+- `pom.xml`: Spring Security starter.
+- `src/main/java/com/bubble/config/{SecurityConfig,WebConfig}.java`: authentication, CSRF, cookies/context and credentialed CORS.
+- `src/main/java/com/bubble/controller/{AuthController,UserController}.java`: auth and current-user endpoints.
+- `src/main/java/com/bubble/dto/{RegisterRequest,LoginRequest,AccountResponse}.java`: validated input and safe output.
+- `src/main/java/com/bubble/security/{AccountPrincipal,AccountDetailsService}.java`: erased-credential principal and user lookup.
+- `src/main/java/com/bubble/service/AccountService.java`: transactional account creation/read.
+- `src/main/java/com/bubble/entity/User.java`: controlled encoded-password initialization.
+- `src/main/java/com/bubble/exception/ApiExceptionHandler.java`: sanitized authentication failures.
+- `src/main/resources/application{,-local}.yml`, `src/test/resources/application-test.yml`: session cookie configuration.
+- `src/test/java/com/bubble/{AuthTestClient,AuthenticationIntegrationTest,BackendIntegrationTest}.java`: actual HTTP security coverage and retained regression checks.
+- `README.md`: configuration, usage and limitations.

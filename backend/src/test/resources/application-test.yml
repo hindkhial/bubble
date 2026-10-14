@@ -1,5 +1,9 @@
 server:
   port: 0
+  servlet:
+    session:
+      cookie:
+        secure: false
 bubble:
   cors:
     allowed-origins: http://localhost:8081

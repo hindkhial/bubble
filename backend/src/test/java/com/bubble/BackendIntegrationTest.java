@@ -22,12 +22,16 @@ import static org.junit.jupiter.api.Assertions.*;
 class BackendIntegrationTest {
     private static ConfigurableApplicationContext context;
     private static String base;
-    private static final HttpClient CLIENT = HttpClient.newHttpClient();
+    private static AuthTestClient client;
 
     @BeforeAll
-    static void start() {
+    static void start() throws Exception {
         context = PostgresTestDatabase.start(BubbleApplication.class);
         base = "http://localhost:" + ((WebServerApplicationContext) context).getWebServer().getPort();
+        client = new AuthTestClient(base);
+        String email = java.util.UUID.randomUUID() + "@example.test";
+        assertEquals(201, client.register(email).statusCode());
+        assertEquals(200, client.login(email).statusCode());
     }
 
     @AfterAll
@@ -36,11 +40,13 @@ class BackendIntegrationTest {
     }
 
     private HttpResponse<String> send(HttpRequest.Builder request) throws Exception {
-        return CLIENT.send(request.build(), HttpResponse.BodyHandlers.ofString());
+        if (!java.util.Set.of("GET", "HEAD", "OPTIONS").contains(request.build().method()))
+            request.header("X-CSRF-TOKEN", client.csrf());
+        return client.send(request);
     }
 
     @Test
-    void applicationStartsWithoutDatabase() {
+    void applicationStartsWithDatabase() {
         assertTrue(context.isActive());
         assertNotNull(context.getBean(BubbleApplication.class));
     }
@@ -54,19 +60,19 @@ class BackendIntegrationTest {
     }
 
     @Test
-    void corsAllowsOnlyConfiguredOriginAndGet() throws Exception {
+    void corsAllowsOnlyConfiguredOriginsAndMethods() throws Exception {
         var allowed = send(HttpRequest.newBuilder(URI.create(base + "/api/v1/health"))
                 .header("Origin", "http://localhost:8081").header("Access-Control-Request-Method", "GET")
                 .method("OPTIONS", HttpRequest.BodyPublishers.noBody()));
         assertEquals(200, allowed.statusCode());
         assertEquals("http://localhost:8081", allowed.headers().firstValue("Access-Control-Allow-Origin").orElseThrow());
-        assertTrue(allowed.headers().firstValue("Access-Control-Allow-Credentials").isEmpty());
+        assertEquals("true", allowed.headers().firstValue("Access-Control-Allow-Credentials").orElseThrow());
         var denied = send(HttpRequest.newBuilder(URI.create(base + "/api/v1/health"))
                 .header("Origin", "https://untrusted.example").GET());
         assertEquals(403, denied.statusCode());
         assertTrue(denied.headers().firstValue("Access-Control-Allow-Origin").isEmpty());
         var post = send(HttpRequest.newBuilder(URI.create(base + "/api/v1/health"))
-                .header("Origin", "http://localhost:8081").header("Access-Control-Request-Method", "POST")
+                .header("Origin", "http://localhost:8081").header("Access-Control-Request-Method", "DELETE")
                 .method("OPTIONS", HttpRequest.BodyPublishers.noBody()));
         assertEquals(403, post.statusCode());
     }

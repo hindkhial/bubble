@@ -17,9 +17,9 @@ public class WebConfig implements WebMvcConfigurer {
         if (!cors.allowedOrigins().isEmpty()) {
             registry.addMapping("/api/v1/**")
                     .allowedOrigins(cors.allowedOrigins().toArray(String[]::new))
-                    .allowedMethods("GET")
-                    .allowedHeaders("Accept", "Content-Type")
-                    .allowCredentials(false)
+                    .allowedMethods("GET", "POST")
+                    .allowedHeaders("Accept", "Content-Type", "X-CSRF-TOKEN")
+                    .allowCredentials(true)
                     .maxAge(3600);
         }
     }
