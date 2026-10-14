@@ -33,6 +33,7 @@ spring:
     multipart:
       enabled: false
 server:
+  forward-headers-strategy: none
   port: ${SERVER_PORT:8080}
   servlet:
     session:
@@ -60,6 +61,9 @@ logging:
     org.hibernate.orm.jdbc.error: OFF
     org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
 bubble:
+  auth-limits:
+    per-address-per-minute: ${BUBBLE_AUTH_PER_ADDRESS_PER_MINUTE:60}
+    total-per-minute: ${BUBBLE_AUTH_TOTAL_PER_MINUTE:300}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:}
   http:

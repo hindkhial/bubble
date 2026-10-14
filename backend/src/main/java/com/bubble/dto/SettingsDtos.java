@@ -1,5 +1,7 @@
 package com.bubble.dto;
 
+import com.bubble.validation.DatabaseText;
+
 import com.bubble.entity.UserPreferences.ThemeMode;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
@@ -14,9 +16,9 @@ public final class SettingsDtos {
 
     public static final class ProfilePatch {
         @JsonSetter(nulls = Nulls.FAIL)
-        @Size(max = 80) @Pattern(regexp = "(?s).*\\S.*")
+        @DatabaseText @Size(max = 80) @Pattern(regexp = "(?s).*\\S.*")
         public String displayName;
-        @Size(max = 160)
+        @DatabaseText @Size(max = 160)
         private String bio;
         @Pattern(regexp = "avatar:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
         private String avatarReference;

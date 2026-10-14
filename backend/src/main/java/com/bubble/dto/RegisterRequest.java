@@ -1,11 +1,13 @@
 package com.bubble.dto;
 
+import com.bubble.validation.DatabaseText;
+
 import jakarta.validation.constraints.*;
 import java.nio.charset.StandardCharsets;
 
-public record RegisterRequest(@NotBlank @Email @Size(max = 320) String email,
+public record RegisterRequest(@DatabaseText @NotBlank @Email @Size(max = 320) String email,
         @NotBlank @Size(min = 12, max = 72) String password,
-        @NotBlank @Size(max = 80) String displayName) {
+        @DatabaseText @NotBlank @Size(max = 80) String displayName) {
     public RegisterRequest { email = email == null ? null : email.trim().toLowerCase(java.util.Locale.ROOT); }
     @AssertTrue(message = "Password must contain at least 12 characters and fit within 72 UTF-8 bytes")
     public boolean isPasswordByteLengthValid() {

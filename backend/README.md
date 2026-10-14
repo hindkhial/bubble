@@ -1,4 +1,4 @@
-# Bubble backend — Milestones 01–05
+# Bubble backend — Milestones 01–06
 
 Java 21 and Spring Boot 4.1.1, with Spring MVC, Jakarta Bean Validation, Maven, JUnit **5** and Mockito. Milestone 02 adds PostgreSQL, Flyway and JPA repositories. Milestone 03 adds session authentication. Milestone 04 adds notes/checklists APIs; Milestone 05 adds profile and preferences management. There is no frontend connection or deployment. Actuator is intentionally omitted: the small public health endpoint is sufficient and no internal management endpoints are exposed.
 
@@ -434,3 +434,71 @@ Milestone 05 changes only:
 Limitations: no uploads, avatar asset resolution, profile color/emoji editing, frontend integration, offline synchronization, revision tokens or deployment. Existing Milestone 03 production security limitations still apply. Purely local frontend use continues to require no account or server.
 
 Milestone 05 verification: `mvn clean verify` passed all **44 tests**, with zero failures, errors or skips. PostgreSQL migration/upgrade, authentication, authorization and existing content regressions passed; compilation and executable-jar packaging succeeded. No standalone Java linter is configured.
+
+## Milestone 06 — Security review and regression coverage
+
+### Findings and changes
+
+The initial unmodified backend passed all 44 existing tests against PostgreSQL. Milestones 01–05 are implemented: startup/migrations, adaptive BCrypt registration, same-site server sessions, CSRF/login rotation/logout invalidation, owner-scoped notes/checklists/items, transactional ordering and profile/preferences persistence. These flows were retained rather than replaced.
+
+The review identified and fixed:
+
+- **Private exception data in logs:** unexpected exceptions were logged with complete messages/causes, which could contain credentials, SQL values or note text. Logs now record exception class and an application class/method/line only, without exception messages, throwable chains, request bodies, query strings or entity contents. Clients retain sanitized 500 JSON. A captured-log test verifies this behavior. Operators can use timestamp, exception type and source location for diagnosis; unrestricted debug/request/bind logging must remain disabled.
+- **Authentication abuse:** login/registration had no attempt budget. A process-local filter after CSRF validation now admits at most 60 attempts per peer address and 300 total attempts per fixed 60-second window by default. Both successful and failed attempts count. Excess attempts return JSON 429 plus `Retry-After: 60`. No email/password/session-token keys are stored. Peer counters are capped at 1,024 entries and cleared each window; monotonic time avoids wall-clock changes. Unit tests verify concurrency, expiry and bounds; actual security-chain tests verify 429 and resistance to spoofed forwarded-address headers.
+- **Ambiguous/coerced JSON:** duplicate fields, numeric enum ordinals and scalar conversions could produce unintended input. The Jackson mapper now rejects duplicate keys, numeric theme modes and wrong scalar types, in addition to the existing rejection of unknown properties. Omitted-versus-null PATCH semantics remain intact.
+- **Unsupported database text:** NUL and unpaired surrogate characters could reach PostgreSQL and fail as database errors. Persisted request text now rejects these before SQL while accepting valid Unicode/emoji and normal line breaks. Existing size constraints remain in force.
+- **Origin configuration:** CORS origins now require a valid URI host/port as well as the existing HTTP(S)/no-path/no-wildcard rules. An empty allowlist explicitly denies cross-origin API requests. CORS and Spring firewall rejections now use sanitized structured JSON. One security-owned CORS filter handles the existing exact allowlist and credentialed preflights, without duplicate Servlet registration.
+- **API headers:** added `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`. Spring Security's no-sniff, frame denial, cache prevention and HTTPS-only HSTS defaults are retained. Backend APIs do not serve frontend pages.
+- **Dependency advisories:** the resolved Tomcat 11.0.24 and Jackson 3.1.5 packages had reported advisories. Same-line overrides now use Tomcat **11.0.26** and Jackson BOM **3.1.7**. Boot remains 4.1.1, Java remains 21, and no application dependency was added. See [Apache Tomcat security notes](https://tomcat.apache.org/security-11.html) and [Jackson security advisories](https://github.com/FasterXML/jackson-databind/security/advisories/GHSA-cxp5-3px4-pw24). Review/remove overrides when upgrading the parent BOM to versions that include equivalent fixes.
+
+### Configuration and deployment assumptions
+
+Local startup remains: provision PostgreSQL, export `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, choose `SPRING_PROFILES_ACTIVE=local`, then `mvn spring-boot:run`. `.env.example` documents values but is not automatically loaded by Spring. Required database configuration has no committed credentials or fallback database. An unavailable database or invalid validated configuration fails startup; inspect the named setting and database readiness without copying secrets into logs.
+
+New validated environment settings:
+
+| Variable | Default | Allowed range |
+| --- | --- | --- |
+| `BUBBLE_AUTH_PER_ADDRESS_PER_MINUTE` | 60 | 1–10,000 |
+| `BUBBLE_AUTH_TOTAL_PER_MINUTE` | 300 | 1–100,000 |
+
+The address is the direct network peer. `server.forward-headers-strategy` is explicitly `none`; untrusted `Forwarded`/`X-Forwarded-For` values are not used for limiter keys. Behind a proxy, users share the proxy's budget. Do not trust arbitrary forwarding headers to bypass this restriction: design trusted proxy boundaries and edge rate limiting before deployment.
+
+Explicitly activate **prod alone** for production and terminate HTTPS at a correctly configured trusted ingress/reverse proxy. Secure cookies are enabled outside local/test. The current local profile remains the default for developer convenience; omitting the production profile is not safe deployment configuration. Direct HTTP remains available at the application connector for local/proxy use, so this milestone does not prove real TLS, certificate handling or proxy/HSTS behavior. The production integration test checks actual Secure/HttpOnly/SameSite cookie attributes but deliberately uses a raw HTTP client to inspect them. Browser integration must use HTTPS in production and refresh CSRF tokens after login/logout. Same-site cookies, explicit origins and `credentials: include` assumptions from Milestone 03 still apply.
+
+### Repeatable verification
+
+```sh
+# Docker running, or configure a dedicated disposable PostgreSQL as documented above.
+mvn clean verify
+# Resolve coordinates for a separate advisory check:
+mvn dependency:list -DoutputFile=target/dependencies.txt
+python3 scripts/audit_dependencies.py target/dependencies.txt target/dependency-audit.json
+```
+
+The audit helper uses Python 3's standard library and the public OSV batch API. It sends dependency names/versions only, never profile/note content or secrets. It exits 0 when no matching advisories are reported, 1 when findings exist, and 2 when the check is unavailable/incomplete. It is deliberately separate from offline Maven tests; unavailable advisory data is not treated as a clean scan. Advisory coverage/freshness and package-level matches cannot prove exploitability or the absence of undisclosed vulnerabilities.
+
+Final `mvn clean verify dependency:list` result: **55 tests, 0 failures, 0 errors, 0 skipped**, including actual PostgreSQL migrations, upgrade/backfill preservation, foreign keys/uniqueness, transaction rollback, timestamps, duplicate registration races, authentication/CSRF/logout, cross-user isolation and concurrent edits. The new coverage adds production cookies/default-deny CORS, budget enforcement, all private-route anonymous attempts, strict JSON/Unicode validation, exact content boundaries, negative item positions, preflight methods, security headers, structured firewall/CORS errors and log redaction. Compilation and executable-jar packaging succeeded. No standalone Java linter is configured; `git diff --check` passed. No required database tests were unavailable.
+
+The post-update OSV check examined **114 resolved dependency coordinates** and reported **zero packages with matching advisories**, compared with three affected package coordinates before patching. This is a point-in-time advisory result, not a blanket security guarantee.
+
+### Remaining risks and integration work
+
+- The limiter is single-process, resets on restart, uses fixed windows (which permit boundary bursts), and is not distributed account lockout or production-grade bot/DDoS protection. Multiple instances and NAT/proxy fairness require an agreed edge/shared design. Public CSRF requests can still allocate sessions; session exhaustion and transport/connection abuse need ingress protection and operational limits.
+- Sessions are in memory and disappear on restart; multi-node sessions, TLS/proxy trust and operational monitoring are still future deployment work. No deployment was performed.
+- Registration 409 can reveal whether an email is registered. Login errors remain generic. Email verification, password recovery, MFA and breached-password screening remain deferred.
+- No client revision/ETag conflict protocol exists; same-field updates remain last-applied-wins. Row locks protect transactional ordering and unrelated partial updates.
+- No frontend integration, cross-site auth policy, upload/asset resolution, offline synchronization or cloud services were introduced. Database migrations V1/V2 and existing data models were unchanged.
+- Raw malformed HTTP may be rejected by the container/ingress before application JSON handling; do not enable diagnostic container error reports in production.
+
+### Modified files
+
+- `.env.example`, `pom.xml`, `src/main/resources/application.yml`
+- `src/main/java/com/bubble/config/{AuthLimitsProperties,CorsProperties,JsonConfig,SecurityConfig,WebConfig}.java`
+- `src/main/java/com/bubble/security/{AuthRequestBudget,AuthRateLimitFilter}.java`
+- `src/main/java/com/bubble/validation/DatabaseText.java`
+- `src/main/java/com/bubble/dto/{ContentDtos,LoginRequest,RegisterRequest,SettingsDtos}.java`
+- `src/main/java/com/bubble/exception/ApiExceptionHandler.java`
+- `src/test/java/com/bubble/{ConfigurationTest,PostgresTestDatabase,HardeningIntegrationTest,ProductionSecurityIntegrationTest,SecurityUnitTest}.java`
+- `scripts/audit_dependencies.py`
+- `README.md`

@@ -28,6 +28,9 @@ import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 
 @Configuration
 public class SecurityConfig {
+    @Bean org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer firewallErrors() {
+        return web -> web.requestRejectedHandler((request, response, rejected) -> error(response, 400, "The request could not be processed."));
+    }
     @Bean PasswordEncoder passwordEncoder() {
         return new DelegatingPasswordEncoder("bcrypt", Map.of("bcrypt", new BCryptPasswordEncoder(12)));
     }
@@ -47,12 +50,15 @@ public class SecurityConfig {
 
     @Bean SecurityFilterChain securityFilterChain(HttpSecurity http,
             HttpSessionSecurityContextRepository contexts, HttpSessionCsrfTokenRepository csrf,
-            SessionAuthenticationStrategy sessions) throws Exception {
+            SessionAuthenticationStrategy sessions, AuthLimitsProperties limits) throws Exception {
         return http.cors(Customizer.withDefaults())
                 .csrf(config -> config.csrfTokenRepository(csrf))
+                .addFilterAfter(new com.bubble.security.AuthRateLimitFilter(new com.bubble.security.AuthRequestBudget(
+                        limits.perAddressPerMinute(), limits.totalPerMinute())), org.springframework.security.web.csrf.CsrfFilter.class)
                 .securityContext(config -> config.securityContextRepository(contexts).requireExplicitSave(true))
                 .sessionManagement(config -> config.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                         .sessionAuthenticationStrategy(sessions))
+                .headers(config -> config.contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'none'; frame-ancestors 'none'")))
                 .requestCache(config -> config.disable())
                 .formLogin(config -> config.disable()).httpBasic(config -> config.disable())
                 .authorizeHttpRequests(config -> config

@@ -60,7 +60,12 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> unexpected(Exception exception) {
-        LOG.error("Unhandled request failure", exception);
+        // Exception messages/causes can embed request bodies, SQL values or credentials.
+        String origin = java.util.Arrays.stream(exception.getStackTrace())
+                .filter(frame -> frame.getClassName().startsWith("com.bubble."))
+                .findFirst().map(frame -> frame.getClassName() + "." + frame.getMethodName() + ":" + frame.getLineNumber())
+                .orElse("outside application");
+        LOG.error("Unhandled request failure: type={}, origin={}", exception.getClass().getName(), origin);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiError(500, "An unexpected error occurred."));
     }

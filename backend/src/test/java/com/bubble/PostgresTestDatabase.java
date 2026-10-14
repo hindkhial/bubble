@@ -15,6 +15,10 @@ final class PostgresTestDatabase {
     private PostgresTestDatabase() {}
 
     static synchronized ConfigurableApplicationContext start(Class<?>... sources) {
+        return startWithOverrides(Map.of(), "test", sources);
+    }
+
+    static synchronized ConfigurableApplicationContext startWithOverrides(Map<String, Object> overrides, String profile, Class<?>... sources) {
         if (settings == null) {
             String url = System.getenv("BUBBLE_TEST_DB_URL");
             String username;
@@ -36,7 +40,8 @@ final class PostgresTestDatabase {
         }
         var environment = new StandardEnvironment();
         environment.getPropertySources().addFirst(new MapPropertySource("testDatabase", settings));
-        return new SpringApplicationBuilder(sources).environment(environment).profiles("test").run();
+        environment.getPropertySources().addFirst(new MapPropertySource("testOverrides", overrides));
+        return new SpringApplicationBuilder(sources).environment(environment).profiles(profile).run();
     }
 
     private static String required(String key) {
