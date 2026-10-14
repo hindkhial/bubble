@@ -21,6 +21,7 @@ public class Checklist extends BaseEntity {
 
     protected Checklist() {}
     public Checklist(User user, String title) { this.user = user; this.title = title; }
+    public void touch() { updateTimestamp(); }
     public User getUser() { return user; }
     public String getTitle() { return title; }
     public void setTitle(String value) { title = value; }

@@ -72,7 +72,7 @@ class BackendIntegrationTest {
         assertEquals(403, denied.statusCode());
         assertTrue(denied.headers().firstValue("Access-Control-Allow-Origin").isEmpty());
         var post = send(HttpRequest.newBuilder(URI.create(base + "/api/v1/health"))
-                .header("Origin", "http://localhost:8081").header("Access-Control-Request-Method", "DELETE")
+                .header("Origin", "http://localhost:8081").header("Access-Control-Request-Method", "TRACE")
                 .method("OPTIONS", HttpRequest.BodyPublishers.noBody()));
         assertEquals(403, post.statusCode());
     }

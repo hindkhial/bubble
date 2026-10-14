@@ -1,6 +1,6 @@
-# Bubble backend — Milestones 01–03
+# Bubble backend — Milestones 01–04
 
-Java 21 and Spring Boot 4.1.1, with Spring MVC, Jakarta Bean Validation, Maven, JUnit **5** and Mockito. Milestone 02 adds PostgreSQL, Flyway and JPA repositories. Milestone 03 adds session authentication. There is no notes/list API, frontend connection, or deployment. Actuator is intentionally omitted: the small public health endpoint is sufficient and no internal management endpoints are exposed.
+Java 21 and Spring Boot 4.1.1, with Spring MVC, Jakarta Bean Validation, Maven, JUnit **5** and Mockito. Milestone 02 adds PostgreSQL, Flyway and JPA repositories. Milestone 03 adds session authentication. Milestone 04 adds notes/checklists APIs. There is no frontend connection or deployment. Actuator is intentionally omitted: the small public health endpoint is sufficient and no internal management endpoints are exposed.
 
 ## Requirements
 
@@ -65,7 +65,7 @@ export CORS_ALLOWED_ORIGINS=http://localhost:8081,http://127.0.0.1:8081
 mvn spring-boot:run
 ```
 
-Before any future production use, explicitly activate `prod` and set exact approved origins. CORS permits GET and POST for `/api/v1/**`, with Accept/Content-Type/X-CSRF-TOKEN headers and credentials for exact approved origins. Spring handles OPTIONS preflights. No wildcard production origins are allowed. CORS is a browser policy, **not authentication**; clients such as curl can call the public health endpoint.
+Before any future production use, explicitly activate `prod` and set exact approved origins. CORS permits GET, POST, PATCH, DELETE and PUT for `/api/v1/**`, with Accept/Content-Type/X-CSRF-TOKEN headers and credentials for exact approved origins. Spring handles OPTIONS preflights. No wildcard production origins are allowed. CORS is a browser policy, **not authentication**; clients such as curl can call the public health endpoint.
 
 Request headers are limited to 16 KiB, form posts and Tomcat's request swallowing to 1 MiB, and multipart upload parsing is disabled. The body filter enforces its configured byte limit, including chunked bodies, for the current synchronous Servlet architecture. Streaming/asynchronous uploads are intentionally not supported yet. Framework client errors, validation failures and unexpected server failures have small sanitized JSON responses; stack traces and implementation messages are not sent to clients. Unexpected failures are logged server-side for diagnosis.
 
@@ -107,7 +107,7 @@ Services, repositories and security packages implement persistence and authentic
 
 1. This foundation: application setup, health, validation and errors, CORS, tests.
 2. Completed: PostgreSQL, Flyway schema migration and Spring Data JPA.
-3. Completed: Spring Security and session-based registration/login/logout. Authenticated notes/lists APIs remain future work.
+3. Completed: Spring Security and session-based registration/login/logout. Milestone 04 adds authenticated notes/lists APIs.
 4. Frontend integration, ownership/privacy rules and a separately agreed synchronization model.
 
 No JWTs or cloud services are introduced. Rate limiting, production TLS/deployment hardening and asynchronous uploads remain future work.
@@ -227,7 +227,7 @@ Run `mvn clean verify` with Docker running. Real HTTP tests exercise the actual 
 
 No schema migration is needed: V1 already contains `password_hash`; its applied checksum is unchanged. Existing records and frontend files are preserved. Legacy users with null hashes need a future explicitly authorized password setup flow; no default credentials are assigned.
 
-Before public deployment, add and review abuse/rate limiting, account/email verification, password recovery/change, MFA policy, TLS/proxy trust configuration, least-privilege DB roles and operational session management. Duplicate registration's 409 reveals that an address is registered; login remains generic. No password reset emails, third-party login, cloud services, notes/list APIs, or frontend login screens are implemented.
+Before public deployment, add and review abuse/rate limiting, account/email verification, password recovery/change, MFA policy, TLS/proxy trust configuration, least-privilege DB roles and operational session management. Duplicate registration's 409 reveals that an address is registered; login remains generic. No password reset emails, third-party login, cloud services or frontend login screens are implemented.
 
 ### Changed files
 
@@ -242,3 +242,99 @@ Before public deployment, add and review abuse/rate limiting, account/email veri
 - `src/main/resources/application{,-local}.yml`, `src/test/resources/application-test.yml`: session cookie configuration.
 - `src/test/java/com/bubble/{AuthTestClient,AuthenticationIntegrationTest,BackendIntegrationTest}.java`: actual HTTP security coverage and retained regression checks.
 - `README.md`: configuration, usage and limitations.
+
+## Milestone 04 — Notes and checklists REST APIs
+
+All routes below require the Milestone 03 session cookie. Every POST/PATCH/PUT/DELETE also requires the current `X-CSRF-TOKEN` header. Identity always comes from the verified security principal. Owner IDs are never accepted in request bodies. Missing and other users' resources both return the same 404. Unknown JSON properties, explicit null patch values and empty patches return 400.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/api/v1/notes` | Paginated notes, optional search/pin filtering |
+| POST | `/api/v1/notes` | Create note; 201 |
+| GET | `/api/v1/notes/{id}` | Read owned note |
+| PATCH | `/api/v1/notes/{id}` | Edit supplied title/content/pinned fields |
+| DELETE | `/api/v1/notes/{id}` | Delete owned note; 204 |
+| GET | `/api/v1/checklists` | Paginated checklist summaries, optional search/pin filtering |
+| POST | `/api/v1/checklists` | Create checklist; 201 |
+| GET | `/api/v1/checklists/{id}` | Read checklist including items in saved order |
+| PATCH | `/api/v1/checklists/{id}` | Edit supplied title/pinned fields |
+| DELETE | `/api/v1/checklists/{id}` | Explicitly delete its items and checklist transactionally; 204 |
+| POST | `/api/v1/checklists/{id}/items` | Append item; 201 |
+| PATCH | `/api/v1/checklists/{id}/items/{itemId}` | Edit content/completed fields |
+| DELETE | `/api/v1/checklists/{id}/items/{itemId}` | Delete item, compact positions; 204 |
+| PUT | `/api/v1/checklists/{id}/items/order` | Replace item order transactionally |
+
+### Request/response examples
+
+Example bodies use fictional content. Authenticate and obtain a fresh CSRF token as described above; reuse the private cookie jar. Create a note:
+
+```sh
+curl -b cookies.txt -H 'Content-Type: application/json' \
+  -H "X-CSRF-TOKEN: $CSRF_TOKEN" \
+  --data '{"title":"Ideas","content":"Try lavender paper","pinned":false}' \
+  http://localhost:8080/api/v1/notes
+```
+
+A 201 response contains:
+
+```json
+{"id":"11111111-1111-4111-8111-111111111111","title":"Ideas","content":"Try lavender paper","pinned":false,"createdAt":"2026-01-01T10:00:00Z","updatedAt":"2026-01-01T10:00:00Z"}
+```
+
+PATCH note: `{"content":"Revised ideas","pinned":true}`. Create checklist: `{"title":"Shopping","pinned":false}`. Add item: `{"content":"Tea"}`. PATCH item: `{"completed":true}` or `{"content":"Herbal tea","completed":false}`. Item responses contain `id`, `content`, `completed`, zero-based `position`, `createdAt` and `updatedAt`. Checklist detail responses contain `id`, `title`, `pinned`, timestamps and `items`. The collection returns summaries without `items`, avoiding loading all children for every row.
+
+Reorder with PUT `/api/v1/checklists/{id}/items/order`:
+
+```json
+{"itemIds":["22222222-2222-4222-8222-222222222222","33333333-3333-4333-8333-333333333333"]}
+```
+
+Supply **all current item IDs exactly once**, in the desired order. An empty array is valid only for an empty checklist. Missing, duplicate, foreign or unknown IDs return 400 and leave positions unchanged. Item position is server-managed; use the reorder endpoint instead of a `position` property. Appends start incomplete. The API caps each checklist at 1,000 items; existing data is never truncated. Deleting an item compacts remaining positions to `0..n-1`.
+
+### Pagination, filtering and search
+
+Both GET collections accept:
+
+| Parameter | Default | Accepted values |
+| --- | --- | --- |
+| `page` | `0` | Zero-based, 0–1,000,000 |
+| `size` | `20` | 1–100 |
+| `sort` | `updatedAt` | `createdAt` or `updatedAt` |
+| `direction` | `desc` | `asc` or `desc` |
+| `pinned` | omitted | `true` / `false`; omission includes both |
+| `q` | omitted | Search text, at most 200 characters; blank means no filter |
+
+Example: `/api/v1/notes?q=lavender&pinned=true&page=0&size=10&sort=updatedAt&direction=desc`. URL-encode query text. Responses have `{content:[...],page:0,size:10,totalElements:1,totalPages:1}`. Empty results have an empty `content` array. UUID ascending breaks timestamp ties in either direction. Pinned filtering does not change the selected chronological order.
+
+Search is a case-insensitive substring match across note title/content, or checklist title/any item content. It is always owner-scoped, parameterized, and escaped so `%`, `_` and backslash are literal characters, not search wildcards. An EXISTS subquery avoids duplicate checklist results when several items match. Search does not require additional infrastructure.
+
+### Validation, transactions and errors
+
+Titles are required, nonblank and at most 100 characters; titles are trimmed. Note content is required on creation, may be empty, and is at most 100,000 characters. Item content is nonblank and at most 10,000 characters. PATCH omits unchanged fields; explicit nulls, unsupported fields and empty patches are rejected. IDs must be UUIDs. Creation defaults `pinned` to false. Existing byte-level request limits also apply, including escaped JSON overhead.
+
+Errors retain `{status,message}`: 400 invalid input/query/order, 401 missing session, 403 invalid CSRF, 404 unavailable resource, 409 database conflict or retryable concurrent locking failure, 413 oversized request, 500 unexpected failure. No database internals or private resource existence is disclosed.
+
+Mutations use transactions and owner-scoped pessimistic row locks. Every checklist/item mutation locks its parent before reading positions or modifying children; concurrent appends/reorders/deletions therefore serialize. Reordering first moves positions above the occupied range, flushes, then assigns contiguous positions and flushes again. Both phases commit or roll back together under the existing immediate uniqueness constraint. Child modifications touch the parent timestamp. Notes also lock before partial updates, preventing concurrent updates of different fields from overwriting one another. Same-field edits use the last applied value; there is no client revision/ETag protocol yet.
+
+There are no new dependencies or migrations. The existing V1 checksum, foreign keys and cascade policies are preserved. API checklist deletion explicitly removes only that owned checklist's children. No frontend files, browser data or other users' content are migrated or changed.
+
+### Tests and modified files
+
+Run `mvn clean verify` with Docker for real PostgreSQL integration tests. The new `ContentIntegrationTest` covers CRUD, persistence, timestamps, ordered items, complete/incomplete toggles, reorder rollback, ownership across every mutation, same-owner wrong-parent items, anonymous access, CSRF, invalid DTOs/query/UUIDs, pagination/pins, stable timestamp ties, literal/case-insensitive search, duplicate-free search and concurrent appends/reorders. Existing authentication and database tests remain enabled.
+
+Milestone 04 changes only:
+
+- `src/main/java/com/bubble/controller/ContentController.java`
+- `src/main/java/com/bubble/dto/ContentDtos.java`
+- `src/main/java/com/bubble/service/{ContentService,ContentQueries}.java`
+- `src/main/java/com/bubble/exception/{ResourceNotFoundException,ApiExceptionHandler}.java`
+- `src/main/java/com/bubble/repository/{NoteRepository,ChecklistRepository}.java`
+- `src/main/java/com/bubble/entity/Checklist.java`
+- `src/main/java/com/bubble/config/WebConfig.java`
+- `src/main/resources/application.yml`
+- `src/test/java/com/bubble/{ContentIntegrationTest,BackendIntegrationTest}.java`
+- `README.md`
+
+Limitations: search uses PostgreSQL substring scans rather than ranked/full-text indexes; deep offset pagination can be expensive. Concurrent edits can shift page membership between requests. The 1,000-item API limit and bounded request sizes deliberately constrain operations; larger collections need a separately designed batch workflow. No frontend connection, cloud service, deployment, restore/soft-delete or offline synchronization is included.
+
+Milestone 04 verification: `mvn clean verify` passed all **34 tests**, with no failures, errors or skipped tests, against disposable PostgreSQL. Compilation and executable-jar packaging succeeded. No standalone Java linter is configured.

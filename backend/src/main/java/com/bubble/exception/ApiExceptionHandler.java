@@ -19,6 +19,21 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     private static final Logger LOG = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiError> missing(ResourceNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError(404, "Resource not found."));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiError> invalidInput(IllegalArgumentException exception) {
+        return ResponseEntity.badRequest().body(new ApiError(400, "The request failed validation."));
+    }
+
+    @ExceptionHandler(org.springframework.dao.PessimisticLockingFailureException.class)
+    public ResponseEntity<ApiError> concurrentEdit(RuntimeException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError(409, "Concurrent edit; retry the request."));
+    }
+
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiError> invalidCredentials(AuthenticationException exception) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
