@@ -43,9 +43,10 @@ class PersistenceIntegrationTest {
     @Test
     void flywayCreatesSchemaAndHibernateValidatesIt() {
         var flyway = context.getBean(Flyway.class);
-        assertEquals("1", flyway.info().current().getVersion().toString());
+        assertEquals("2", flyway.info().current().getVersion().toString());
+        assertEquals(2, flyway.info().applied().length);
         assertEquals(0, flyway.info().pending().length);
-        assertEquals(5, jdbc.queryForObject("SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('users','profiles','notes','checklists','checklist_items')", Integer.class));
+        assertEquals(6, jdbc.queryForObject("SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('users','profiles','notes','checklists','checklist_items','user_preferences')", Integer.class));
         assertTrue(context.getEnvironment().getProperty("spring.jpa.hibernate.ddl-auto").equals("validate"));
     }
 

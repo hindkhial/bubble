@@ -3,6 +3,8 @@ package com.bubble.service;
 import com.bubble.dto.AccountResponse;
 import com.bubble.dto.RegisterRequest;
 import com.bubble.entity.User;
+import com.bubble.entity.UserPreferences;
+import com.bubble.repository.UserPreferencesRepository;
 import com.bubble.repository.UserRepository;
 import java.util.UUID;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -14,7 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class AccountService {
     private final UserRepository users;
     private final PasswordEncoder encoder;
-    public AccountService(UserRepository users, PasswordEncoder encoder) { this.users = users; this.encoder = encoder; }
+    private final UserPreferencesRepository preferences;
+    public AccountService(UserRepository users, PasswordEncoder encoder,
+            UserPreferencesRepository preferences) {
+        this.users = users; this.encoder = encoder; this.preferences = preferences;
+    }
 
     @Transactional
     public AccountResponse register(RegisterRequest input) {
@@ -22,6 +28,7 @@ public class AccountService {
         user.initializePasswordHash(encoder.encode(input.password()));
         // Flush inside the transaction: the unique constraint resolves concurrent registrations safely.
         users.saveAndFlush(user);
+        preferences.saveAndFlush(new UserPreferences(user));
         return response(user);
     }
 

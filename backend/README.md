@@ -1,6 +1,6 @@
-# Bubble backend — Milestones 01–04
+# Bubble backend — Milestones 01–05
 
-Java 21 and Spring Boot 4.1.1, with Spring MVC, Jakarta Bean Validation, Maven, JUnit **5** and Mockito. Milestone 02 adds PostgreSQL, Flyway and JPA repositories. Milestone 03 adds session authentication. Milestone 04 adds notes/checklists APIs. There is no frontend connection or deployment. Actuator is intentionally omitted: the small public health endpoint is sufficient and no internal management endpoints are exposed.
+Java 21 and Spring Boot 4.1.1, with Spring MVC, Jakarta Bean Validation, Maven, JUnit **5** and Mockito. Milestone 02 adds PostgreSQL, Flyway and JPA repositories. Milestone 03 adds session authentication. Milestone 04 adds notes/checklists APIs; Milestone 05 adds profile and preferences management. There is no frontend connection or deployment. Actuator is intentionally omitted: the small public health endpoint is sufficient and no internal management endpoints are exposed.
 
 ## Requirements
 
@@ -338,3 +338,99 @@ Milestone 04 changes only:
 Limitations: search uses PostgreSQL substring scans rather than ranked/full-text indexes; deep offset pagination can be expensive. Concurrent edits can shift page membership between requests. The 1,000-item API limit and bounded request sizes deliberately constrain operations; larger collections need a separately designed batch workflow. No frontend connection, cloud service, deployment, restore/soft-delete or offline synchronization is included.
 
 Milestone 04 verification: `mvn clean verify` passed all **34 tests**, with no failures, errors or skipped tests, against disposable PostgreSQL. Compilation and executable-jar packaging succeeded. No standalone Java linter is configured.
+
+## Milestone 05 — Profile and preferences
+
+These APIs reuse the existing authenticated session and CSRF security. Identity always comes from the verified principal. There are no user IDs in the routes or accepted request bodies. Unsupported JSON fields (including `userId`) return 400. Query parameters cannot select another account. Missing profile/preferences records return the same sanitized 404 format as other resources.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/api/v1/profile` | Current user's profile |
+| PATCH | `/api/v1/profile` | Partially update display name, bio and avatar reference |
+| GET | `/api/v1/preferences` | Current user's stored appearance preferences |
+| PATCH | `/api/v1/preferences` | Partially update theme mode and/or accent color |
+
+### Profile format and partial updates
+
+Example GET response (fictional):
+
+```json
+{"displayName":"Reader","bio":"A quiet place for ideas","avatarReference":null,"createdAt":"2026-01-01T10:00:00Z","updatedAt":"2026-01-01T10:00:00Z"}
+```
+
+PATCH examples:
+
+```json
+{"displayName":"New name"}
+```
+
+```json
+{"bio":null,"avatarReference":null}
+```
+
+```json
+{"avatarReference":"avatar:11111111-1111-4111-8111-111111111111"}
+```
+
+Omitted fields are preserved. `bio:null` and `avatarReference:null` clear those fields; `bio:""` stores an empty bio. Display names cannot be null/blank and are trimmed, with an 80-character limit. Bio is at most 160 characters and is preserved as supplied. Empty patches and unsupported fields are rejected. Existing avatar color/emoji data is preserved; editing those fields is outside this milestone.
+
+An avatar reference is an opaque `avatar:<lowercase UUID>` identifier. It is **not a URL or path**. Arbitrary HTTP(S), file, javascript, data URLs, relative paths and raw frontend `imageUri` values are rejected. GET preserves existing legacy references; this milestone does not rewrite stored avatars. No image is fetched, uploaded, served or verified to exist. A future upload/asset API must issue references and enforce asset ownership when resolving them; clients must not turn untrusted references into direct URLs. Removing an avatar uses null, not an empty string.
+
+### Preferences format and defaults
+
+Example response:
+
+```json
+{"themeMode":"LIGHT","accentColor":"Lavender","createdAt":"2026-01-01T10:00:00Z","updatedAt":"2026-01-01T10:00:00Z"}
+```
+
+PATCH `{"themeMode":"DARK"}` preserves the accent; PATCH `{"accentColor":"Dusty pink"}` preserves the mode. Theme mode accepts exactly `LIGHT`, `DARK`, or `SYSTEM`. Accent names match `src/theme/appearance.ts` exactly: `Lavender`, `Rose`, `Sage`, `Deep lavender`, `Sky blue`, `Dusty pink`, `Denim blue`. Unsupported values, lowercase theme modes, nulls and empty patches return 400.
+
+Defaults are **LIGHT / Lavender**, matching the existing frontend defaults. The frontend currently stores `light`/`dark`; a future integration must map uppercase backend values and implement system-theme resolution for `SYSTEM`. Local browser profile/appearance storage remains untouched, optional and usable offline without an account. No preferences are uploaded or synchronized by this milestone.
+
+### Authentication and errors
+
+Use the session cookie on GET and PATCH. PATCH also needs the current `X-CSRF-TOKEN`; fetch a fresh token after login as documented in Milestone 03. Example:
+
+```sh
+curl -b cookies.txt http://localhost:8080/api/v1/profile
+curl -b cookies.txt -X PATCH -H 'Content-Type: application/json' \
+  -H "X-CSRF-TOKEN: $CSRF_TOKEN" --data '{"bio":null}' \
+  http://localhost:8080/api/v1/profile
+curl -b cookies.txt -X PATCH -H 'Content-Type: application/json' \
+  -H "X-CSRF-TOKEN: $CSRF_TOKEN" --data '{"themeMode":"SYSTEM"}' \
+  http://localhost:8080/api/v1/preferences
+```
+
+Successful GET/PATCH return 200 and the updated DTO; no password/hash, email, JPA relationship or internal user ID is serialized. Errors keep the existing `{status,message}` format, for example:
+
+```json
+{"status":404,"message":"Resource not found."}
+```
+
+Invalid DTOs return sanitized 400, missing authentication 401, invalid CSRF 403, database conflicts/retryable locks 409, oversized requests 413 and unexpected failures 500. Row locks serialize partial profile/preferences mutations so unrelated fields are preserved under concurrent requests. Actual changes advance `updatedAt`; idempotent patches may retain it. Same-field edits remain last-applied-wins without revision tokens.
+
+### Database and migration
+
+`V2__add_user_preferences.sql` adds `user_preferences` with UUID identity/timestamps, a unique user foreign key, restrictive deletion, nonnull defaults and database checks for supported modes/colors. It backfills exactly one default record per existing account without modifying profiles, notes or lists. Registration now creates User, Profile and UserPreferences in the same transaction. The unique constraint prevents duplicate records; no preferences are silently regenerated if a record is administratively removed (the API returns 404).
+
+V1 is unchanged. Apply migrations by normal application startup; do not manually reapply or edit applied migrations. Backfilled preferences use migration-time timestamps. No new dependencies, cloud services or authentication mechanisms were added.
+
+### Verification and changed files
+
+Run `mvn clean verify` with Docker, or the dedicated disposable external PostgreSQL configuration documented above. `SettingsIntegrationTest` uses real HTTP security and PostgreSQL to verify profile changes/clearing, strict validation, defaults, every supported preference, partial-update preservation, fresh-session/database reloads, existing avatar customization, user isolation, CSRF, anonymous access, missing records and concurrent partial updates. `PreferencesMigrationIntegrationTest` creates an isolated temporary schema, applies V1, inserts representative existing data, upgrades to V2, verifies backfill/data preservation and database constraints, and removes only its own test schema. External test roles therefore also need permission to create/drop a schema in their disposable database.
+
+Milestone 05 changes only:
+
+- `src/main/java/com/bubble/controller/SettingsController.java`
+- `src/main/java/com/bubble/dto/SettingsDtos.java`
+- `src/main/java/com/bubble/entity/UserPreferences.java`
+- `src/main/java/com/bubble/repository/{ProfileRepository,UserPreferencesRepository}.java`
+- `src/main/java/com/bubble/service/{AccountService,SettingsService}.java`
+- `src/main/resources/db/migration/V2__add_user_preferences.sql`
+- `src/test/java/com/bubble/{SettingsIntegrationTest,PreferencesMigrationIntegrationTest,PersistenceIntegrationTest}.java`
+- `README.md`
+
+Limitations: no uploads, avatar asset resolution, profile color/emoji editing, frontend integration, offline synchronization, revision tokens or deployment. Existing Milestone 03 production security limitations still apply. Purely local frontend use continues to require no account or server.
+
+Milestone 05 verification: `mvn clean verify` passed all **44 tests**, with zero failures, errors or skips. PostgreSQL migration/upgrade, authentication, authorization and existing content regressions passed; compilation and executable-jar packaging succeeded. No standalone Java linter is configured.
