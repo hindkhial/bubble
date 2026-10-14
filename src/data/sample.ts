@@ -20,6 +20,8 @@ export type SampleItem = {
   preview: string;
   body: string;
   meta: string;
+  createdAt?: number;
+  updatedAt?: number;
   image?: ImageSourcePropType;
   cardImageRatio?: number;
   rows?: ChecklistRow[];

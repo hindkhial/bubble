@@ -1,25 +1,19 @@
-# Bubble mobile interface milestone
+# Bubble frontend
 
-An Expo and TypeScript mobile app showing Home, nested Bubbles, files, and a private You screen. It starts with sample content from `src/data/sample.ts`; synthetic local photos in `assets/covers/` are sample covers. Add creates Bubbles, notes, photos, and checklists in temporary app state. You can choose a device photo as a Bubble cover or create a Photo item. Content and profile changes reset when the app restarts; no account or server is connected.
+An Expo / React Native / TypeScript personal notes and lists interface. Frontend development targets the `frontend` branch; backend development is separate.
 
-## Run
+## Run and check
 
-Use Node.js LTS, then:
+Use Node.js 22.6+ and run `pnpm install`, then `pnpm web` for browser preview or `pnpm start` for Expo. If file watching reaches platform limits, use `CI=1 pnpm web` and restart after edits.
 
-```sh
-pnpm install
-pnpm start
-```
+Checks: `pnpm typecheck`, `pnpm test`, and `pnpm export:mobile`. No lint script is configured.
 
-Open the project in Expo Go on a compatible Android or iPhone, or use an emulator. Your phone and computer need access to the same development server. The target phone platform has not yet been established.
+## Milestone 08
 
-For a quick browser preview of these screens, run `pnpm web`. If Metro reports a file watcher limit, run `CI=1 pnpm web`; that mode requires a server restart after code changes. The mobile app remains the intended product; review spacing and gestures on a phone later.
+Home keeps the personalized welcome and original Bubble grid, with pinned notes/lists using the same existing file cards. Recent Activity and hero quick-create buttons are removed; creation remains in Add. Search works locally across Bubble titles/descriptions, note/photo titles and text, previews, metadata, and checklist items. All/Bubbles/Notes/Lists filters, clear, empty states, pinned-first results, and the original Bubble/file card grid are used. New checklists have an optional Add title control and a compact plus button; completion checkboxes appear only when editing existing lists.
 
-## Check
+Versioned browser-local storage keys keep content, Bubbles, pins, profile customization, and Appearance mode/accent between refreshes. Storage code lives in `src/storage`; it can be replaced independently of the UI. Failed reads preserve the raw stored value instead of overwriting it; failed writes show an error and retain current session state. Nothing is sent to a server. Browser localStorage has size limits and is specific to this browser and origin. Clearing browser data removes it. Native Expo currently uses session state only; browser persistence is the scope of this milestone.
 
-```sh
-pnpm typecheck
-pnpm export:mobile
-```
+New browsers begin empty. Existing stored data is not replaced with sample data. New notes/photos/checklists receive creation and modification timestamps; edits and checklist toggles update modification time. Legacy items without timestamps retain stable ordering; historical dates are not invented.
 
-Tap a Home Bubble to open it, tap child Bubbles or files to navigate deeper, and use Back or the parent path to return. Add lets you create a Bubble, note, photo, or checklist. The Home avatar and You tab open the private demo profile, where you can edit its name and avatar color. Search remains a placeholder.
+Photos selected in the browser are stored as data URLs. Large photos may exceed localStorage capacity, in which case the saving error is displayed. Permanent native photo storage and an installable offline application shell are future work.

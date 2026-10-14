@@ -1,9 +1,12 @@
+import { useTheme } from '../theme/Theme';
+import type { ThemeColors } from '../theme/appearance';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../theme/tokens';
 
 export function ManagementMenu({ visible, title, onEdit, onDelete, onClose }: {
   visible: boolean; title: string; onEdit: () => void; onDelete: () => void; onClose: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
     <Pressable style={styles.scrim} onPress={onClose}>
       <Pressable style={styles.sheet} onPress={(event) => event.stopPropagation()}>
@@ -17,7 +20,7 @@ export function ManagementMenu({ visible, title, onEdit, onDelete, onClose }: {
   </Modal>;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   scrim: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(52,46,56,0.34)' },
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 22, paddingBottom: 34 },
   handle: { width: 42, height: 5, borderRadius: 3, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 20 },

@@ -1,14 +1,15 @@
+import { useLocalState } from '../storage/useLocalState';
 import { createContext, useContext, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import { colors } from '../theme/tokens';
 
-export type Profile = { displayName: string; avatarColor: string };
+export type Profile = { displayName: string; avatarColor: string; bio: string; imageUri?: string; avatarEmoji?: string };
 
-const ProfileContext = createContext<{ profile: Profile; updateProfile: (profile: Profile) => void } | null>(null);
+const ProfileContext = createContext<{ profile: Profile; storageError: string | null; updateProfile: (profile: Profile) => void } | null>(null);
 
 export function ProfileProvider({ children }: PropsWithChildren) {
-  const [profile, updateProfile] = useState<Profile>({ displayName: 'Bubble', avatarColor: colors.lavenderSoft });
-  return <ProfileContext.Provider value={{ profile, updateProfile }}>{children}</ProfileContext.Provider>;
+  const [profile, updateProfile, storageError] = useLocalState<Profile>('bubble.profile.v1', () => ({ displayName: 'Bubble', avatarColor: colors.lavenderSoft, bio: '' }), (value): value is Profile => !!value && typeof value === 'object' && 'displayName' in value && typeof value.displayName === 'string' && 'avatarColor' in value && typeof value.avatarColor === 'string' && 'bio' in value && typeof value.bio === 'string');
+  return <ProfileContext.Provider value={{ profile, updateProfile, storageError }}>{children}</ProfileContext.Provider>;
 }
 
 export function useProfile() {

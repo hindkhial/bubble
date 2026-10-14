@@ -1,48 +1,37 @@
+import { accentPalette, themedAvatarColor } from '../theme/appearance';
+import { useTheme } from '../theme/Theme';
+import type { ThemeColors } from '../theme/appearance';
 import { useEffect, useRef, useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import { BIO_LIMIT, DISPLAY_NAME_LIMIT, validateProfile } from '../utils/profile';
 import { useNavigation } from 'expo-router';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Profile } from '../state/Profile';
-import { colors } from '../theme/tokens';
-import { formStyles as styles } from './AddPreview';
+import { createFormStyles } from './AddPreview';
 import { ConfirmDialog } from './ConfirmDialog';
 import { ProfileAvatar } from './ProfileAvatar';
 
-const avatarColors = [
-  { name: 'Lavender', value: colors.lavenderSoft },
-  { name: 'Rose', value: colors.rose },
-  { name: 'Sage', value: colors.sage },
-  { name: 'Deep lavender', value: colors.lavenderDeep },
-];
+const avatarColors = accentPalette;
 
 export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profile; onSave: (profile: Profile) => void; onClose: () => void }) {
+  const { colors, mode } = useTheme();
+  const styles = createFormStyles(colors);
+  const local = createLocal(colors);
   const navigation = useNavigation();
   const [name, setName] = useState(profile.displayName);
   const [avatarColor, setAvatarColor] = useState(profile.avatarColor);
+  const [bio, setBio] = useState(profile.bio);
+  const [imageUri, setImageUri] = useState(profile.imageUri);
+  const [avatarEmoji, setAvatarEmoji] = useState(profile.avatarEmoji ?? '');
+  const [picking, setPicking] = useState(false);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const [error, setError] = useState('');
   const [discardOpen, setDiscardOpen] = useState(false);
   const blockedAction = useRef<Parameters<typeof navigation.dispatch>[0] | null>(null);
   const bypass = useRef(false);
-  const browserBack = useRef(false);
-  const dirtyRef = useRef(false);
   const saving = useRef(false);
-  const dirty = name !== profile.displayName || avatarColor !== profile.avatarColor;
-  dirtyRef.current = dirty;
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const url = window.location.href;
-    const guard = { ...window.history.state, bubbleProfileEditGuard: true };
-    window.history.pushState(guard, '', url);
-    const onPopState = () => {
-      if (bypass.current) return;
-      browserBack.current = true;
-      window.history.pushState(guard, '', url);
-      if (dirtyRef.current) setDiscardOpen(true);
-      else { bypass.current = true; onClose(); window.history.go(-2); }
-    };
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
+  const dirty = name !== profile.displayName || avatarColor !== profile.avatarColor || bio !== profile.bio || imageUri !== profile.imageUri || avatarEmoji !== (profile.avatarEmoji ?? '');
 
   useEffect(() => navigation.addListener('beforeRemove', (event) => {
     if (bypass.current || !dirty) return;
@@ -51,39 +40,59 @@ export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profil
     setDiscardOpen(true);
   }), [navigation, dirty]);
 
-  const leave = () => { bypass.current = true; onClose(); if (Platform.OS === 'web') window.history.back(); };
+  const leave = () => { bypass.current = true; onClose(); };
   const attemptClose = () => { if (dirty) setDiscardOpen(true); else leave(); };
   const discard = () => {
     bypass.current = true;
     setDiscardOpen(false);
     onClose();
-    if (browserBack.current && Platform.OS === 'web') window.history.go(-2);
-    else if (Platform.OS === 'web') window.history.back();
-    else if (blockedAction.current) navigation.dispatch(blockedAction.current);
+    if (blockedAction.current) navigation.dispatch(blockedAction.current);
+  };
+  const pickImage = async () => {
+    setPicking(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85, base64: Platform.OS === 'web' });
+      if (!mounted.current) return;
+      if (!result.canceled && result.assets?.[0]) { setImageUri(Platform.OS === 'web' && result.assets[0].base64 ? `data:${result.assets[0].mimeType || 'image/jpeg'};base64,${result.assets[0].base64}` : result.assets[0].uri); setError(''); }
+    } catch {
+      if (mounted.current) setError('Could not open your photos. Please try again.');
+    } finally {
+      if (mounted.current) setPicking(false);
+    }
   };
   const save = () => {
     if (saving.current) return;
     const displayName = name.trim();
-    if (!displayName) { setError('Please enter a display name.'); return; }
+    const validation = validateProfile(name, bio);
+    if (validation) { setError(validation); return; }
     saving.current = true;
     bypass.current = true;
-    onSave({ displayName, avatarColor });
-    if (Platform.OS === 'web') window.history.back();
+    onSave({ displayName, avatarColor, bio: bio.trim(), imageUri, avatarEmoji: avatarEmoji.trim() || undefined });
   };
 
   return <Modal visible transparent animationType="slide" onRequestClose={attemptClose}>
     <KeyboardAvoidingView style={styles.scrim} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Pressable style={StyleSheet.absoluteFill} onPress={attemptClose} />
-      <View style={styles.sheet}>
+      <View style={[styles.sheet, local.sheet]} accessibilityViewIsModal>
         <View style={styles.handle} />
         <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={styles.title}>Edit profile</Text>
           <Text style={styles.intro}>Make this space feel like yours.</Text>
-          <View style={local.preview}><ProfileAvatar profile={{ displayName: name, avatarColor }} size={72} /></View>
+          <View style={local.preview}><ProfileAvatar profile={{ displayName: name, avatarColor, bio, imageUri, avatarEmoji }} size={72} /></View>
+          <Pressable accessibilityRole="button" disabled={picking} accessibilityState={{ disabled: picking }} onPress={pickImage} style={styles.cancel}><Text style={styles.cancelText}>{picking ? 'Opening photos…' : imageUri ? 'Change photo' : 'Choose photo'}</Text></Pressable>
+          {imageUri ? <Pressable accessibilityRole="button" onPress={() => setImageUri(undefined)} style={styles.cancel}><Text style={styles.cancelText}>Remove photo</Text></Pressable> : null}
           <Text style={styles.label}>Display name *</Text>
-          <TextInput accessibilityLabel="Display name" autoCapitalize="words" style={styles.input} value={name} onChangeText={(value) => { setName(value); setError(''); }} maxLength={80} placeholder="Your name" placeholderTextColor={colors.muted} />
+          <TextInput accessibilityLabel="Display name" autoCapitalize="words" style={styles.input} value={name} onChangeText={(value) => { setName(value); setError(''); }} maxLength={DISPLAY_NAME_LIMIT} placeholder="Your name" placeholderTextColor={colors.muted} />
+          <Text style={styles.label}>Short bio</Text>
+          <TextInput accessibilityLabel="Short bio" multiline textAlignVertical="top" style={[styles.input, local.bio]} value={bio} onChangeText={(value) => { setBio(value); setError(''); }} maxLength={BIO_LIMIT} placeholder="A little about you" placeholderTextColor={colors.muted} />
+          <Text style={local.counter}>{bio.length}/{BIO_LIMIT}</Text>
+          <Text style={styles.label}>Avatar emoji</Text>
+          <Text style={styles.intro}>Choose a face or enter your favorite emoji. Your photo takes priority; remove it to show your emoji.</Text>
+          <View style={local.emojis}>{['🐱', '🐻', '🐰', '🦊', '🐼', '🐸', '🌷', '✨'].map((emoji) => <Pressable key={emoji} accessibilityRole="button" accessibilityLabel={`Use ${emoji} avatar`} accessibilityState={{ selected: avatarEmoji === emoji }} onPress={() => setAvatarEmoji(emoji)} style={[local.emoji, avatarEmoji === emoji && local.emojiSelected]}><Text style={local.emojiText}>{emoji}</Text></Pressable>)}</View>
+          <TextInput accessibilityLabel="Custom avatar emoji" value={avatarEmoji} onChangeText={setAvatarEmoji} maxLength={16} placeholder="Enter an emoji" placeholderTextColor={colors.muted} style={styles.input} />
+          <Pressable accessibilityRole="button" onPress={() => setAvatarEmoji('')} style={styles.cancel}><Text style={styles.cancelText}>Use my initial</Text></Pressable>
           <Text style={styles.label}>Avatar color</Text>
-          <View style={styles.swatches}>{avatarColors.map((option) => <Pressable key={option.name} accessibilityRole="button" accessibilityLabel={`${option.name} avatar color${avatarColor === option.value ? ', selected' : ''}`} accessibilityState={{ selected: avatarColor === option.value }} onPress={() => setAvatarColor(option.value)} style={[styles.swatch, { backgroundColor: option.value }, avatarColor === option.value && styles.swatchSelected]}><Text style={styles.swatchCheck}>{avatarColor === option.value ? '✓' : ''}</Text></Pressable>)}</View>
+          <View style={styles.swatches}>{avatarColors.map((option) => <Pressable key={option.name} accessibilityRole="button" accessibilityLabel={`${option.name} avatar color${avatarColor === option.value ? ', selected' : ''}`} accessibilityState={{ selected: avatarColor === option.value }} onPress={() => setAvatarColor(option.value)} style={[styles.swatch, { backgroundColor: themedAvatarColor(option.value, mode) }, avatarColor === option.value && styles.swatchSelected]}><Text style={styles.swatchCheck}>{avatarColor === option.value ? '✓' : ''}</Text></Pressable>)}</View>
           {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
           <Pressable accessibilityRole="button" onPress={save} style={styles.save}><Text style={styles.saveText}>Save changes</Text></Pressable>
           <Pressable accessibilityRole="button" onPress={attemptClose} style={styles.cancel}><Text style={styles.cancelText}>Cancel</Text></Pressable>
@@ -94,4 +103,4 @@ export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profil
   </Modal>;
 }
 
-const local = StyleSheet.create({ preview: { alignItems: 'center', paddingVertical: 9 } });
+const createLocal = (colors: ThemeColors) => StyleSheet.create({ emojis: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }, emoji: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 24, borderWidth: 2, borderColor: colors.border }, emojiSelected: { borderColor: colors.action, backgroundColor: colors.lavenderSoft }, emojiText: { fontSize: 25 }, sheet: { width: '100%', maxWidth: 560, alignSelf: 'center' }, bio: { minHeight: 94 }, counter: { color: colors.muted, fontSize: 12, textAlign: 'right', marginTop: 6 }, preview: { alignItems: 'center', paddingVertical: 9 } });

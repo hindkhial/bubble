@@ -1,3 +1,6 @@
+import { themedAvatarColor } from '../theme/appearance';
+import { useTheme } from '../theme/Theme';
+import type { ThemeColors } from '../theme/appearance';
 import { useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -5,32 +8,35 @@ import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, St
 import { newChecklistRow } from '../data/sample';
 import type { ChecklistRow } from '../data/sample';
 import { useContent } from '../state/Content';
-import { colors } from '../theme/tokens';
+import { colors as baseColors } from '../theme/tokens';
 import { ChecklistEditorRows } from './ChecklistEditorRows';
 
 type Step = 'menu' | 'bubble' | 'note' | 'photo' | 'checklist' | 'destination';
 type PickedPhoto = { uri: string; ratio: number };
 export const bubblePalette = [
-  { name: 'Lilac', value: colors.lavender },
-  { name: 'Soft lavender', value: colors.lavenderSoft },
-  { name: 'Deep lavender', value: colors.lavenderDeep },
+  { name: 'Lilac', value: baseColors.lavender },
+  { name: 'Soft lavender', value: baseColors.lavenderSoft },
+  { name: 'Deep lavender', value: baseColors.lavenderDeep },
 ];
 const palette = bubblePalette;
 
-export function AddPreview({ parentId = null }: { parentId?: string | null }) {
+export function AddPreview({ parentId = null, quickAction }: { parentId?: string | null; quickAction?: 'note' | 'checklist' }) {
+  const { colors, mode } = useTheme();
+  const styles = createFormStyles(colors);
   const router = useRouter();
   const { bubbles, bubbleById, createBubble, createNote, createPhoto, createChecklist } = useContent();
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState<Step>('menu');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [color, setColor] = useState<string>(colors.lavender);
+  const [color, setColor] = useState<string>(baseColors.lavender);
   const [coverPhoto, setCoverPhoto] = useState<PickedPhoto | null>(null);
   const [noteTitle, setNoteTitle] = useState('');
   const [body, setBody] = useState('');
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [photoTitle, setPhotoTitle] = useState('');
   const [photoDescription, setPhotoDescription] = useState('');
+  const [showChecklistTitle, setShowChecklistTitle] = useState(false);
   const [checklistTitle, setChecklistTitle] = useState('');
   const [checklistRows, setChecklistRows] = useState<ChecklistRow[]>(() => [newChecklistRow()]);
   const [destination, setDestination] = useState<string | null>(parentId);
@@ -41,18 +47,18 @@ export function AddPreview({ parentId = null }: { parentId?: string | null }) {
   const saving = useRef(false);
 
   const reset = () => {
-    setStep('menu'); setTitle(''); setDescription(''); setColor(colors.lavender); setCoverPhoto(null);
-    setNoteTitle(''); setBody(''); setPhoto(null); setPhotoTitle(''); setPhotoDescription(''); setChecklistTitle(''); setChecklistRows([newChecklistRow()]);
+    setStep('menu'); setTitle(''); setDescription(''); setColor(baseColors.lavender); setCoverPhoto(null);
+    setNoteTitle(''); setBody(''); setPhoto(null); setPhotoTitle(''); setPhotoDescription(''); setChecklistTitle(''); setShowChecklistTitle(false); setChecklistRows([newChecklistRow()]);
     setDestination(parentId); setError(''); setReturnToFile(null); setDestinationReturn('note'); setPendingBubble(null);
   };
   const close = () => { setVisible(false); reset(); };
-  const open = () => { reset(); saving.current = false; setVisible(true); };
+  const open = () => { reset(); saving.current = false; setStep(quickAction ?? 'menu'); setVisible(true); };
   const pickImage = async (target: 'cover' | 'photo') => {
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 });
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85, base64: Platform.OS === 'web' });
       if (result.canceled || !result.assets?.[0]) return;
       const asset = result.assets[0];
-      const picked = { uri: asset.uri, ratio: asset.width && asset.height ? asset.height / asset.width : 1 };
+      const picked = { uri: Platform.OS === 'web' && asset.base64 ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}` : asset.uri, ratio: asset.width && asset.height ? asset.height / asset.width : 1 };
       if (target === 'cover') setCoverPhoto(picked);
       else setPhoto(picked);
       setError('');
@@ -110,7 +116,7 @@ export function AddPreview({ parentId = null }: { parentId?: string | null }) {
   };
 
   return <>
-    <Pressable accessibilityRole="button" accessibilityLabel="Add content" onPress={open} style={styles.button}><Text style={styles.buttonText}>＋ Add</Text></Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel={quickAction === 'note' ? 'New note' : quickAction === 'checklist' ? 'New checklist' : 'Add content'} onPress={open} style={styles.button}><Text style={styles.buttonText}>{quickAction === 'note' ? '＋ Note' : quickAction === 'checklist' ? '＋ Checklist' : '＋ Add'}</Text></Pressable>
     <Modal animationType="slide" transparent visible={visible} onRequestClose={close}>
       <KeyboardAvoidingView style={styles.scrim} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Pressable style={StyleSheet.absoluteFill} onPress={close} />
@@ -137,7 +143,7 @@ export function AddPreview({ parentId = null }: { parentId?: string | null }) {
               <Pressable accessibilityRole="button" onPress={() => pickImage('cover')} style={styles.pick}><Text style={styles.pickText}>{coverPhoto ? 'Change cover photo' : 'Choose cover photo'}</Text></Pressable>
               {coverPhoto && <Pressable accessibilityRole="button" onPress={() => setCoverPhoto(null)} style={styles.remove}><Text style={styles.removeText}>Remove photo</Text></Pressable>}
               <Text style={styles.label}>Color</Text>
-              <View style={styles.swatches}>{palette.map((option) => <Pressable key={option.name} accessibilityRole="button" accessibilityLabel={`${option.name} color${color === option.value ? ', selected' : ''}`} onPress={() => setColor(option.value)} style={[styles.swatch, { backgroundColor: option.value }, color === option.value && styles.swatchSelected]}><Text style={styles.swatchCheck}>{color === option.value ? '✓' : ''}</Text></Pressable>)}</View>
+              <View style={styles.swatches}>{palette.map((option) => <Pressable key={option.name} accessibilityRole="button" accessibilityLabel={`${option.name} color${color === option.value ? ', selected' : ''}`} onPress={() => setColor(option.value)} style={[styles.swatch, { backgroundColor: themedAvatarColor(option.value, mode) }, color === option.value && styles.swatchSelected]}><Text style={styles.swatchCheck}>{color === option.value ? '✓' : ''}</Text></Pressable>)}</View>
               <Text style={styles.help}>The lavender cover is used when no photo is chosen.</Text>
               {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
               <Pressable accessibilityRole="button" onPress={saveBubble} style={styles.save}><Text style={styles.saveText}>Create Bubble</Text></Pressable>
@@ -171,10 +177,10 @@ export function AddPreview({ parentId = null }: { parentId?: string | null }) {
               <Text style={styles.title}>New checklist</Text>
               <Text style={styles.label}>Save to</Text>
               {bubbles.length ? <Pressable accessibilityRole="button" accessibilityLabel="Choose destination Bubble" onPress={() => { setDestinationReturn('checklist'); setError(''); setStep('destination'); }} style={styles.destination}><Text style={styles.destinationText}>{destination === '__pending__' ? pendingBubble?.title : destination ? bubbleById(destination)?.title ?? 'Choose a Bubble' : 'Choose a Bubble'}</Text><Text style={styles.chevron}>›</Text></Pressable> : pendingBubble ? <View style={styles.destination}><Text style={styles.destinationText}>{pendingBubble.title} (new Bubble)</Text></View> : <Pressable accessibilityRole="button" onPress={() => { setReturnToFile('checklist'); setStep('bubble'); setError(''); }} style={styles.destination}><Text style={styles.destinationText}>Create a Bubble first</Text><Text style={styles.chevron}>›</Text></Pressable>}
-              <Text style={styles.label}>Title (optional)</Text>
-              <TextInput accessibilityLabel="Checklist title" style={styles.input} placeholder="Untitled checklist" placeholderTextColor={colors.muted} value={checklistTitle} onChangeText={setChecklistTitle} maxLength={100} />
-              <Text style={styles.label}>Items *</Text>
-              <ChecklistEditorRows rows={checklistRows} onChange={(rows) => { setChecklistRows(rows); setError(''); }} />
+              <Pressable accessibilityRole="button" onPress={() => setShowChecklistTitle((value) => !value)} style={styles.titleToggle}><Text style={styles.pickText}>{showChecklistTitle ? 'Hide title' : 'Add title'}</Text></Pressable>
+              {showChecklistTitle ? <TextInput accessibilityLabel="Checklist title" style={styles.input} placeholder="Give your list a title" placeholderTextColor={colors.muted} value={checklistTitle} onChangeText={setChecklistTitle} maxLength={100} /> : null}
+              <Text style={styles.intro}>What would you like to get done?</Text>
+              <ChecklistEditorRows creating rows={checklistRows} onChange={(rows) => { setChecklistRows(rows); setError(''); }} />
               {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
               <Pressable accessibilityRole="button" onPress={saveChecklist} style={styles.save}><Text style={styles.saveText}>Save checklist</Text></Pressable>
             </>}
@@ -191,9 +197,10 @@ export function AddPreview({ parentId = null }: { parentId?: string | null }) {
   </>;
 }
 
-export const formStyles = StyleSheet.create({
+export const createFormStyles = (colors: ThemeColors) => StyleSheet.create({
+  titleToggle: { alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: colors.lavenderSoft, alignItems: 'center', justifyContent: 'center', marginVertical: 10 },
   button: { backgroundColor: colors.action, minHeight: 52, borderRadius: 26, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center' },
-  buttonText: { color: colors.white, fontWeight: '700', fontSize: 16 },
+  buttonText: { color: colors.onAction, fontWeight: '700', fontSize: 16 },
   scrim: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(52,46,56,0.34)' },
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 24, paddingBottom: 30, maxHeight: '90%' },
   handle: { width: 42, height: 5, borderRadius: 3, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 20 },
@@ -205,7 +212,7 @@ export const formStyles = StyleSheet.create({
   choiceHelp: { color: colors.muted, fontSize: 11, marginTop: 3 },
   chevron: { color: colors.action, marginLeft: 'auto', fontSize: 25 },
   label: { color: colors.text, fontWeight: '700', fontSize: 13, marginBottom: 7, marginTop: 12 },
-  input: { borderWidth: 1, borderColor: colors.border, borderRadius: 16, backgroundColor: colors.white, paddingHorizontal: 14, paddingVertical: 12, color: colors.text, fontSize: 15, minHeight: 48 },
+  input: { borderWidth: 1, borderColor: colors.border, borderRadius: 16, backgroundColor: colors.input, paddingHorizontal: 14, paddingVertical: 12, color: colors.text, fontSize: 15, minHeight: 48 },
   description: { height: 86 }, noteBody: { height: 160 },
   imagePreview: { width: '100%', height: 130, borderRadius: 18, marginBottom: 8, backgroundColor: colors.lavenderSoft },
   pick: { minHeight: 48, borderRadius: 16, borderWidth: 1, borderColor: colors.action, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.lavenderSoft },
@@ -221,8 +228,7 @@ export const formStyles = StyleSheet.create({
   destinationChoice: { minHeight: 51, borderBottomWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center' },
   destinationText: { color: colors.text, fontSize: 15, fontWeight: '600' }, selected: { color: colors.action, marginLeft: 'auto', fontSize: 18 },
   save: { backgroundColor: colors.action, minHeight: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
-  saveText: { color: colors.white, fontSize: 16, fontWeight: '700' },
+  saveText: { color: colors.onAction, fontSize: 16, fontWeight: '700' },
   cancel: { backgroundColor: colors.lavenderSoft, minHeight: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
   cancelText: { color: colors.action, fontSize: 15, fontWeight: '700' },
 });
-const styles = formStyles;

@@ -1,3 +1,5 @@
+import { useTheme } from '../../theme/Theme';
+import type { ThemeColors } from '../../theme/appearance';
 import { useState } from 'react';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -9,9 +11,11 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { EditContentSheet } from '../../components/EditContentSheet';
 import { ManagementMenu } from '../../components/ManagementMenu';
 import { useContent } from '../../state/Content';
-import { colors, spacing } from '../../theme/tokens';
+import { spacing } from '../../theme/tokens';
 
 export default function BubbleDetailScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -56,7 +60,7 @@ export default function BubbleDetailScreen() {
           <View style={styles.empty}><Text style={styles.emptyIcon}>✧</Text><Text style={styles.emptyTitle}>Nothing here yet</Text><Text style={styles.emptyText}>A little room for your next thought.</Text></View>
         )}
       </ScrollView>
-      <View style={styles.bottom}><Text style={styles.sampleLabel}>Demo · resets on restart</Text><AddPreview parentId={bubble.id} /></View>
+      <View style={styles.bottom}><Text style={styles.sampleLabel}>Saved in this browser when storage is available</Text><AddPreview parentId={bubble.id} /></View>
       <ManagementMenu visible={menuOpen} title={bubble.title} onClose={() => setMenuOpen(false)} onEdit={() => afterMenuCloses(() => setEditing(true))} onDelete={() => afterMenuCloses(() => setConfirmDelete(true))} />
       {editing && <EditContentSheet entry={bubble} onClose={() => setEditing(false)} onSave={(draft) => { updateBubble(bubble.id, draft); setEditing(false); }} />}
       <ConfirmDialog visible={confirmDelete} title={`Delete ${bubble.title}?`} message="This will delete this Bubble and everything inside it, including nested Bubbles and files. This cannot be undone." confirmLabel="Delete Bubble" onCancel={() => setConfirmDelete(false)} onConfirm={() => { const destination = bubble.parentId ? `/bubble/${bubble.parentId}` as const : '/' as const; setConfirmDelete(false); deleteBubble(bubble.id); router.replace(destination); }} />
@@ -64,7 +68,7 @@ export default function BubbleDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: spacing.page, paddingBottom: 28 },
   toolbar: { height: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },

@@ -1,3 +1,4 @@
+import { useLocalState } from '../storage/useLocalState';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import { useContent } from './Content';
@@ -12,10 +13,11 @@ type PinsContextValue = {
 const PinsContext = createContext<PinsContextValue | null>(null);
 
 export function PinsProvider({ children }: PropsWithChildren) {
-  const [pins, setPins] = useState<PinState>({});
-  const { bubbles, items } = useContent();
+  const [pins, setPins, storageError, pinsLoaded] = useLocalState<PinState>('bubble.pins.v1', () => ({}), (value): value is PinState => !!value && typeof value === 'object' && !Array.isArray(value) && Object.values(value).every((keys) => Array.isArray(keys) && keys.every((key) => typeof key === 'string')));
+  const { bubbles, items, hydrated } = useContent();
 
   useEffect(() => {
+    if (!hydrated || !pinsLoaded) return;
     const live = new Set([...bubbles.map((bubble) => `bubble:${bubble.id}`), ...items.map((item) => `file:${item.id}`)]);
     const scopes = new Set(['root', ...bubbles.map((bubble) => bubble.id)]);
     setPins((previous) => {
@@ -29,7 +31,7 @@ export function PinsProvider({ children }: PropsWithChildren) {
       }
       return changed ? next : previous;
     });
-  }, [bubbles, items]);
+  }, [bubbles, items, hydrated, pinsLoaded]);
 
   const pinsFor = useCallback((scopeId: string) => pins[scopeId] ?? [], [pins]);
   const togglePin = useCallback((scopeId: string, key: string) => {

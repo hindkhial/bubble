@@ -1,3 +1,5 @@
+import { useTheme } from '../../theme/Theme';
+import type { ThemeColors } from '../../theme/appearance';
 import { useState } from 'react';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -7,9 +9,11 @@ import { EditContentSheet } from '../../components/EditContentSheet';
 import { ManagementMenu } from '../../components/ManagementMenu';
 import { checklistProgress } from '../../data/sample';
 import { useContent } from '../../state/Content';
-import { colors, spacing } from '../../theme/tokens';
+import { spacing } from '../../theme/tokens';
 
 export default function FileDetailScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -73,7 +77,7 @@ export default function FileDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: spacing.page, paddingBottom: 48 },
   toolbar: { height: 50, alignItems: 'center', justifyContent: 'center' },

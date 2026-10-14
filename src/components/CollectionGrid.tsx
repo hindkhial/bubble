@@ -1,20 +1,24 @@
+import { useTheme } from '../theme/Theme';
+import type { ThemeColors } from '../theme/appearance';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { CollectionEntry } from '../data/sample';
 import { usePins } from '../state/Pins';
-import { colors } from '../theme/tokens';
 import { BubbleCard } from './BubbleCard';
 import { FileCard } from './FileCard';
 
 const entryKey = (entry: CollectionEntry) => `${entry.kind}:${entry.value.id}`;
 
-export function CollectionGrid({ entries, scopeId }: { entries: CollectionEntry[]; scopeId: string }) {
+export function CollectionGrid({ entries, scopeId, respectEntryScopes = false }: { entries: CollectionEntry[]; scopeId: string; respectEntryScopes?: boolean }) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const { pinsFor, togglePin } = usePins();
   const [selected, setSelected] = useState<CollectionEntry | null>(null);
   const [limitReached, setLimitReached] = useState(false);
-  const pins = pinsFor(scopeId);
+  const entryScope = (entry: CollectionEntry) => respectEntryScopes ? entry.kind === 'bubble' ? entry.value.parentId ?? 'root' : entry.value.bubbleId : scopeId;
+  const pins = respectEntryScopes ? entries.flatMap((entry) => pinsFor(entryScope(entry))) : pinsFor(scopeId);
   const ordered = [...entries].sort((a, b) => {
     const aPin = pins.indexOf(entryKey(a));
     const bPin = pins.indexOf(entryKey(b));
@@ -42,7 +46,7 @@ export function CollectionGrid({ entries, scopeId }: { entries: CollectionEntry[
   };
   const toggleSelectedPin = () => {
     if (!selected) return;
-    if (togglePin(scopeId, entryKey(selected))) closeActions();
+    if (togglePin(entryScope(selected), entryKey(selected))) closeActions();
     else setLimitReached(true);
   };
 
@@ -78,7 +82,7 @@ export function CollectionGrid({ entries, scopeId }: { entries: CollectionEntry[
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   columns: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   column: { flex: 1, gap: 12 },
   scrim: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(52,46,56,0.34)' },

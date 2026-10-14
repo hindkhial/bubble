@@ -1,9 +1,11 @@
+import { themedAvatarColor } from '../theme/appearance';
+import { useTheme } from '../theme/Theme';
+import type { ThemeColors } from '../theme/appearance';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigation } from 'expo-router';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Bubble, ChecklistRow, SampleItem } from '../data/sample';
-import { colors } from '../theme/tokens';
-import { bubblePalette, formStyles as styles } from './AddPreview';
+import { bubblePalette, createFormStyles } from './AddPreview';
 import { ChecklistEditorRows } from './ChecklistEditorRows';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -14,6 +16,8 @@ export function EditContentSheet({ entry, onSave, onClose }: {
   onSave: (draft: Draft) => void;
   onClose: () => void;
 }) {
+  const { colors, mode } = useTheme();
+  const styles = createFormStyles(colors);
   const navigation = useNavigation();
   const isBubble = 'parentId' in entry;
   const isChecklist = !isBubble && entry.type === 'CHECKLIST';
@@ -33,37 +37,8 @@ export function EditContentSheet({ entry, onSave, onClose }: {
   const [discardOpen, setDiscardOpen] = useState(false);
   const blockedAction = useRef<Parameters<typeof navigation.dispatch>[0] | null>(null);
   const bypass = useRef(false);
-  const browserBack = useRef(false);
-  const dirtyRef = useRef(false);
   const saving = useRef(false);
   const dirty = title !== initial.title || description !== initial.description || color !== initial.color || body !== initial.body || JSON.stringify(rows) !== JSON.stringify(initial.rows);
-  dirtyRef.current = dirty;
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const url = window.location.href;
-    const guard = { ...window.history.state, bubbleEditGuard: true };
-    window.history.pushState(guard, '', url);
-    const onPopState = () => {
-      if (bypass.current) return;
-      browserBack.current = true;
-      window.history.pushState(guard, '', url);
-      if (dirtyRef.current) setDiscardOpen(true);
-      else {
-        bypass.current = true;
-        onClose();
-        window.history.go(-2);
-      }
-    };
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
-
-  const leave = () => {
-    bypass.current = true;
-    onClose();
-    if (Platform.OS === 'web') window.history.back();
-  };
 
   useEffect(() => navigation.addListener('beforeRemove', (event) => {
     if (bypass.current || !dirty) return;
@@ -72,6 +47,7 @@ export function EditContentSheet({ entry, onSave, onClose }: {
     setDiscardOpen(true);
   }), [navigation, dirty]);
 
+  const leave = () => { bypass.current = true; onClose(); };
   const attemptClose = () => {
     if (dirty) setDiscardOpen(true);
     else leave();
@@ -80,9 +56,7 @@ export function EditContentSheet({ entry, onSave, onClose }: {
     bypass.current = true;
     setDiscardOpen(false);
     onClose();
-    if (browserBack.current && Platform.OS === 'web') window.history.go(-2);
-    else if (Platform.OS === 'web') window.history.back();
-    else if (blockedAction.current) navigation.dispatch(blockedAction.current);
+    if (blockedAction.current) navigation.dispatch(blockedAction.current);
   };
   const save = () => {
     if (saving.current) return;
@@ -92,7 +66,7 @@ export function EditContentSheet({ entry, onSave, onClose }: {
     saving.current = true;
     bypass.current = true;
     onSave({ title, description, color, body, rows });
-    if (Platform.OS === 'web') window.history.back();
+
   };
 
   return <>
@@ -103,14 +77,14 @@ export function EditContentSheet({ entry, onSave, onClose }: {
           <View style={styles.handle} />
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <Text style={styles.title}>{isBubble ? 'Edit Bubble' : isChecklist ? 'Edit checklist' : 'Edit note'}</Text>
-            <Text style={styles.intro}>Your changes will appear in this demo collection.</Text>
+            <Text style={styles.intro}>Your changes will appear right away.</Text>
             <Text style={styles.label}>Title {isBubble ? '*' : '(optional)'}</Text>
             <TextInput accessibilityLabel={isBubble ? 'Bubble title' : isChecklist ? 'Checklist title' : 'Note title'} style={styles.input} placeholder={isBubble ? 'Give it a name' : isChecklist ? 'Untitled checklist' : 'Untitled note'} placeholderTextColor={colors.muted} value={title} onChangeText={(value) => { setTitle(value); setError(''); }} maxLength={isBubble ? 80 : 100} />
             {isBubble ? <>
               <Text style={styles.label}>Description (optional)</Text>
               <TextInput accessibilityLabel="Bubble description" style={[styles.input, styles.description]} multiline textAlignVertical="top" value={description} onChangeText={setDescription} maxLength={280} />
               <Text style={styles.label}>Color</Text>
-              <View style={styles.swatches}>{bubblePalette.map((option) => <Pressable key={option.name} accessibilityRole="button" accessibilityLabel={`${option.name} color${color === option.value ? ', selected' : ''}`} onPress={() => setColor(option.value)} style={[styles.swatch, { backgroundColor: option.value }, color === option.value && styles.swatchSelected]}><Text style={styles.swatchCheck}>{color === option.value ? '✓' : ''}</Text></Pressable>)}</View>
+              <View style={styles.swatches}>{bubblePalette.map((option) => <Pressable key={option.name} accessibilityRole="button" accessibilityLabel={`${option.name} color${color === option.value ? ', selected' : ''}`} onPress={() => setColor(option.value)} style={[styles.swatch, { backgroundColor: themedAvatarColor(option.value, mode) }, color === option.value && styles.swatchSelected]}><Text style={styles.swatchCheck}>{color === option.value ? '✓' : ''}</Text></Pressable>)}</View>
             </> : isChecklist ? <>
               <Text style={styles.label}>Items *</Text>
               <ChecklistEditorRows rows={rows} onChange={(next) => { setRows(next); setError(''); }} />

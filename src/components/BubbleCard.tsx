@@ -1,3 +1,6 @@
+import { themedAvatarColor } from '../theme/appearance';
+import { useTheme } from '../theme/Theme';
+import type { ThemeColors } from '../theme/appearance';
 import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CoverPhoto } from './CoverPhoto';
@@ -5,9 +8,11 @@ import { BubbleSheen } from './BubbleSheen';
 import { PinnedMarker } from './PinnedMarker';
 import { useContent } from '../state/Content';
 import type { Bubble } from '../data/sample';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
 
 export function BubbleCard({ bubble, pinned, onOpenActions }: { bubble: Bubble; pinned: boolean; onOpenActions: () => void }) {
+  const { colors, mode } = useTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const { bubbleCountLabel } = useContent();
   const { width } = useWindowDimensions();
@@ -15,28 +20,29 @@ export function BubbleCard({ bubble, pinned, onOpenActions }: { bubble: Bubble; 
   const photoHeight = Math.max(115, Math.min(260, columnWidth * bubble.cardImageRatio));
   const webContextMenu = Platform.OS === 'web' ? { onContextMenu: (event: { preventDefault: () => void }) => { event.preventDefault(); onOpenActions(); } } : {};
   return (
-    <Pressable
+    <View style={styles.card}><Pressable
       {...webContextMenu}
       accessibilityRole="button"
       accessibilityLabel={`Open ${bubble.title} Bubble`}
       onPress={() => router.push(`/bubble/${bubble.id}`)}
       onLongPress={onOpenActions}
       delayLongPress={450}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      style={({ pressed }) => [pressed && styles.pressed]}
     >
-      {bubble.cover ? <CoverPhoto source={bubble.cover} style={[styles.photo, { height: photoHeight }]} /> : <View style={[styles.photo, styles.defaultCover, { height: photoHeight, backgroundColor: bubble.color ?? colors.lavender }]}><Text style={styles.defaultCoverIcon}>◌</Text></View>}
-      <View style={[styles.caption, { backgroundColor: bubble.color ?? colors.lavender }]}>
+      {bubble.cover ? <CoverPhoto source={bubble.cover} style={[styles.photo, { height: photoHeight }]} /> : <View style={[styles.photo, styles.defaultCover, { height: photoHeight, backgroundColor: bubble.color ? themedAvatarColor(bubble.color, mode) : colors.lavender }]}><Text style={styles.defaultCoverIcon}>◌</Text></View>}
+      <View style={[styles.caption, { backgroundColor: bubble.color ? themedAvatarColor(bubble.color, mode) : colors.lavender }]}>
         <Text style={styles.marker}>◌ BUBBLE</Text>
         <Text style={styles.title} numberOfLines={2}>{bubble.title}</Text>
         <Text style={styles.count} numberOfLines={2}>{bubbleCountLabel(bubble.id)}</Text>
       </View>
       <BubbleSheen id={bubble.id} />
-      {pinned && <PinnedMarker title={`${bubble.title} Bubble`} onPress={onOpenActions} />}
     </Pressable>
+      {pinned && <PinnedMarker title={`${bubble.title} Bubble`} onPress={onOpenActions} />}
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: { width: '100%', borderRadius: 36, overflow: 'hidden', backgroundColor: colors.lavender, shadowColor: colors.action, shadowOpacity: 0.1, shadowRadius: 11, shadowOffset: { width: 0, height: 5 }, elevation: 2 },
   pressed: { opacity: 0.76, transform: [{ scale: 0.985 }] },
   photo: { width: '100%' },

@@ -1,3 +1,7 @@
+import { usePins } from '../state/Pins';
+import { pinnedFirst } from '../utils/dashboard';
+import { useTheme } from '../theme/Theme';
+import type { ThemeColors } from '../theme/appearance';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,12 +11,17 @@ import { ProfileAvatar } from '../components/ProfileAvatar';
 import { useContent } from '../state/Content';
 import { useProfile } from '../state/Profile';
 import type { CollectionEntry } from '../data/sample';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
 
 export default function HomeScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
-  const { childBubbles } = useContent();
+  const { childBubbles, items, bubbles, storageError } = useContent();
   const { profile } = useProfile();
+  const { pinsFor } = usePins();
+  const pinKeys = new Set(bubbles.flatMap((bubble) => pinsFor(bubble.id)));
+  const pinned = pinnedFirst(items, pinKeys).filter((item) => pinKeys.has(`file:${item.id}`));
   const rootBubbles = childBubbles(null);
   const entries: CollectionEntry[] = rootBubbles.map((value) => ({ kind: 'bubble', value }));
   return (
@@ -24,9 +33,12 @@ export default function HomeScreen() {
           <Pressable accessibilityRole="button" accessibilityLabel="Open your profile" onPress={() => router.push('/you')} style={styles.avatarButton}><ProfileAvatar profile={profile} size={42} /></Pressable>
         </View>
 
-        <Text style={styles.heading} numberOfLines={2}>Good morning, {profile.displayName}.</Text>
+        <Text style={styles.heading} numberOfLines={2}>Welcome back, {profile.displayName.trim() || 'friend'}.</Text>
         <Text style={styles.intro}>Your thoughts and favorite things, all in one place.</Text>
 
+        {storageError ? <Text accessibilityRole="alert" style={[styles.intro, { color: colors.text }]}>{storageError}</Text> : null}
+        <Text accessibilityRole="header" style={styles.dashboardTitle}>Pinned</Text>
+        {pinned.length ? <CollectionGrid entries={pinned.map((value) => ({ kind: 'file', value }))} scopeId="root" respectEntryScopes /> : <Text style={styles.sectionSubtitle}>Keep favorites close. Open a Bubble and pin a note or list from its options.</Text>}
         <View style={styles.sectionHeading}>
           <View>
             <Text style={styles.sectionTitle}>Your Bubbles</Text>
@@ -35,15 +47,16 @@ export default function HomeScreen() {
           <Text style={styles.sectionCount}>{rootBubbles.length}</Text>
         </View>
         {entries.length ? <CollectionGrid entries={entries} scopeId="root" /> : <View style={styles.empty}><Text style={styles.emptyIcon}>✧</Text><Text style={styles.emptyTitle}>Nothing here yet</Text><Text style={styles.emptyText}>Make a Bubble to keep your next thought.</Text></View>}
-        <Text style={styles.demo}>Demo data · New entries reset when the app restarts.</Text>
+        <Text style={styles.demo}>Stored in this browser · Search stays on your device.</Text>
       </ScrollView>
       <BottomNavigation active="home" />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
+  dashboardTitle: { color: colors.text, fontSize: 21, fontWeight: '700', marginTop: 22, marginBottom: 14 },
   content: { paddingHorizontal: spacing.page, paddingBottom: 28 },
   topline: { height: 52, flexDirection: 'row', alignItems: 'center', marginBottom: 13 },
   logo: { width: 33, height: 32, marginRight: 7 },
@@ -53,7 +66,7 @@ const styles = StyleSheet.create({
   avatarButton: { marginLeft: 'auto', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   heading: { color: colors.text, fontSize: 27, lineHeight: 33, fontWeight: '700', letterSpacing: -0.5 },
   intro: { color: colors.muted, fontSize: 14, lineHeight: 21, marginTop: 5, marginBottom: 25, maxWidth: 340 },
-  sectionHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  sectionHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 28, marginBottom: 14 },
   sectionTitle: { color: colors.text, fontSize: 24, fontWeight: '700' },
   sectionSubtitle: { color: colors.muted, fontSize: 14, marginTop: 5 },
   sectionCount: { color: colors.action, backgroundColor: colors.lavender, overflow: 'hidden', borderRadius: 15, paddingHorizontal: 10, paddingVertical: 5, fontWeight: '700' },

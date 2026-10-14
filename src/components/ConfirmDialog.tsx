@@ -1,5 +1,6 @@
+import { useTheme } from '../theme/Theme';
+import type { ThemeColors } from '../theme/appearance';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../theme/tokens';
 
 export function ConfirmDialog({ visible, title, message, confirmLabel, onConfirm, onCancel, destructive = true, embedded = false }: {
   visible: boolean;
@@ -11,6 +12,8 @@ export function ConfirmDialog({ visible, title, message, confirmLabel, onConfirm
   destructive?: boolean;
   embedded?: boolean;
 }) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   if (!visible) return null;
   const content = <View style={[styles.scrim, embedded && StyleSheet.absoluteFill]}>
       <View accessibilityRole="alert" style={styles.dialog}>
@@ -23,7 +26,7 @@ export function ConfirmDialog({ visible, title, message, confirmLabel, onConfirm
   return embedded ? content : <Modal visible transparent animationType="fade" onRequestClose={onCancel}>{content}</Modal>;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   scrim: { flex: 1, backgroundColor: 'rgba(52,46,56,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   dialog: { width: '100%', maxWidth: 390, backgroundColor: colors.surface, borderRadius: 26, padding: 22, borderWidth: 1, borderColor: colors.border },
   title: { color: colors.text, fontSize: 21, fontWeight: '700', marginBottom: 10 },

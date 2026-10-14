@@ -1,22 +1,23 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { themedAvatarColor } from '../theme/appearance';
+import { useTheme } from '../theme/Theme';
+import type { ThemeColors } from '../theme/appearance';
+import { useState } from 'react';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import type { Profile } from '../state/Profile';
-import { colors } from '../theme/tokens';
-
-export function profileInitials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return '•';
-  const first = Array.from(parts[0])[0] ?? '';
-  const last = parts.length > 1 ? Array.from(parts[parts.length - 1])[0] ?? '' : '';
-  return `${first}${last}`.toLocaleUpperCase();
-}
+import { profileInitials } from '../utils/profile';
+export { profileInitials } from '../utils/profile';
 
 export function ProfileAvatar({ profile, size = 44 }: { profile: Profile; size?: number }) {
-  return <View accessibilityLabel={`${profile.displayName || 'Profile'} avatar`} style={[styles.avatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: profile.avatarColor }]}>
-    <Text style={[styles.initials, { fontSize: size * 0.39 }]}>{profileInitials(profile.displayName)}</Text>
+  const { colors, mode } = useTheme();
+  const styles = createStyles(colors);
+  const [failedUri, setFailedUri] = useState<string | undefined>();
+  const showImage = profile.imageUri && profile.imageUri !== failedUri;
+  return <View accessible accessibilityLabel={`${profile.displayName || 'Profile'} avatar`} style={[styles.avatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: themedAvatarColor(profile.avatarColor, mode) }]}>
+    {showImage ? <Image source={{ uri: profile.imageUri }} onError={() => setFailedUri(profile.imageUri)} accessible={false} resizeMode="cover" style={StyleSheet.absoluteFill} /> : <Text style={[styles.initials, { fontSize: size * 0.39 }]}>{profile.avatarEmoji || profileInitials(profile.displayName)}</Text>}
   </View>;
 }
 
-const styles = StyleSheet.create({
-  avatar: { alignItems: 'center', justifyContent: 'center' },
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  avatar: { overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   initials: { color: colors.action, fontWeight: '700' },
 });

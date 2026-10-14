@@ -1,7 +1,7 @@
+import { useLocalState } from '../storage/useLocalState';
 import { createContext, useContext, useMemo, useRef, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import type { ImageSourcePropType } from 'react-native';
-import { bubbles as seedBubbles, items as seedItems } from '../data/sample';
 import type { Bubble, ChecklistRow, CollectionEntry, SampleItem } from '../data/sample';
 
 type NewBubble = { title: string; description: string; parentId: string | null; color: string; cover?: ImageSourcePropType; cardImageRatio?: number };
@@ -12,6 +12,8 @@ type NewChecklist = ChecklistChanges & { bubbleId: string };
 type BubbleChanges = { title: string; description: string; color: string };
 type NoteChanges = { title: string; body: string };
 type ContentContextValue = {
+  hydrated: boolean;
+  storageError: string | null;
   bubbles: Bubble[];
   items: SampleItem[];
   bubbleById: (id: string) => Bubble | undefined;
@@ -35,14 +37,16 @@ type ContentContextValue = {
 const ContentContext = createContext<ContentContextValue | null>(null);
 
 export function ContentProvider({ children }: PropsWithChildren) {
-  const [bubbles, setBubbles] = useState<Bubble[]>(() => [...seedBubbles]);
-  const [items, setItems] = useState<SampleItem[]>(() => [...seedItems]);
+  const [bubbles, setBubbles, bubblesError, bubblesLoaded] = useLocalState<Bubble[]>('bubble.bubbles.v1', () => [], (value): value is Bubble[] => Array.isArray(value) && value.every((entry) => entry && typeof entry.id === 'string' && typeof entry.title === 'string' && typeof entry.order === 'number'));
+  const [items, setItems, itemsError, itemsLoaded] = useLocalState<SampleItem[]>('bubble.items.v1', () => [], (value): value is SampleItem[] => Array.isArray(value) && value.every((entry) => entry && typeof entry.id === 'string' && typeof entry.bubbleId === 'string' && typeof entry.title === 'string' && typeof entry.body === 'string' && typeof entry.order === 'number' && ['NOTE', 'PHOTO', 'CHECKLIST'].includes(entry.type) && (entry.rows === undefined || (Array.isArray(entry.rows) && entry.rows.every((row: { text?: unknown; done?: unknown }) => row && typeof row.text === 'string' && typeof row.done === 'boolean')))));
   const sequence = useRef(0);
 
   const value = useMemo<ContentContextValue>(() => {
     const childBubbles = (parentId: string | null) => bubbles.filter((bubble) => bubble.parentId === parentId);
     const bubbleItems = (bubbleId: string) => items.filter((item) => item.bubbleId === bubbleId);
     return {
+      hydrated: bubblesLoaded && itemsLoaded,
+      storageError: bubblesError || itemsError,
       bubbles,
       items,
       bubbleById: (id) => bubbles.find((bubble) => bubble.id === id),
@@ -70,7 +74,7 @@ export function ContentProvider({ children }: PropsWithChildren) {
         const cleanBody = body.trim();
         const item: SampleItem = {
           id: `new-note-${Date.now()}-${++sequence.current}`,
-          bubbleId, type: 'NOTE', order: Date.now() + sequence.current / 1000,
+          createdAt: Date.now(), updatedAt: Date.now(), bubbleId, type: 'NOTE', order: Date.now() + sequence.current / 1000,
           title: title.trim() || 'Untitled note',
           preview: cleanBody.replace(/\s+/g, ' ').slice(0, 160),
           body: cleanBody, meta: 'Note · Just now',
@@ -81,7 +85,7 @@ export function ContentProvider({ children }: PropsWithChildren) {
       createPhoto: ({ title, description, bubbleId, image, cardImageRatio }) => {
         const item: SampleItem = {
           id: `new-photo-${Date.now()}-${++sequence.current}`,
-          bubbleId, type: 'PHOTO', order: Date.now() + sequence.current / 1000,
+          createdAt: Date.now(), updatedAt: Date.now(), bubbleId, type: 'PHOTO', order: Date.now() + sequence.current / 1000,
           title: title.trim() || 'Untitled photo',
           preview: description.trim(), body: description.trim(),
           meta: 'Photo · Just now', image, cardImageRatio,
@@ -92,7 +96,7 @@ export function ContentProvider({ children }: PropsWithChildren) {
       createChecklist: ({ title, rows, bubbleId }) => {
         const item: SampleItem = {
           id: `new-checklist-${Date.now()}-${++sequence.current}`,
-          bubbleId, type: 'CHECKLIST', order: Date.now() + sequence.current / 1000,
+          createdAt: Date.now(), updatedAt: Date.now(), bubbleId, type: 'CHECKLIST', order: Date.now() + sequence.current / 1000,
           title: title.trim() || 'Untitled checklist', preview: '', body: '',
           meta: 'Checklist · Just now', rows: rows.filter((row) => row.text.trim()).map((row) => ({ ...row })),
         };
@@ -104,15 +108,15 @@ export function ContentProvider({ children }: PropsWithChildren) {
       updateNote: (id, changes) => setItems((current) => current.map((item) => {
         if (item.id !== id || item.type !== 'NOTE') return item;
         const body = changes.body.trim();
-        return { ...item, title: changes.title.trim() || 'Untitled note', body, preview: body.replace(/\s+/g, ' ').slice(0, 160) };
+        return { ...item, updatedAt: Date.now(), title: changes.title.trim() || 'Untitled note', body, preview: body.replace(/\s+/g, ' ').slice(0, 160) };
       })),
       updateChecklist: (id, changes) => setItems((current) => current.map((item) =>
         item.id === id && item.type === 'CHECKLIST'
-          ? { ...item, title: changes.title.trim() || 'Untitled checklist', rows: changes.rows.filter((row) => row.text.trim()).map((row) => ({ ...row })) }
+          ? { ...item, updatedAt: Date.now(), title: changes.title.trim() || 'Untitled checklist', rows: changes.rows.filter((row) => row.text.trim()).map((row) => ({ ...row })) }
           : item)),
       toggleChecklistRow: (itemId, rowId) => setItems((current) => current.map((item) =>
         item.id === itemId && item.type === 'CHECKLIST'
-          ? { ...item, rows: (item.rows ?? []).map((row) => row.id === rowId ? { ...row, done: !row.done } : row) }
+          ? { ...item, updatedAt: Date.now(), rows: (item.rows ?? []).map((row) => row.id === rowId ? { ...row, done: !row.done } : row) }
           : item)),
       deleteBubble: (id) => {
         const descendants = new Set([id]);
@@ -132,7 +136,7 @@ export function ContentProvider({ children }: PropsWithChildren) {
       deleteNote: (id) => setItems((current) => current.filter((item) => item.id !== id || item.type !== 'NOTE')),
       deleteChecklist: (id) => setItems((current) => current.filter((item) => item.id !== id || item.type !== 'CHECKLIST')),
     };
-  }, [bubbles, items]);
+  }, [bubbles, items, bubblesError, itemsError, bubblesLoaded, itemsLoaded]);
 
   return <ContentContext.Provider value={value}>{children}</ContentContext.Provider>;
 }
