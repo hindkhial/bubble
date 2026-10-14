@@ -26,8 +26,7 @@ class BackendIntegrationTest {
 
     @BeforeAll
     static void start() {
-        context = new SpringApplicationBuilder(BubbleApplication.class)
-                .profiles("test").run();
+        context = PostgresTestDatabase.start(BubbleApplication.class);
         base = "http://localhost:" + ((WebServerApplicationContext) context).getWebServer().getPort();
     }
 
