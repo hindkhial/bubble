@@ -1,0 +1,7 @@
+server:
+  port: 0
+bubble:
+  cors:
+    allowed-origins: http://localhost:8081
+  http:
+    max-request-bytes: 1024
