@@ -67,8 +67,8 @@ This uses generated in-memory fixtures and no real browser data. It verifies the
 
 ## Current results and limitations
 
-- Frontend: 33 unit tests pass; TypeScript checks pass.
-- Backend: 56 tests pass, zero failures/errors/skips; executable JAR packaging passes with real PostgreSQL/Testcontainers.
+- Frontend: 40 unit tests pass; TypeScript checks pass.
+- Backend: 59 tests pass, zero failures/errors/skips; executable JAR packaging passes with real PostgreSQL/Testcontainers.
 - Live TypeScript/Spring/PostgreSQL check passes with isolated data.
 - Expo web, iOS and Android exports pass.
 - Browser walkthrough: local Bubble/note creation and refresh; registration/sign-in; account note creation/editing/direct-refresh restoration and case-insensitive body search; profile/bio and dark-mode/accent persistence; retained account draft during a stopped-backend save; mode switching with local-original preservation; and local editing/refresh with the backend stopped were verified on a separate test origin. These are walkthrough checks, not Playwright runner passes. Complete internet-offline browser reload/restart and the full UI checklist/transfer matrix remain unverified.
@@ -80,3 +80,5 @@ This uses generated in-memory fixtures and no real browser data. It verifies the
 - Search now waits for a completed response before showing a no-results state, and distinguishes request failure or an unavailable session from an empty result. A browser regression scenario is included but awaits execution with the rest of the suite.
 
 In restricted environments, set `TMPDIR` to a writable directory for Expo/Playwright and `JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=/absolute/writable/path` for Maven and forked Java tests. These are environment workarounds, not application changes. A temporary-directory fix does not resolve the separate Chromium launch restriction.
+
+Performance regression checks and synthetic benchmark commands are documented in [PERFORMANCE.md](PERFORMANCE.md).

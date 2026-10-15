@@ -21,10 +21,11 @@ export class ApiClient {
     if (!this.tokenRequest) this.tokenRequest = this.request<{token: string}>('GET', '/auth/csrf').then(value => { this.csrf = value.token; return value.token; }).finally(() => { this.tokenRequest = null; });
     return this.tokenRequest;
   }
-  async request<T>(method: string, path: string, input?: unknown): Promise<T> {
+  async request<T>(method: string, path: string, input?: unknown, signal?: AbortSignal): Promise<T> {
     if(this.configurationError)throw new ApiError('Account API URL is invalid. Local mode remains available.');
     if (!path.startsWith('/') || path.startsWith('//')) throw new Error('Invalid API path.');
     const mutation = method !== 'GET';
+    if (signal?.aborted) throw new DOMException('Request cancelled.', 'AbortError');
     const headers: Record<string, string> = { Accept: 'application/json' };
     if (mutation) headers['X-CSRF-TOKEN'] = await this.token();
     if (input !== undefined) headers['Content-Type'] = 'application/json';
@@ -32,9 +33,10 @@ export class ApiClient {
     const timeout = setTimeout(() => controller.abort(), 15000);
     let response: Response;
     try {
-      response = await this.fetcher(this.base + '/api/v1' + path, { method, headers, credentials: 'include', cache: 'no-store', signal: controller.signal, ...(input === undefined ? {} : { body: JSON.stringify(input) }) });
+      response = await this.fetcher(this.base + '/api/v1' + path, { method, headers, credentials: 'include', cache: 'no-store', signal: signal ? AbortSignal.any([controller.signal,signal]) : controller.signal, ...(input === undefined ? {} : { body: JSON.stringify(input) }) });
     } catch {
       clearTimeout(timeout);
+      if (!mutation && signal?.aborted) throw new DOMException('Request cancelled.', 'AbortError');
       throw new ApiError(mutation ? 'Connection lost. The change may have reached your account. Refresh before trying again; your draft is still here.' : 'Cannot reach your account. Check the connection and try again.', 0, mutation);
     }
     if (!response.ok) {

@@ -47,6 +47,18 @@ public class ContentService {
     }
     @Transactional(readOnly=true)
     public ChecklistView list(UUID owner,UUID id) { return list(lists.findByIdAndUser_Id(id,owner).orElseThrow(ResourceNotFoundException::new)); }
+    @Transactional(readOnly=true)
+    public PageView<ChecklistView> listsWithItems(UUID owner,int page,int size,String sort,String direction,Boolean pinned,String q) {
+        if (size > 20) throw new IllegalArgumentException();
+        var result=lists.findAll(ContentQueries.owned(owner,pinned,q,true),ContentQueries.page(page,size,sort,direction));
+        var ids=result.getContent().stream().map(Checklist::getId).toList();
+        var grouped=new HashMap<UUID,List<ItemView>>();
+        if (!ids.isEmpty()) for(var row:items.findByChecklist_IdInAndChecklist_User_IdOrderByChecklist_IdAscPositionAsc(ids,owner))
+            grouped.computeIfAbsent(row.getChecklist().getId(),ignored -> new ArrayList<>()).add(item(row));
+        var content=result.getContent().stream().map(value -> new ChecklistView(value.getId(),value.getTitle(),value.isPinned(),
+                value.getCreatedAt(),value.getUpdatedAt(),grouped.getOrDefault(value.getId(),List.of()))).toList();
+        return new PageView<>(content,page,size,result.getTotalElements(),result.getTotalPages());
+    }
     public ChecklistView createList(UUID owner,NewChecklist input) {
         var value=new Checklist(users.getReferenceById(owner),input.title().trim());
         value.setPinned(Boolean.TRUE.equals(input.pinned())); return list(lists.saveAndFlush(value));

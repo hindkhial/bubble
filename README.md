@@ -25,3 +25,7 @@ Open **You → Security** or the workspace link to create an account, sign in, r
 ## Testing
 
 See [TESTING.md](TESTING.md) for isolated browser tests, full-stack checks and current verification limits.
+
+## Performance
+
+See [PERFORMANCE.md](PERFORMANCE.md) for measured improvements, repeatable synthetic benchmarks and remaining limits.

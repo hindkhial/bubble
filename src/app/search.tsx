@@ -24,8 +24,9 @@ export default function SearchScreen() {
     setRemote(null);setSearchError('');
     if(account.mode!=='account'||!account.user||!query.trim())return;
     let active=true;
-    const timer=setTimeout(()=>{void account.repository.content(query).then(value=>{if(active)setRemote(value.items);}).catch(error=>{if(active){setSearchError('Search could not finish. Check your connection and try again.');account.reportError(error);}});},250);
-    return ()=>{active=false;clearTimeout(timer);};
+    const controller=new AbortController();
+    const timer=setTimeout(()=>{void account.repository.content(query,controller.signal).then(value=>{if(active)setRemote(value.items);}).catch(error=>{if(active){setSearchError('Search could not finish. Check your connection and try again.');account.reportError(error);}});},250);
+    return ()=>{active=false;clearTimeout(timer);controller.abort();};
   },[query,account.mode,account.user?.id,account.items]);
   const searching = account.mode==='account' && !!account.user && !!query.trim() && remote===null && !searchError;
   const unavailable = account.mode==='account' && !account.user;
