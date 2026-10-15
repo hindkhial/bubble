@@ -1,6 +1,6 @@
 # Bubble — local and account workspaces
 
-An Expo / React Native / TypeScript notes and lists application, with a Spring Boot/PostgreSQL account backend. This integration lives on `integration/account-workspaces`; the original `frontend` and `backend` branches are preserved. See [integration setup, safety rules and test results](INTEGRATION.md).
+An Expo / React Native / TypeScript notes and lists application, with a Spring Boot/PostgreSQL account backend. This integration lives on `integration`; the original `frontend` and `backend` branches are preserved. See [integration setup, safety rules and test results](INTEGRATION.md).
 
 ## Run and check
 

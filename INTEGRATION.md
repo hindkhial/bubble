@@ -28,7 +28,7 @@ Copying is sequential per item, not an all-selected-items transaction. Earlier a
 Requirements: Node.js 22.6+ (verified with 24), pnpm, Java 21, Maven 3.6.3+, Docker/PostgreSQL. Dependency installation uses the existing lockfile.
 
 ```sh
-git switch integration/account-workspaces
+git switch integration
 pnpm install --frozen-lockfile
 # Export database credentials outside version control; do not regenerate credentials for an existing volume.
 export DB_USERNAME=your_local_role
