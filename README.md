@@ -1,6 +1,6 @@
 # Bubble — local and account workspaces
 
-An Expo / React Native / TypeScript notes and lists application, with a Spring Boot/PostgreSQL account backend. This integration lives on `integration/milestone-07`; the original `frontend` and `backend` branches are preserved. See [integration setup, safety rules and test results](INTEGRATION.md).
+An Expo / React Native / TypeScript notes and lists application, with a Spring Boot/PostgreSQL account backend. This integration lives on `integration/account-workspaces`; the original `frontend` and `backend` branches are preserved. See [integration setup, safety rules and test results](INTEGRATION.md).
 
 ## Run and check
 
@@ -8,11 +8,11 @@ Use Node.js 22.6+ and run `pnpm install`, then `pnpm web` for browser preview or
 
 Checks: `pnpm typecheck`, `pnpm test`, and `pnpm export:mobile`. No lint script is configured.
 
-## Milestone 08
+## Home, search and local storage
 
 Home keeps the personalized welcome and original Bubble grid, with pinned notes/lists using the same existing file cards. Recent Activity and hero quick-create buttons are removed; creation remains in Add. Search works locally across Bubble titles/descriptions, note/photo titles and text, previews, metadata, and checklist items. All/Bubbles/Notes/Lists filters, clear, empty states, pinned-first results, and the original Bubble/file card grid are used. New checklists have an optional Add title control and a compact plus button; completion checkboxes appear only when editing existing lists.
 
-Versioned browser-local storage keys keep content, Bubbles, pins, profile customization, and Appearance mode/accent between refreshes. Storage code lives in `src/storage`; it can be replaced independently of the UI. Failed reads preserve the raw stored value instead of overwriting it; failed writes show an error and retain current session state. In local mode, nothing is sent to a server. Account mode is separately selected and never uploads local content on sign-in. Browser localStorage has size limits and is specific to this browser and origin. Clearing browser data removes it. Native Expo currently uses session state only; browser persistence is the scope of this milestone.
+Versioned browser-local storage keys keep content, Bubbles, pins, profile customization, and Appearance mode/accent between refreshes. Storage code lives in `src/storage`; it can be replaced independently of the UI. Failed reads preserve the raw stored value instead of overwriting it; failed writes show an error and retain current session state. In local mode, nothing is sent to a server. Account mode is separately selected and never uploads local content on sign-in. Browser localStorage has size limits and is specific to this browser and origin. Clearing browser data removes it. Native Expo currently uses session state only; persistent storage currently targets the browser.
 
 New browsers begin empty. Existing stored data is not replaced with sample data. New notes/photos/checklists receive creation and modification timestamps; edits and checklist toggles update modification time. Legacy items without timestamps retain stable ordering; historical dates are not invented.
 

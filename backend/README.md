@@ -1,6 +1,6 @@
-# Bubble backend — Milestones 01–06
+# Bubble backend
 
-Java 21 and Spring Boot 4.1.1, with Spring MVC, Jakarta Bean Validation, Maven, JUnit **5** and Mockito. Milestone 02 adds PostgreSQL, Flyway and JPA repositories. Milestone 03 adds session authentication. Milestone 04 adds notes/checklists APIs; Milestone 05 adds profile and preferences management. There is no frontend connection or deployment. Actuator is intentionally omitted: the small public health endpoint is sufficient and no internal management endpoints are exposed.
+Java 21 and Spring Boot 4.1.1, with Spring MVC, Jakarta Bean Validation, Maven, JUnit **5** and Mockito. PostgreSQL, Flyway and Spring Data JPA provide persistence. Session authentication protects notes, checklists, profile and preferences APIs. Browser account integration is documented in [the integration guide](../INTEGRATION.md). No deployment has been performed. Actuator is intentionally omitted: the small public health endpoint is sufficient and no internal management endpoints are exposed.
 
 ## Requirements
 
@@ -8,7 +8,7 @@ Java 21 and Spring Boot 4.1.1, with Spring MVC, Jakarta Bean Validation, Maven, 
 - Maven **3.6.3+** (verified with 3.9.11).
 - Access to Maven Central for the initial dependency download. Application startup now requires PostgreSQL. Integration tests use a disposable PostgreSQL container and require Docker (or the explicit disposable PostgreSQL option below).
 
-The Maven Enforcer check requires Java 21. Spring Boot's current stable line supports Java 21; see [Spring Boot requirements](https://docs.spring.io/spring-boot/system-requirements.html). JUnit Jupiter is explicitly pinned to 5.14.4 because this milestone requests JUnit 5, rather than Boot 4.1's JUnit 6 default. Integration tests use a real embedded server and JDK HTTP client without requiring a different JUnit version.
+The Maven Enforcer check requires Java 21. Spring Boot's current stable line supports Java 21; see [Spring Boot requirements](https://docs.spring.io/spring-boot/system-requirements.html). JUnit Jupiter is explicitly pinned to 5.14.4 for compatibility with the JUnit 5 test suite, rather than Boot 4.1's JUnit 6 default. Integration tests use a real embedded server and JDK HTTP client without requiring a different JUnit version.
 
 ## Setup and run
 
@@ -103,17 +103,14 @@ backend/
 
 Services, repositories and security packages implement persistence and authentication. The committed frontend tree is retained untouched as the shared starting snapshot. All backend changes are confined to `backend/` on the `backend` branch; do not merge into `frontend` automatically.
 
-## Planned milestones
+## Supported features
 
-1. This foundation: application setup, health, validation and errors, CORS, tests.
-2. Completed: PostgreSQL, Flyway schema migration and Spring Data JPA.
-3. Completed: Spring Security and session-based registration/login/logout. Milestone 04 adds authenticated notes/lists APIs.
-4. Frontend integration, ownership/privacy rules and a separately agreed synchronization model.
+The backend supports database migrations, session authentication, owner-scoped notes and checklists, profile and appearance preferences, and browser account integration.
 
-No JWTs or cloud services are introduced. Rate limiting, production TLS/deployment hardening and asynchronous uploads remain future work.
+No JWTs or cloud services are introduced. Process-local authentication rate limiting is implemented; production TLS/deployment hardening and asynchronous uploads remain future work.
 
 
-## Milestone 02 — PostgreSQL and JPA
+## PostgreSQL and JPA
 
 ### Run PostgreSQL locally
 
@@ -150,7 +147,7 @@ All IDs are UUIDs and timestamps are PostgreSQL `TIMESTAMPTZ` / Java `Instant`. 
 
 `new User(email, displayName)` creates its profile in the same persistence operation. The database guarantees at most one profile per user; raw administrative SQL must preserve the application invariant of creating both together. Cascade **PERSIST/MERGE** is limited to user→profile and checklist→items. There is no cascade REMOVE or orphan removal. All foreign keys use `ON DELETE RESTRICT`, so parent deletion cannot silently remove personal data. Explicit deletion/reordering workflows will be designed with future services; reordering must avoid temporarily duplicated positions.
 
-`password_hash` remains nullable for legacy Milestone 02 records. Milestone 03 registration sets a controlled BCrypt hash; legacy users without hashes cannot log in. No plaintext password field exists. Entities have no generated `toString` that could print private note/password data and are not exposed through controllers. Database conflict responses are sanitized; SQL/bind/error logging is disabled to avoid accidental row-content disclosure.
+`password_hash` remains nullable for legacy records. Registration sets a controlled BCrypt hash; legacy users without hashes cannot log in. No plaintext password field exists. Entities have no generated `toString` that could print private note/password data and are not exposed through controllers. Database conflict responses are sanitized; SQL/bind/error logging is disabled to avoid accidental row-content disclosure.
 
 ### Repositories
 
@@ -158,9 +155,9 @@ All IDs are UUIDs and timestamps are PostgreSQL `TIMESTAMPTZ` / Java `Instant`. 
 
 ### Frontend compatibility
 
-Frontend `body` maps to Note `content`; checklist row `text` maps to item `content`, `done` to `completed`, and row-array order to integer `position`. The backend persists profile `displayName` (80 chars), `bio` (160 chars), `avatarReference`, `avatarColor` and `avatarEmoji`. Pins are stored as booleans on notes/checklists. Backend UUIDs and UTC timestamps will require explicit mapping from legacy browser string IDs/epoch timestamps. No browser data is migrated or uploaded in this milestone.
+Frontend `body` maps to Note `content`; checklist row `text` maps to item `content`, `done` to `completed`, and row-array order to integer `position`. The backend persists profile `displayName` (80 chars), `bio` (160 chars), `avatarReference`, `avatarColor` and `avatarEmoji`. Pins are stored as booleans on notes/checklists. Backend UUIDs and UTC timestamps will require explicit mapping from legacy browser string IDs/epoch timestamps. No browser data is migrated or uploaded automatically.
 
-Bubbles/grouping, photo attachments, Appearance preferences and collection-scoped pin limits remain frontend-only until their backend data models are separately agreed. `avatarReference` is a resource reference, not an upload/storage API. This milestone does not silently reinterpret existing browser data or modify frontend files.
+Bubbles/grouping, photo attachments and collection-scoped pin limits remain frontend-only until their backend data models are separately agreed. `avatarReference` is a resource reference, not an upload/storage API. Local browser data is never silently reinterpreted or uploaded.
 
 ### PostgreSQL tests
 
@@ -173,13 +170,12 @@ Tests use Testcontainers 2.x with PostgreSQL 17 (`postgres:17-alpine`). They run
 
 If Docker is unavailable, provision a **dedicated disposable PostgreSQL database**, then export `BUBBLE_TEST_DB_URL`, `BUBBLE_TEST_DB_USERNAME` and `BUBBLE_TEST_DB_PASSWORD` before `mvn clean verify`. The test helper accepts only PostgreSQL URLs. Never point tests at personal/production data: tests apply migrations and insert test records. Testcontainers automatically stops/removes its disposable database; the explicitly supplied external database remains the developer's responsibility.
 
-Java/JUnit/Maven requirements from Milestone 01 remain unchanged. Milestone 02 introduced no service/controller APIs. Milestone 03 authentication is described below; no deployment or cloud infrastructure has been added.
 
-## Milestone 03 — Authentication
+## Authentication
 
 ### Browser/session design
 
-Accounts are optional for the separate offline frontend; this milestone does not connect or modify it. Authentication uses Spring Security's DAO provider and server-managed sessions, with BCrypt cost 12. Registration atomically creates User/Profile and relies on the database unique constraint to handle duplicate races. Email is trimmed and lowercased. Passwords require at least 12 Unicode characters and at most 72 UTF-8 bytes; passwords are never trimmed. Names must be nonblank and at most 80 characters.
+Accounts are optional; local browser workspaces remain separate from account workspaces. Authentication uses Spring Security's DAO provider and server-managed sessions, with BCrypt cost 12. Registration atomically creates User/Profile and relies on the database unique constraint to handle duplicate races. Email is trimmed and lowercased. Passwords require at least 12 Unicode characters and at most 72 UTF-8 bytes; passwords are never trimmed. Names must be nonblank and at most 80 characters.
 
 Production is designed for a **same-site HTTPS browser deployment**, ideally one origin with `/api` reverse-proxied to this backend. The `BUBBLE_SESSION` cookie is HttpOnly, SameSite=Lax, path `/`, Secure by default, with a 30-minute idle timeout. Only `local` and `test` disable Secure for HTTP development. Activate `prod` explicitly before deployment. Sessions are held in server memory: server restarts log users out, and multiple instances need a separately designed shared session solution.
 
@@ -227,7 +223,7 @@ Run `mvn clean verify` with Docker running. Real HTTP tests exercise the actual 
 
 No schema migration is needed: V1 already contains `password_hash`; its applied checksum is unchanged. Existing records and frontend files are preserved. Legacy users with null hashes need a future explicitly authorized password setup flow; no default credentials are assigned.
 
-Before public deployment, add and review abuse/rate limiting, account/email verification, password recovery/change, MFA policy, TLS/proxy trust configuration, least-privilege DB roles and operational session management. Duplicate registration's 409 reveals that an address is registered; login remains generic. No password reset emails, third-party login, cloud services or frontend login screens are implemented.
+Before public deployment, add and review abuse/rate limiting, account/email verification, password recovery/change, MFA policy, TLS/proxy trust configuration, least-privilege DB roles and operational session management. Duplicate registration's 409 reveals that an address is registered; login remains generic. No password reset emails, third-party login or cloud services are implemented.
 
 ### Changed files
 
@@ -243,9 +239,9 @@ Before public deployment, add and review abuse/rate limiting, account/email veri
 - `src/test/java/com/bubble/{AuthTestClient,AuthenticationIntegrationTest,BackendIntegrationTest}.java`: actual HTTP security coverage and retained regression checks.
 - `README.md`: configuration, usage and limitations.
 
-## Milestone 04 — Notes and checklists REST APIs
+## Notes and checklists REST APIs
 
-All routes below require the Milestone 03 session cookie. Every POST/PATCH/PUT/DELETE also requires the current `X-CSRF-TOKEN` header. Identity always comes from the verified security principal. Owner IDs are never accepted in request bodies. Missing and other users' resources both return the same 404. Unknown JSON properties, explicit null patch values and empty patches return 400.
+All routes below require the authenticated session cookie. Every POST/PATCH/PUT/DELETE also requires the current `X-CSRF-TOKEN` header. Identity always comes from the verified security principal. Owner IDs are never accepted in request bodies. Missing and other users' resources both return the same 404. Unknown JSON properties, explicit null patch values and empty patches return 400.
 
 | Method | Path | Description |
 | --- | --- | --- |
@@ -322,24 +318,9 @@ There are no new dependencies or migrations. The existing V1 checksum, foreign k
 
 Run `mvn clean verify` with Docker for real PostgreSQL integration tests. The new `ContentIntegrationTest` covers CRUD, persistence, timestamps, ordered items, complete/incomplete toggles, reorder rollback, ownership across every mutation, same-owner wrong-parent items, anonymous access, CSRF, invalid DTOs/query/UUIDs, pagination/pins, stable timestamp ties, literal/case-insensitive search, duplicate-free search and concurrent appends/reorders. Existing authentication and database tests remain enabled.
 
-Milestone 04 changes only:
+Limitations: search uses PostgreSQL substring scans rather than ranked/full-text indexes; deep offset pagination can be expensive. Concurrent edits can shift page membership between requests. The 1,000-item API limit and bounded request sizes constrain operations. Restore/soft-delete and offline synchronization are not implemented.
 
-- `src/main/java/com/bubble/controller/ContentController.java`
-- `src/main/java/com/bubble/dto/ContentDtos.java`
-- `src/main/java/com/bubble/service/{ContentService,ContentQueries}.java`
-- `src/main/java/com/bubble/exception/{ResourceNotFoundException,ApiExceptionHandler}.java`
-- `src/main/java/com/bubble/repository/{NoteRepository,ChecklistRepository}.java`
-- `src/main/java/com/bubble/entity/Checklist.java`
-- `src/main/java/com/bubble/config/WebConfig.java`
-- `src/main/resources/application.yml`
-- `src/test/java/com/bubble/{ContentIntegrationTest,BackendIntegrationTest}.java`
-- `README.md`
-
-Limitations: search uses PostgreSQL substring scans rather than ranked/full-text indexes; deep offset pagination can be expensive. Concurrent edits can shift page membership between requests. The 1,000-item API limit and bounded request sizes deliberately constrain operations; larger collections need a separately designed batch workflow. No frontend connection, cloud service, deployment, restore/soft-delete or offline synchronization is included.
-
-Milestone 04 verification: `mvn clean verify` passed all **34 tests**, with no failures, errors or skipped tests, against disposable PostgreSQL. Compilation and executable-jar packaging succeeded. No standalone Java linter is configured.
-
-## Milestone 05 — Profile and preferences
+## Profile and preferences
 
 These APIs reuse the existing authenticated session and CSRF security. Identity always comes from the verified principal. There are no user IDs in the routes or accepted request bodies. Unsupported JSON fields (including `userId`) return 400. Query parameters cannot select another account. Missing profile/preferences records return the same sanitized 404 format as other resources.
 
@@ -372,9 +353,9 @@ PATCH examples:
 {"avatarReference":"avatar:11111111-1111-4111-8111-111111111111"}
 ```
 
-Omitted fields are preserved. `bio:null` and `avatarReference:null` clear those fields; `bio:""` stores an empty bio. Display names cannot be null/blank and are trimmed, with an 80-character limit. Bio is at most 160 characters and is preserved as supplied. Empty patches and unsupported fields are rejected. Existing avatar color/emoji data is preserved; editing those fields is outside this milestone.
+Omitted fields are preserved. `bio:null` and `avatarReference:null` clear those fields; `bio:""` stores an empty bio. Display names cannot be null/blank and are trimmed, with an 80-character limit. Bio is at most 160 characters and is preserved as supplied. Empty patches and unsupported fields are rejected. Existing avatar color/emoji data is preserved; editing those fields is not supported by the profile API.
 
-An avatar reference is an opaque `avatar:<lowercase UUID>` identifier. It is **not a URL or path**. Arbitrary HTTP(S), file, javascript, data URLs, relative paths and raw frontend `imageUri` values are rejected. GET preserves existing legacy references; this milestone does not rewrite stored avatars. No image is fetched, uploaded, served or verified to exist. A future upload/asset API must issue references and enforce asset ownership when resolving them; clients must not turn untrusted references into direct URLs. Removing an avatar uses null, not an empty string.
+An avatar reference is an opaque `avatar:<lowercase UUID>` identifier. It is **not a URL or path**. Arbitrary HTTP(S), file, javascript, data URLs, relative paths and raw frontend `imageUri` values are rejected. GET preserves existing legacy references; stored avatars are not rewritten. No image is fetched, uploaded, served or verified to exist. A future upload/asset API must issue references and enforce asset ownership when resolving them; clients must not turn untrusted references into direct URLs. Removing an avatar uses null, not an empty string.
 
 ### Preferences format and defaults
 
@@ -386,11 +367,11 @@ Example response:
 
 PATCH `{"themeMode":"DARK"}` preserves the accent; PATCH `{"accentColor":"Dusty pink"}` preserves the mode. Theme mode accepts exactly `LIGHT`, `DARK`, or `SYSTEM`. Accent names match `src/theme/appearance.ts` exactly: `Lavender`, `Rose`, `Sage`, `Deep lavender`, `Sky blue`, `Dusty pink`, `Denim blue`. Unsupported values, lowercase theme modes, nulls and empty patches return 400.
 
-Defaults are **LIGHT / Lavender**, matching the existing frontend defaults. The frontend currently stores `light`/`dark`; a future integration must map uppercase backend values and implement system-theme resolution for `SYSTEM`. Local browser profile/appearance storage remains untouched, optional and usable offline without an account. No preferences are uploaded or synchronized by this milestone.
+Defaults are **LIGHT / Lavender**, matching the existing frontend defaults. The frontend maps uppercase backend values to its appearance model and resolves `SYSTEM` using the device color scheme. Local browser profile/appearance storage remains untouched, optional and usable offline without an account. No preferences are uploaded or synchronized automatically.
 
 ### Authentication and errors
 
-Use the session cookie on GET and PATCH. PATCH also needs the current `X-CSRF-TOKEN`; fetch a fresh token after login as documented in Milestone 03. Example:
+Use the session cookie on GET and PATCH. PATCH also needs the current `X-CSRF-TOKEN`; fetch a fresh token after login as documented in the Authentication section. Example:
 
 ```sh
 curl -b cookies.txt http://localhost:8080/api/v1/profile
@@ -416,30 +397,17 @@ Invalid DTOs return sanitized 400, missing authentication 401, invalid CSRF 403,
 
 V1 is unchanged. Apply migrations by normal application startup; do not manually reapply or edit applied migrations. Backfilled preferences use migration-time timestamps. No new dependencies, cloud services or authentication mechanisms were added.
 
-### Verification and changed files
+### Verification
 
 Run `mvn clean verify` with Docker, or the dedicated disposable external PostgreSQL configuration documented above. `SettingsIntegrationTest` uses real HTTP security and PostgreSQL to verify profile changes/clearing, strict validation, defaults, every supported preference, partial-update preservation, fresh-session/database reloads, existing avatar customization, user isolation, CSRF, anonymous access, missing records and concurrent partial updates. `PreferencesMigrationIntegrationTest` creates an isolated temporary schema, applies V1, inserts representative existing data, upgrades to V2, verifies backfill/data preservation and database constraints, and removes only its own test schema. External test roles therefore also need permission to create/drop a schema in their disposable database.
 
-Milestone 05 changes only:
+Limitations: no uploads, avatar asset resolution, profile color/emoji editing, offline synchronization, revision tokens or deployment. Purely local frontend use requires no account or server.
 
-- `src/main/java/com/bubble/controller/SettingsController.java`
-- `src/main/java/com/bubble/dto/SettingsDtos.java`
-- `src/main/java/com/bubble/entity/UserPreferences.java`
-- `src/main/java/com/bubble/repository/{ProfileRepository,UserPreferencesRepository}.java`
-- `src/main/java/com/bubble/service/{AccountService,SettingsService}.java`
-- `src/main/resources/db/migration/V2__add_user_preferences.sql`
-- `src/test/java/com/bubble/{SettingsIntegrationTest,PreferencesMigrationIntegrationTest,PersistenceIntegrationTest}.java`
-- `README.md`
-
-Limitations: no uploads, avatar asset resolution, profile color/emoji editing, frontend integration, offline synchronization, revision tokens or deployment. Existing Milestone 03 production security limitations still apply. Purely local frontend use continues to require no account or server.
-
-Milestone 05 verification: `mvn clean verify` passed all **44 tests**, with zero failures, errors or skips. PostgreSQL migration/upgrade, authentication, authorization and existing content regressions passed; compilation and executable-jar packaging succeeded. No standalone Java linter is configured.
-
-## Milestone 06 — Security review and regression coverage
+## Security review and regression coverage
 
 ### Findings and changes
 
-The initial unmodified backend passed all 44 existing tests against PostgreSQL. Milestones 01–05 are implemented: startup/migrations, adaptive BCrypt registration, same-site server sessions, CSRF/login rotation/logout invalidation, owner-scoped notes/checklists/items, transactional ordering and profile/preferences persistence. These flows were retained rather than replaced.
+The backend includes: startup/migrations, adaptive BCrypt registration, same-site server sessions, CSRF/login rotation/logout invalidation, owner-scoped notes/checklists/items, transactional ordering and profile/preferences persistence. These flows were retained rather than replaced.
 
 The review identified and fixed:
 
@@ -464,7 +432,7 @@ New validated environment settings:
 
 The address is the direct network peer. `server.forward-headers-strategy` is explicitly `none`; untrusted `Forwarded`/`X-Forwarded-For` values are not used for limiter keys. Behind a proxy, users share the proxy's budget. Do not trust arbitrary forwarding headers to bypass this restriction: design trusted proxy boundaries and edge rate limiting before deployment.
 
-Explicitly activate **prod alone** for production and terminate HTTPS at a correctly configured trusted ingress/reverse proxy. Secure cookies are enabled outside local/test. The current local profile remains the default for developer convenience; omitting the production profile is not safe deployment configuration. Direct HTTP remains available at the application connector for local/proxy use, so this milestone does not prove real TLS, certificate handling or proxy/HSTS behavior. The production integration test checks actual Secure/HttpOnly/SameSite cookie attributes but deliberately uses a raw HTTP client to inspect them. Browser integration must use HTTPS in production and refresh CSRF tokens after login/logout. Same-site cookies, explicit origins and `credentials: include` assumptions from Milestone 03 still apply.
+Explicitly activate **prod alone** for production and terminate HTTPS at a correctly configured trusted ingress/reverse proxy. Secure cookies are enabled outside local/test. The current local profile remains the default for developer convenience; omitting the production profile is not safe deployment configuration. Direct HTTP remains available at the application connector for local/proxy use, so local tests do not prove real TLS, certificate handling or proxy/HSTS behavior. The production integration test checks actual Secure/HttpOnly/SameSite cookie attributes but deliberately uses a raw HTTP client to inspect them. Browser integration must use HTTPS in production and refresh CSRF tokens after login/logout. Same-site cookies, explicit origins and `credentials: include` assumptions from the Authentication section still apply.
 
 ### Repeatable verification
 
@@ -488,7 +456,7 @@ The post-update OSV check examined **114 resolved dependency coordinates** and r
 - Sessions are in memory and disappear on restart; multi-node sessions, TLS/proxy trust and operational monitoring are still future deployment work. No deployment was performed.
 - Registration 409 can reveal whether an email is registered. Login errors remain generic. Email verification, password recovery, MFA and breached-password screening remain deferred.
 - No client revision/ETag conflict protocol exists; same-field updates remain last-applied-wins. Row locks protect transactional ordering and unrelated partial updates.
-- No frontend integration, cross-site auth policy, upload/asset resolution, offline synchronization or cloud services were introduced. Database migrations V1/V2 and existing data models were unchanged.
+- No cross-site auth policy, upload/asset resolution, offline synchronization or cloud services were introduced. Database migrations V1/V2 and existing data models were unchanged.
 - Raw malformed HTTP may be rejected by the container/ingress before application JSON handling; do not enable diagnostic container error reports in production.
 
 ### Modified files
@@ -503,6 +471,6 @@ The post-update OSV check examined **114 resolved dependency coordinates** and r
 - `scripts/audit_dependencies.py`
 - `README.md`
 
-## Milestone 07 integration branch
+## Frontend integration
 
 The dedicated integration branch connects Expo browser account mode using the existing session/CSRF APIs. See [../INTEGRATION.md](../INTEGRATION.md) for startup, privacy boundaries and validation. Two additional authenticated draft endpoints support atomic full-editor checklist saves: `POST /api/v1/checklists/with-items` (201) and `PUT /api/v1/checklists/{id}/content` (200). They accept `{title,items:[{id:null-or-existing-UUID,content,completed}]}`; omitted old rows are removed, array order is retained, IDs are owner/parent checked, and all changes roll back together. Existing item CRUD/reorder endpoints are retained. No migrations or dependencies changed. These modifications exist only on the integration branch until review.

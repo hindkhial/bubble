@@ -1,4 +1,4 @@
-# Bubble Milestone 07 — integration review
+# Bubble — integration guide
 
 ## Branch strategy and audit
 
@@ -19,7 +19,7 @@ Pre-change checks verified 12 frontend tests/type checking and all 55 backend te
 
 In the account screen, choose **Review local notes and lists**, select individual entries, then choose **Copy selected items to my account**. Nothing is uploaded just by reviewing or signing in. Photos, Bubble grouping, pins, local profile and local appearance are not copied. The result is a copy with new server UUIDs; local originals are never deleted or modified.
 
-A browser ledger scoped to API base URL and account ID records each local ID as pending before any write and complete only after an acknowledged response. Confirmed IDs are skipped on subsequent copies. Duplicate local IDs and malformed local data are rejected before uploading. Definite 4xx rejections remove the pending marker so a corrected entry can be retried explicitly; unknown outcomes remain blocked. Storage failures disable the copy rather than risking an untracked upload. If the outcome is uncertain, pending entries are blocked from automatic retries even after refresh. Inspect server content and reconcile manually; there is no automated reconciliation/reset UI in this milestone. Editing a local item after it was copied does not update its account copy.
+A browser ledger scoped to API base URL and account ID records each local ID as pending before any write and complete only after an acknowledged response. Confirmed IDs are skipped on subsequent copies. Duplicate local IDs and malformed local data are rejected before uploading. Definite 4xx rejections remove the pending marker so a corrected entry can be retried explicitly; unknown outcomes remain blocked. Storage failures disable the copy rather than risking an untracked upload. If the outcome is uncertain, pending entries are blocked from automatic retries even after refresh. Inspect server content and reconcile manually; there is no automated reconciliation/reset UI currently. Editing a local item after it was copied does not update its account copy.
 
 Copying is sequential per item, not an all-selected-items transaction. Earlier acknowledged copies remain if a later copy fails. The UI reports the failure, refreshes account content and retains the originals. Existing ledger entries are not cleared on sign-out. This protects against duplicate uploads but does not establish a permanent synchronization relationship.
 
@@ -28,7 +28,7 @@ Copying is sequential per item, not an all-selected-items transaction. Earlier a
 Requirements: Node.js 22.6+ (verified with 24), pnpm, Java 21, Maven 3.6.3+, Docker/PostgreSQL. Dependency installation uses the existing lockfile.
 
 ```sh
-git switch integration/milestone-07
+git switch integration/account-workspaces
 pnpm install --frozen-lockfile
 # Export database credentials outside version control; do not regenerate credentials for an existing volume.
 export DB_USERNAME=your_local_role
@@ -84,7 +84,7 @@ The live script creates a fictional disposable account and generated fixtures; i
 
 Final validation results are recorded below. No lint script is configured; whitespace checks and TypeScript checks were run instead of claiming ESLint coverage. Native exports validate bundling, not on-device account functionality.
 
-Browser checks verified real registration/login, note creation, persistence/session restoration after refresh, separation of a disposable local original on sign-in, mode switching and local preservation after refresh. The copy review/selection screen was inspected. **Submitting the selected local note in the browser was blocked by automatic approval review and was not executed.** The earlier live generated-fixture test and mocked copy safety tests passed; they are separate from that unexecuted browser submission. Approval is needed before completing that one browser copy check.
+Browser checks verified real registration/login, note creation, persistence/session restoration after refresh, separation of a disposable local original on sign-in, mode switching and local preservation after refresh. The copy review/selection screen was inspected. Manual browser submission of selected local content remains unverified. Generated-fixture API checks and mocked copy safety tests passed.
 
 ## Changed files
 
@@ -108,6 +108,6 @@ No dependencies were added. No original branch refs were modified, no real local
 - Frontend: **31/31 tests passed**, no skips; TypeScript `--noEmit` passed.
 - Backend: **56/56 tests passed**, no failures/errors/skips; Maven executable-jar packaging succeeded using real PostgreSQL/Testcontainers.
 - Expo web, iOS and Android exports passed. The first export failed because the default system temporary directory was not writable; setting `TMPDIR` to a writable workspace directory resolved it. No native device/simulator account test is claimed.
-- A real TypeScript client/Spring/PostgreSQL smoke run passed registration, failed/successful login, session retrieval, notes CRUD/pin/search, atomic checklist order/completion, profile/avatar and SYSTEM appearance updates, generated-fixture copying/deduplication/local-original preservation, delete and logout. This run occurred before the separate manual browser copy submission was blocked; it did not read real browser data.
-- Browser: registration/login, note creation, refresh persistence/session restoration, no automatic upload on sign-in, mode switching and local-original persistence passed. The selected-note copy submission remains unexecuted pending approval.
+- A real TypeScript client/Spring/PostgreSQL smoke run passed registration, failed/successful login, session retrieval, notes CRUD/pin/search, atomic checklist order/completion, profile/avatar and SYSTEM appearance updates, generated-fixture copying/deduplication/local-original preservation, delete and logout. This check used generated fixtures and did not read real browser data.
+- Browser: registration/login, note creation, refresh persistence/session restoration, no automatic upload on sign-in, mode switching and local-original persistence passed. Manual selected-note copy submission remains unverified.
 - No configured ESLint script exists; `git diff --check` and type checking passed.
