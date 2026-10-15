@@ -21,3 +21,7 @@ Photos selected in the browser are stored as data URLs. Large photos may exceed 
 ## Account mode
 
 Open **You → Security** or the workspace link to create an account, sign in, resume an existing session, switch workspaces or sign out. Account mode requires the configured backend; local-only mode remains available without it. Copying local notes/lists requires a separate review, selection and explicit copy action. Originals stay local. This is not two-way offline synchronization. Account integration currently targets the browser; native builds retain local session behavior. See [INTEGRATION.md](INTEGRATION.md) before starting the full stack.
+
+## Testing
+
+See [TESTING.md](TESTING.md) for isolated browser tests, full-stack checks and current verification limits.

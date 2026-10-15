@@ -12,3 +12,9 @@ expo-env.d.ts
 .env
 .env.*
 !.env.example
+
+# Browser test artifacts
+playwright-report/
+test-results/
+
+.pnpm-store/

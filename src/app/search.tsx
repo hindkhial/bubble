@@ -18,14 +18,17 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<SearchFilter | 'Bubbles'>('All');
   const pins = new Set([...pinsFor('root'), ...bubbles.flatMap((bubble) => pinsFor(bubble.id))]);
-  const [remote,setRemote]=useState<SampleItem[]|null>(null);const [searching,setSearching]=useState(false);
+  const [remote,setRemote]=useState<SampleItem[]|null>(null);
+  const [searchError,setSearchError]=useState('');
   useEffect(()=>{
-    setRemote(null);
+    setRemote(null);setSearchError('');
     if(account.mode!=='account'||!account.user||!query.trim())return;
-    let active=true;setSearching(true);
-    const timer=setTimeout(()=>{void account.repository.content(query).then(value=>{if(active)setRemote(value.items);}).catch(error=>{if(active)account.reportError(error);}).finally(()=>{if(active)setSearching(false);});},250);
+    let active=true;
+    const timer=setTimeout(()=>{void account.repository.content(query).then(value=>{if(active)setRemote(value.items);}).catch(error=>{if(active){setSearchError('Search could not finish. Check your connection and try again.');account.reportError(error);}});},250);
     return ()=>{active=false;clearTimeout(timer);};
   },[query,account.mode,account.user?.id,account.items]);
+  const searching = account.mode==='account' && !!account.user && !!query.trim() && remote===null && !searchError;
+  const unavailable = account.mode==='account' && !account.user;
   const results = searchEverything(account.mode==='account'?[]:bubbles, account.mode==='account'&&query.trim()?remote??[]:items, query, filter, pins);
   return <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
@@ -37,8 +40,8 @@ export default function SearchScreen() {
       </View>
       <View style={styles.filters}>{(account.mode==='account'?['All','Notes','Lists'] as const:['All','Bubbles','Notes','Lists'] as const).map((option) => <Pressable key={option} accessibilityRole="button" accessibilityState={{ selected: filter === option }} onPress={() => setFilter(option)} style={[styles.filter, { backgroundColor: filter === option ? colors.lavender : colors.surface, borderColor: colors.border }]}><Text style={{ color: colors.text }}>{option}</Text></Pressable>)}</View>
       {storageError ? <Text accessibilityRole="alert" style={{ color: colors.text, marginBottom: 16 }}>{storageError}</Text> : null}
-      <Text accessibilityLiveRegion="polite" style={{ color: colors.muted, marginBottom: 12 }}>{searching&&query.trim()?'Searching…':results.length} {results.length === 1 ? 'result' : 'results'}</Text>
-      {results.length ? <CollectionGrid entries={results} scopeId="root" respectEntryScopes /> : <View style={[styles.empty, { backgroundColor: colors.surface }]}><Text style={[styles.emptyTitle, { color: colors.text }]}>{query.trim() ? 'No matching thoughts yet' : 'A little space waiting to be filled'}</Text><Text style={{ color: colors.muted, lineHeight: 21 }}>{query.trim() ? 'Try another word or choose a different filter.' : 'Create a note or checklist from Add, then find it here.'}</Text></View>}
+      <Text accessibilityLiveRegion="polite" style={{ color: colors.muted, marginBottom: 12 }}>{unavailable ? 'Open account options to sign in again, or use local mode.' : searching ? 'Searching…' : searchError || `${results.length} ${results.length === 1 ? 'result' : 'results'}`}</Text>
+      {unavailable || searching || searchError ? null : results.length ? <CollectionGrid entries={results} scopeId="root" respectEntryScopes /> : <View style={[styles.empty, { backgroundColor: colors.surface }]}><Text style={[styles.emptyTitle, { color: colors.text }]}>{query.trim() ? 'No matching thoughts yet' : 'A little space waiting to be filled'}</Text><Text style={{ color: colors.muted, lineHeight: 21 }}>{query.trim() ? 'Try another word or choose a different filter.' : 'Create a note or checklist from Add, then find it here.'}</Text></View>}
     </ScrollView>
     <BottomNavigation active="search" />
   </SafeAreaView>;

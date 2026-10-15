@@ -41,7 +41,12 @@ export class ApiClient {
       clearTimeout(timeout);
       if (response.status === 401 || response.status === 403) this.resetCsrf();
       const messages: Record<number, string> = { 400: 'Check the fields and their length limits.', 401: 'Sign in again to access your account.', 403: 'The request was not permitted. Try again with a fresh session.', 404: 'This item is no longer available.', 409: 'This change conflicts with existing data. Refresh before trying again.', 413: 'This content is too large to send.', 429: 'Too many sign-in attempts. Please wait a minute.' };
-      throw new ApiError(messages[response.status] ?? 'The account service could not complete this request.', response.status);
+      // A proxy/server failure can arrive after the database has committed.
+      // Keep the draft and require reconciliation instead of allowing a duplicate retry.
+      const uncertain = mutation && response.status >= 500;
+      throw new ApiError(uncertain
+        ? 'The account service failed to confirm this change. It may have been saved. Refresh before trying again; your draft is still here.'
+        : messages[response.status] ?? 'The account service could not complete this request.', response.status, uncertain);
     }
     if (response.status === 204) {clearTimeout(timeout);return undefined as T;}
     try { return await response.json() as T; } catch { throw new ApiError('The account returned an unreadable response. Refresh before trying again.', response.status, mutation); } finally {clearTimeout(timeout);}

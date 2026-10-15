@@ -33,3 +33,21 @@ test('malformed local checklist data is blocked before upload',async()=>{let wri
 test('a definite rejected copy can be corrected while uncertain copies stay blocked',async()=>{const storage=memory();let writes=0;const repo={api:{base:'http://localhost'},saveNote:async()=>{writes++;if(writes===1)throw new ApiError('Invalid',400);return{id:'new'};}};const selected=[{id:'local',type:'NOTE',title:'Title',body:'body'}];await assert.rejects(()=>copyLocalItems(repo,storage,'owner',selected));assert.equal(await copyLocalItems(repo,storage,'owner',selected),1);});
 
 test('profile patches preserve omitted nullable fields and legacy avatar references',()=>{const current={displayName:'Before',bio:null,avatarReference:'legacy-reference',createdAt:'date',updatedAt:'date'};assert.deepEqual(profileChanges(current,{displayName:'After',bio:'',avatarReference:'legacy-reference'}),{displayName:'After'});assert.deepEqual(profileChanges(current,{displayName:'Before',bio:'',avatarReference:null}),{avatarReference:null});});
+
+
+test('server failures after a mutation remain uncertain and are never retried', async () => {
+  let writes = 0;
+  const api = new ApiClient('http://localhost', async (_url, options) => {
+    if (options.method === 'GET') return response({ token: 'test-token' });
+    writes++;
+    return response({}, 502);
+  });
+  await assert.rejects(() => api.request('POST', '/notes', { title: 'Test', content: 'Body' }),
+    error => error instanceof ApiError && error.status === 502 && error.uncertain);
+  assert.equal(writes, 1);
+});
+
+test('read failures do not mark a mutation outcome as uncertain', async () => {
+  const api = new ApiClient('http://localhost', async () => response({}, 503));
+  await assert.rejects(() => api.request('GET', '/notes'), error => error.status === 503 && !error.uncertain);
+});

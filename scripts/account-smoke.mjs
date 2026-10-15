@@ -7,8 +7,10 @@ import { copyLocalItems } from '../src/api/importLocal.ts';
 const base=process.env.BUBBLE_TEST_API_URL;
 if(!base || !['localhost','127.0.0.1'].includes(new URL(base).hostname))throw new Error('Set BUBBLE_TEST_API_URL to an explicitly disposable local backend.');
 let cookie='';
+const origin=process.env.BUBBLE_TEST_ORIGIN || 'http://localhost:8082';
+if(!['localhost','127.0.0.1'].includes(new URL(origin).hostname))throw new Error('Test origin must be localhost.');
 const fetchWithCookies=async(url,options)=>{
- const headers=new Headers(options?.headers);headers.set('Origin','http://localhost:8082');if(cookie)headers.set('Cookie',cookie);
+ const headers=new Headers(options?.headers);headers.set('Origin',origin);if(cookie)headers.set('Cookie',cookie);
  const response=await fetch(url,{...options,headers});
  for(const value of response.headers.getSetCookie()) {if(value.startsWith('BUBBLE_SESSION='))cookie=value.split(';')[0];}
  return response;
@@ -21,13 +23,23 @@ const note=await repo.saveNote({title:'Integration note',body:'Searchable text'}
 await repo.saveNote({title:'Edited note',body:'Changed body'},note.id);
 await repo.api.request('PATCH','/notes/'+note.id,{pinned:true});
 assert.equal((await repo.content('changed')).items.length,1);
+assert.equal((await repo.content('CHANGED')).items.length,1);
+await repo.api.request('PATCH','/notes/'+note.id,{pinned:false});
+assert.equal((await repo.content()).pinned.includes(note.id),false);
 let list=await repo.saveChecklist({title:'List',rows:[{id:'local-a',text:'Tea',done:false},{id:'local-b',text:'Milk',done:true}]});
 list=await repo.saveChecklist({title:'Edited list',rows:[{...list.rows[1],done:false},{...list.rows[0],done:true}]},list.id);
 assert.equal(list.rows[0].text,'Milk');assert.equal(list.rows[1].done,true);
+list=await repo.saveChecklist({title:list.title,rows:[list.rows[0],{id:'new-row',text:'Bread',done:false}]},list.id);
+assert.deepEqual(list.rows.map(row=>row.text),['Milk','Bread']);
+assert.equal((await repo.content('bread')).items.length,1);
 await repo.api.request('PATCH','/profile',{displayName:'Updated account',bio:'Updated bio',avatarReference:'avatar:'+randomUUID()});
 assert.equal((await repo.api.request('GET','/profile')).bio,'Updated bio');
 await repo.api.request('PATCH','/profile',{avatarReference:null});
-await repo.api.request('PATCH','/preferences',{themeMode:'SYSTEM',accentColor:'Sky blue'});
+for(const themeMode of ['DARK','LIGHT','SYSTEM']){
+ await repo.api.request('PATCH','/preferences',{themeMode,accentColor:'Sky blue'});
+ const settings=await new ApiClient(base,fetchWithCookies).request('GET','/preferences');
+ assert.equal(settings.themeMode,themeMode);assert.equal(settings.accentColor,'Sky blue');
+}
 assert.equal((await repo.api.request('GET','/preferences')).themeMode,'SYSTEM');
 const data=new Map([['bubble.items.v1','local originals kept']]);const storage={getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value)};
 const selected=[{id:'local-note',type:'NOTE',title:'Copied note',body:'Kept local'},{id:'local-list',type:'CHECKLIST',title:'Copied list',body:'',rows:[{id:'local-row',text:'Copied task',done:true}]}];

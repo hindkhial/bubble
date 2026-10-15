@@ -111,3 +111,7 @@ No dependencies were added. No original branch refs were modified, no real local
 - A real TypeScript client/Spring/PostgreSQL smoke run passed registration, failed/successful login, session retrieval, notes CRUD/pin/search, atomic checklist order/completion, profile/avatar and SYSTEM appearance updates, generated-fixture copying/deduplication/local-original preservation, delete and logout. This check used generated fixtures and did not read real browser data.
 - Browser: registration/login, note creation, refresh persistence/session restoration, no automatic upload on sign-in, mode switching and local-original persistence passed. Manual selected-note copy submission remains unverified.
 - No configured ESLint script exists; `git diff --check` and type checking passed.
+
+## Stability checks
+
+See [TESTING.md](TESTING.md) for the current test workflow, latest results, fixes and remaining browser-runner limitations.
