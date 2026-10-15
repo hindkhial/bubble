@@ -6,6 +6,27 @@ import { copyLocalItems, importLedgerKey } from '../src/api/importLocal.ts';
 const response=(body,status=200)=>new Response(status===204?null:JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});
 const serverItem={id:'11111111-1111-4111-8111-111111111111',title:'Test',content:'Body',pinned:true,createdAt:'2026-01-01T00:00:00Z',updatedAt:'2026-01-02T00:00:00Z'};
 const memory=()=>{const data=new Map();return {getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value),data};};
+test('safe cancellation works without AbortSignal.any and releases caller listeners',async()=>{
+ const any=AbortSignal.any;AbortSignal.any=undefined;
+ try {
+  const caller=new AbortController();let removed=0;
+  const remove=caller.signal.removeEventListener.bind(caller.signal);
+  caller.signal.removeEventListener=(...args)=>{removed++;return remove(...args);};
+  const api=new ApiClient('http://localhost',async()=>response({ok:true}));
+  assert.deepEqual(await api.request('GET','/notes',undefined,caller.signal),{ok:true});
+  assert.equal(removed,1);
+ } finally {AbortSignal.any=any;}
+});
+test('cancellation while reading JSON remains an AbortError',async()=>{
+ const caller=new AbortController();
+ const api=new ApiClient('http://localhost',async()=>({ok:true,status:200,json:async()=>{caller.abort();throw new Error('body aborted');}}));
+ await assert.rejects(()=>api.request('GET','/notes',undefined,caller.signal),error=>error.name==='AbortError');
+});
+test('cancellation between pages sends no subsequent page request',async()=>{
+ const caller=new AbortController();let calls=0;
+ const repo=new AccountRepository(new ApiClient('http://localhost',async()=>{calls++;caller.abort();return response({content:[serverItem],totalPages:2});}));
+ await assert.rejects(()=>repo.pages('/notes',100,caller.signal),error=>error.name==='AbortError');assert.equal(calls,1);
+});
 test('account loading uses paginated checklist items without detail fan-out',async()=>{
  const calls=[];
  const repo=new AccountRepository(new ApiClient('http://localhost',async url=>{

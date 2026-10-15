@@ -89,3 +89,41 @@ The live benchmark creates a fictional account and 20 generated checklists, chec
 - `tests/api.test.mjs`, `tests/performance.test.mjs`
 - `scripts/benchmark.mjs`, `scripts/benchmark-account.mjs`, `package.json`
 - `README.md`, `INTEGRATION.md`, `TESTING.md`, `backend/README.md`, `PERFORMANCE.md`
+
+## Final pull-request review
+
+The original 19-file diff at `7ba7f1f8c511b2aa1e17e5978b3e30d3768161a4` was reviewed together with its callers, storage providers, security configuration and existing tests. Follow-up fixes stay within that file set. The measurements above describe the original optimization run, not a new browser performance claim.
+
+| File | Review focus and outcome |
+| --- | --- |
+| `INTEGRATION.md` | Batched-read description matches the client/server contract; local/account separation remains accurate. |
+| `README.md` | Documentation links only; no runtime changes. |
+| `TESTING.md` | Isolated-data requirements retained; added a reproducible manual browser checklist and explicit execution limits. |
+| `backend/README.md` | Default summary compatibility and 20-parent detailed-page limit documented accurately. |
+| `PERFORMANCE.md` | Synthetic measurements, small bundle regression and verification gaps disclosed; no production-load guarantee. |
+| `ContentController.java` | Existing authenticated principal supplies ownership; optional read flag preserves default summaries. |
+| `ChecklistItemRepository.java` | Bulk query restricts both parent IDs and their owner, and orders rows by parent/position. |
+| `ContentService.java` | Read-only transaction; existing validated page/search/sort rules reused; no collection fetch-join or write. |
+| `PerformanceIntegrationTest.java` | Isolated PostgreSQL fixtures; query/page/ownership/concurrency coverage; added before/after snapshots of existing synthetic notes, checklist rows, profile and appearance. |
+| `package.json` | Two benchmark scripts only; dependency versions unchanged. |
+| `benchmark-account.mjs` | Explicit disposable localhost acknowledgement; fictional account and own-fixture cleanup; outputs aggregate measurements only. |
+| `benchmark.mjs` | Synthetic entries and equivalent reference algorithm; no personal content or storage access. |
+| `src/api/account.ts` | Complete paginated reads, cancellation propagation, older-server fallback and rejection of missing item arrays prevent empty-list replacement. |
+| `src/api/client.ts` | Credentials/CSRF/no-store/timeout/uncertain writes preserved. Review fixed reliance on `AbortSignal.any` and normalized caller cancellation during JSON reading; caller listeners are removed. |
+| `src/app/search.tsx` | Superseded reads cancelled; inactive callbacks ignored; existing debounce, filters and error/empty states retained. |
+| `CollectionGrid.tsx` | Memo dependencies include entries/scope/pin provider; selection/actions and existing card components retained. |
+| `collectionOrder.ts` | Stable ordering, unique scope visits, first pin occurrence and immutable input verified. |
+| `tests/api.test.mjs` | Batching/legacy/incomplete-data tests retained; added old-browser cancellation compatibility, body cancellation, listener cleanup and between-page cancellation coverage. |
+| `tests/performance.test.mjs` | Large synthetic fixtures, scope ordering, filtering and immutability coverage; no fragile timing assertions. |
+
+No new ownership bypass, CSRF relaxation, unsafe private-content cache, destructive migration, storage-format change or unrelated UI redesign was identified. Read-only code and automated snapshots support data-preservation confidence; tests intentionally do not touch or certify a production database.
+
+The manual fallback checklist is in [TESTING.md](TESTING.md#manual-browser-release-checklist). Browser-runner failures must remain distinct from application assertion failures. GitHub reported no CI check runs or commit statuses for the original reviewed head; local test evidence is not a substitute for an independently executed CI run.
+
+### Review outcome
+
+Final review validation: 43/43 frontend tests; TypeScript and whitespace checks; web export; 59/59 backend tests with no failures/errors/skips and executable JAR build; real TypeScript-client integration checks against both the updated and archived integration backends. The complete backend run used isolated external PostgreSQL after an earlier Testcontainers run failed with two readiness errors. Original iOS/Android exports were not rerun in this review.
+
+Synthetic before/after snapshots confirm existing notes, checklist rows/order/completion, profile/bio and Dark/Sky blue preferences are unchanged by concurrent detailed reads. Partial browser checks reconfirm local persistence/search and account restoration/search/profile/preferences, plus switching back to the separate local workspace. No personal content or original branch refs were changed.
+
+**Ready for code review; merge recommendation remains conditional.** No blocking code defect remains from the 19-file review. The old-browser cancellation compatibility fix and its tests are included. Before merging into `integration`, obtain a successful eight-scenario browser run on an unrestricted runner or record a complete pass of the manual release checklist. This environment still cannot launch either bundled Chromium variant; partial in-app-browser checks do not close that gap. GitHub has no reported automated checks. No merge or deployment was performed.

@@ -65,6 +65,12 @@ class PerformanceIntegrationTest {
         var user=AuthTestClient.JSON.readTree(client.get("/api/v1/users/me").body()).get("id").asString();
         var list=UUID.randomUUID();jdbc.update("insert into checklists(id,user_id,title) values (?,?,?)",list,UUID.fromString(user),"Owned");
         jdbc.update("insert into checklist_items(checklist_id,content,position) select ?, 'Large task ' || n, n from generate_series(0,999) n",list);
+        jdbc.update("insert into notes(user_id,title,content) values (?, 'Existing synthetic note', 'Keep this text')",UUID.fromString(user));
+        jdbc.update("update profiles set display_name='Existing profile', bio='Keep this bio' where user_id=?",UUID.fromString(user));
+        jdbc.update("update user_preferences set theme_mode='DARK', accent_color='Sky blue' where user_id=?",UUID.fromString(user));
+        var snapshots=new HashMap<String,String>();
+        for(var path:List.of("/api/v1/notes","/api/v1/profile","/api/v1/preferences","/api/v1/checklists/"+list))
+            snapshots.put(path,client.get(path).body());
         var detailed=client.get("/api/v1/checklists?includeItems=true&q=Large%20task%20999");assertEquals(200,detailed.statusCode());
         var content=AuthTestClient.JSON.readTree(detailed.body()).get("content");assertEquals(1,content.size());assertEquals(1000,content.get(0).get("items").size());
         assertFalse(AuthTestClient.JSON.readTree(client.get("/api/v1/checklists").body()).get("content").get(0).has("items"));
@@ -81,6 +87,7 @@ class PerformanceIntegrationTest {
             }));
             for(var future:futures)assertEquals(1000,future.get());
         }
+        for(var snapshot:snapshots.entrySet())assertEquals(snapshot.getValue(),client.get(snapshot.getKey()).body(),"Read changed persisted data: "+snapshot.getKey());
     }
     @Test void existingOwnerSortIndexSupportsLargeNotePages() {
         jdbc.update("insert into notes(user_id,title,content) select ?, 'Synthetic note ' || n, repeat('x',200) from generate_series(1,10000) n",owner);
