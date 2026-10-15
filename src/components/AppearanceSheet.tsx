@@ -1,9 +1,11 @@
+import { useAccount } from '../state/Account';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { accentPalette, type ThemeColors } from '../theme/appearance';
 import { useTheme } from '../theme/Theme';
 
 export function AppearanceSheet({ onClose }: { onClose: () => void }) {
-  const { colors, mode, setMode, accent, setAccent, storageError } = useTheme();
+  const { colors, mode, selectedMode, setMode, accent, setAccent, storageError } = useTheme();
+  const account=useAccount();
   const styles = createStyles(colors);
   return <Modal visible transparent animationType="slide" onRequestClose={onClose}>
     <View style={styles.scrim}>
@@ -13,20 +15,20 @@ export function AppearanceSheet({ onClose }: { onClose: () => void }) {
           <Text style={styles.description}>A little more you, in every Bubble.</Text>
           <Text accessibilityRole="header" style={styles.label}>Mode</Text>
           <View style={styles.modes}>
-            {(['light', 'dark'] as const).map((option) => <Pressable key={option} accessibilityRole="radio" accessibilityState={{ checked: mode === option }} onPress={() => setMode(option)} style={[styles.mode, mode === option && styles.selected]}>
-              <Text style={styles.modeText}>{option === 'light' ? 'Light' : 'Dark'}{mode === option ? ' ✓' : ''}</Text>
+            {(account.mode==='account' ? ['light','dark','system'] as const : ['light','dark'] as const).map((option) => <Pressable key={option} accessibilityRole="radio" accessibilityState={{ checked: selectedMode === option }} disabled={account.busy || account.loading} onPress={() => setMode(option)} style={[styles.mode, selectedMode === option && styles.selected]}>
+              <Text style={styles.modeText}>{option === 'light' ? 'Light' : option === 'dark' ? 'Dark' : 'System'}{selectedMode === option ? ' ✓' : ''}</Text>
             </Pressable>)}
           </View>
           <Text accessibilityRole="header" style={styles.label}>Customize your app</Text>
           <Text style={styles.description}>Choose your accent. Dark mode uses a deeper shade of the same color.</Text>
           <View style={styles.palette}>
-            {accentPalette.map((option) => <Pressable key={option.name} accessibilityRole="radio" accessibilityLabel={`${option.name} app color`} accessibilityState={{ checked: accent === option.name }} onPress={() => setAccent(option.name)} style={[styles.colorOption, accent === option.name && styles.selected]}>
+            {accentPalette.map((option) => <Pressable key={option.name} accessibilityRole="radio" accessibilityLabel={`${option.name} app color`} accessibilityState={{ checked: accent === option.name }} disabled={account.busy || account.loading} onPress={() => setAccent(option.name)} style={[styles.colorOption, accent === option.name && styles.selected]}>
               <View style={[styles.swatch, { backgroundColor: mode === 'dark' ? option.dark : option.value }]}><Text style={styles.check}>{accent === option.name ? '✓' : ''}</Text></View>
               <Text style={styles.colorName}>{option.name}</Text>
             </Pressable>)}
           </View>
           {storageError ? <Text accessibilityRole="alert" style={styles.note}>{storageError}</Text> : null}
-          <Text style={styles.note}>Changes apply immediately and are saved in this browser when local storage is available.</Text>
+          <Text style={styles.note}>{account.mode==='account' ? 'Account changes apply after the server confirms them. A connection is required.' : 'Changes apply immediately and are saved in this browser when local storage is available.'}</Text>
           <Pressable accessibilityRole="button" onPress={onClose} style={styles.close}><Text style={styles.modeText}>Done</Text></Pressable>
         </ScrollView>
       </View>

@@ -13,7 +13,7 @@ type Draft = { title: string; description: string; color: string; body: string; 
 
 export function EditContentSheet({ entry, onSave, onClose }: {
   entry: Bubble | SampleItem;
-  onSave: (draft: Draft) => void;
+  onSave: (draft: Draft) => void | Promise<unknown>;
   onClose: () => void;
 }) {
   const { colors, mode } = useTheme();
@@ -58,14 +58,15 @@ export function EditContentSheet({ entry, onSave, onClose }: {
     onClose();
     if (blockedAction.current) navigation.dispatch(blockedAction.current);
   };
-  const save = () => {
+  const save = async () => {
     if (saving.current) return;
     if (isBubble && !title.trim()) { setError('Please give your Bubble a title.'); return; }
     if (isChecklist && !rows.some((row) => row.text.trim())) { setError('Add at least one checklist item before saving.'); return; }
     if (!isBubble && !isChecklist && !body.trim()) { setError('Write a little text before saving your note.'); return; }
     saving.current = true;
-    bypass.current = true;
-    onSave({ title, description, color, body, rows });
+    try { await onSave({ title, description, color, body, rows });bypass.current=true; }
+    catch(problem){setError(problem instanceof Error?problem.message:'Could not save.');}
+    finally {saving.current=false;}
 
   };
 

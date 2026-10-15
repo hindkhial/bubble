@@ -16,6 +16,7 @@ export function CollectionGrid({ entries, scopeId, respectEntryScopes = false }:
   const router = useRouter();
   const { pinsFor, togglePin } = usePins();
   const [selected, setSelected] = useState<CollectionEntry | null>(null);
+  const [actionError,setActionError]=useState('');
   const [limitReached, setLimitReached] = useState(false);
   const entryScope = (entry: CollectionEntry) => respectEntryScopes ? entry.kind === 'bubble' ? entry.value.parentId ?? 'root' : entry.value.bubbleId : scopeId;
   const pins = respectEntryScopes ? entries.flatMap((entry) => pinsFor(entryScope(entry))) : pinsFor(scopeId);
@@ -31,7 +32,7 @@ export function CollectionGrid({ entries, scopeId, respectEntryScopes = false }:
   ordered.forEach((entry, index) => columns[index % 2].push(entry));
 
   const openActions = (entry: CollectionEntry) => {
-    setLimitReached(false);
+    setLimitReached(false);setActionError('');
     setSelected(entry);
   };
   const closeActions = () => {
@@ -44,10 +45,9 @@ export function CollectionGrid({ entries, scopeId, respectEntryScopes = false }:
     closeActions();
     router.push(destination);
   };
-  const toggleSelectedPin = () => {
+  const toggleSelectedPin = async () => {
     if (!selected) return;
-    if (togglePin(entryScope(selected), entryKey(selected))) closeActions();
-    else setLimitReached(true);
+    try {if (await togglePin(entryScope(selected), entryKey(selected))) closeActions();else setLimitReached(true);}catch(problem){setActionError(problem instanceof Error?problem.message:'Could not pin.');}
   };
 
   return (
@@ -71,6 +71,7 @@ export function CollectionGrid({ entries, scopeId, respectEntryScopes = false }:
             <View style={styles.handle} />
             <Text style={styles.sheetType}>{selected?.kind === 'bubble' ? 'BUBBLE' : selected?.value.type}</Text>
             <Text style={styles.sheetTitle} numberOfLines={2}>{selected?.value.title}</Text>
+            {actionError ? <Text accessibilityRole="alert" style={styles.limit}>{actionError}</Text> : null}
             {limitReached && <Text accessibilityRole="alert" style={styles.limit}>You can pin up to 3 items here. Unpin one first.</Text>}
             <Pressable accessibilityRole="button" onPress={openSelected} style={styles.action}><Text style={styles.actionText}>Open</Text></Pressable>
             <Pressable accessibilityRole="button" onPress={toggleSelectedPin} style={styles.action}><Text style={styles.actionText}>{selected && pins.includes(entryKey(selected)) ? 'Unpin' : 'Pin to top'}</Text></Pressable>

@@ -8,3 +8,7 @@ dist/
 
 expo-env.d.ts
 # @end expo-cli
+# Local integration configuration; Expo public URLs are not secrets.
+.env
+.env.*
+!.env.example

@@ -1,3 +1,4 @@
+import { useAccount } from '../state/Account';
 import { accentPalette, themedAvatarColor } from '../theme/appearance';
 import { useTheme } from '../theme/Theme';
 import type { ThemeColors } from '../theme/appearance';
@@ -13,7 +14,9 @@ import { ProfileAvatar } from './ProfileAvatar';
 
 const avatarColors = accentPalette;
 
-export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profile; onSave: (profile: Profile) => void; onClose: () => void }) {
+export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profile; onSave: (profile: Profile) => void | Promise<unknown>; onClose: () => void }) {
+  const account=useAccount();
+  const [avatarReference,setAvatarReference]=useState(profile.avatarReference??'');
   const { colors, mode } = useTheme();
   const styles = createFormStyles(colors);
   const local = createLocal(colors);
@@ -31,7 +34,7 @@ export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profil
   const blockedAction = useRef<Parameters<typeof navigation.dispatch>[0] | null>(null);
   const bypass = useRef(false);
   const saving = useRef(false);
-  const dirty = name !== profile.displayName || avatarColor !== profile.avatarColor || bio !== profile.bio || imageUri !== profile.imageUri || avatarEmoji !== (profile.avatarEmoji ?? '');
+  const dirty = name !== profile.displayName || avatarColor !== profile.avatarColor || bio !== profile.bio || imageUri !== profile.imageUri || avatarEmoji !== (profile.avatarEmoji ?? '') || avatarReference !== (profile.avatarReference??'');
 
   useEffect(() => navigation.addListener('beforeRemove', (event) => {
     if (bypass.current || !dirty) return;
@@ -60,14 +63,15 @@ export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profil
       if (mounted.current) setPicking(false);
     }
   };
-  const save = () => {
+  const save = async () => {
     if (saving.current) return;
     const displayName = name.trim();
     const validation = validateProfile(name, bio);
     if (validation) { setError(validation); return; }
     saving.current = true;
-    bypass.current = true;
-    onSave({ displayName, avatarColor, bio: bio.trim(), imageUri, avatarEmoji: avatarEmoji.trim() || undefined });
+    try { await onSave({ displayName, avatarColor, bio: bio.trim(), imageUri, avatarEmoji: avatarEmoji.trim() || undefined,avatarReference:avatarReference||null });bypass.current=true; }
+    catch(problem){setError(problem instanceof Error?problem.message:'Could not save the profile.');}
+    finally {saving.current=false;}
   };
 
   return <Modal visible transparent animationType="slide" onRequestClose={attemptClose}>
@@ -79,20 +83,22 @@ export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profil
           <Text style={styles.title}>Edit profile</Text>
           <Text style={styles.intro}>Make this space feel like yours.</Text>
           <View style={local.preview}><ProfileAvatar profile={{ displayName: name, avatarColor, bio, imageUri, avatarEmoji }} size={72} /></View>
-          <Pressable accessibilityRole="button" disabled={picking} accessibilityState={{ disabled: picking }} onPress={pickImage} style={styles.cancel}><Text style={styles.cancelText}>{picking ? 'Opening photos…' : imageUri ? 'Change photo' : 'Choose photo'}</Text></Pressable>
+          {account.mode==='local' ? <><Pressable accessibilityRole="button" disabled={picking} accessibilityState={{ disabled: picking }} onPress={pickImage} style={styles.cancel}><Text style={styles.cancelText}>{picking ? 'Opening photos…' : imageUri ? 'Change photo' : 'Choose photo'}</Text></Pressable>
           {imageUri ? <Pressable accessibilityRole="button" onPress={() => setImageUri(undefined)} style={styles.cancel}><Text style={styles.cancelText}>Remove photo</Text></Pressable> : null}
+          </> : <><Text style={styles.label}>Avatar reference</Text><Text style={styles.intro}>Existing avatar IDs only. Photos and uploads remain local; account images are not served yet.</Text><TextInput accessibilityLabel="Avatar reference" value={avatarReference} onChangeText={setAvatarReference} maxLength={43} placeholder="avatar:UUID (or leave empty)" style={styles.input} /></>}
           <Text style={styles.label}>Display name *</Text>
           <TextInput accessibilityLabel="Display name" autoCapitalize="words" style={styles.input} value={name} onChangeText={(value) => { setName(value); setError(''); }} maxLength={DISPLAY_NAME_LIMIT} placeholder="Your name" placeholderTextColor={colors.muted} />
           <Text style={styles.label}>Short bio</Text>
           <TextInput accessibilityLabel="Short bio" multiline textAlignVertical="top" style={[styles.input, local.bio]} value={bio} onChangeText={(value) => { setBio(value); setError(''); }} maxLength={BIO_LIMIT} placeholder="A little about you" placeholderTextColor={colors.muted} />
           <Text style={local.counter}>{bio.length}/{BIO_LIMIT}</Text>
-          <Text style={styles.label}>Avatar emoji</Text>
+          {account.mode==='local' ? <><Text style={styles.label}>Avatar emoji</Text>
           <Text style={styles.intro}>Choose a face or enter your favorite emoji. Your photo takes priority; remove it to show your emoji.</Text>
           <View style={local.emojis}>{['🐱', '🐻', '🐰', '🦊', '🐼', '🐸', '🌷', '✨'].map((emoji) => <Pressable key={emoji} accessibilityRole="button" accessibilityLabel={`Use ${emoji} avatar`} accessibilityState={{ selected: avatarEmoji === emoji }} onPress={() => setAvatarEmoji(emoji)} style={[local.emoji, avatarEmoji === emoji && local.emojiSelected]}><Text style={local.emojiText}>{emoji}</Text></Pressable>)}</View>
           <TextInput accessibilityLabel="Custom avatar emoji" value={avatarEmoji} onChangeText={setAvatarEmoji} maxLength={16} placeholder="Enter an emoji" placeholderTextColor={colors.muted} style={styles.input} />
           <Pressable accessibilityRole="button" onPress={() => setAvatarEmoji('')} style={styles.cancel}><Text style={styles.cancelText}>Use my initial</Text></Pressable>
           <Text style={styles.label}>Avatar color</Text>
           <View style={styles.swatches}>{avatarColors.map((option) => <Pressable key={option.name} accessibilityRole="button" accessibilityLabel={`${option.name} avatar color${avatarColor === option.value ? ', selected' : ''}`} accessibilityState={{ selected: avatarColor === option.value }} onPress={() => setAvatarColor(option.value)} style={[styles.swatch, { backgroundColor: themedAvatarColor(option.value, mode) }, avatarColor === option.value && styles.swatchSelected]}><Text style={styles.swatchCheck}>{avatarColor === option.value ? '✓' : ''}</Text></Pressable>)}</View>
+          </> : null}
           {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
           <Pressable accessibilityRole="button" onPress={save} style={styles.save}><Text style={styles.saveText}>Save changes</Text></Pressable>
           <Pressable accessibilityRole="button" onPress={attemptClose} style={styles.cancel}><Text style={styles.cancelText}>Cancel</Text></Pressable>

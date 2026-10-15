@@ -1,3 +1,4 @@
+import { useAccount } from '../state/Account';
 import { usePins } from '../state/Pins';
 import { pinnedFirst } from '../utils/dashboard';
 import { useTheme } from '../theme/Theme';
@@ -14,6 +15,7 @@ import type { CollectionEntry } from '../data/sample';
 import { spacing } from '../theme/tokens';
 
 export default function HomeScreen() {
+  const account=useAccount();
   const { colors } = useTheme();
   const styles = createStyles(colors);
   const router = useRouter();
@@ -41,13 +43,13 @@ export default function HomeScreen() {
         {pinned.length ? <CollectionGrid entries={pinned.map((value) => ({ kind: 'file', value }))} scopeId="root" respectEntryScopes /> : <Text style={styles.sectionSubtitle}>Keep favorites close. Open a Bubble and pin a note or list from its options.</Text>}
         <View style={styles.sectionHeading}>
           <View>
-            <Text style={styles.sectionTitle}>Your Bubbles</Text>
-            <Text style={styles.sectionSubtitle}>Little collections for everything.</Text>
+            <Text style={styles.sectionTitle}>{account.mode==='account'?'Your account':'Your Bubbles'}</Text>
+            <Text style={styles.sectionSubtitle}>{account.mode==='account'?'Your server-backed notes and lists.':'Little collections for everything.'}</Text>
           </View>
           <Text style={styles.sectionCount}>{rootBubbles.length}</Text>
         </View>
         {entries.length ? <CollectionGrid entries={entries} scopeId="root" /> : <View style={styles.empty}><Text style={styles.emptyIcon}>✧</Text><Text style={styles.emptyTitle}>Nothing here yet</Text><Text style={styles.emptyText}>Make a Bubble to keep your next thought.</Text></View>}
-        <Text style={styles.demo}>Stored in this browser · Search stays on your device.</Text>
+        <Text style={styles.demo}>{account.mode==='account'?'Account mode · connection required · local notes stay separate':'Stored in this browser · Search stays on your device.'}</Text>
       </ScrollView>
       <BottomNavigation active="home" />
     </SafeAreaView>

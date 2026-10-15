@@ -10,7 +10,9 @@
     "ios": "expo start --ios",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
-    "export:mobile": "expo export --platform ios && expo export --platform android"
+    "export:mobile": "expo export --platform ios && expo export --platform android",
+    "test:account-live": "node --experimental-strip-types scripts/account-smoke.mjs",
+    "build:web": "expo export --platform web"
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",
