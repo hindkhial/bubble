@@ -29,3 +29,6 @@ deploy/staging/backups/
 *.p12
 *.pfx
 *.dump
+*.htpasswd
+tester-credentials.json
+lifecycle.json

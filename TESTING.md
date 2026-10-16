@@ -131,3 +131,18 @@ PR #5 was reviewed again on 2026-10-16: 45 frontend tests, 62 PostgreSQL/backend
 The original PostgreSQL image reported 1 critical/24 high findings in the Go standard library bundled inside `gosu`, plus lower-severity findings. PostgreSQL itself does not use those Go networking parsers, but the helper was replaced with Alpine's `su-exec` instead of suppressing findings. Fixable zlib/libpng issues were patched in all affected runtimes. Rescanning the rebuilt backend, frontend and PostgreSQL images reported **zero vulnerabilities at every severity** with the current databases. This is a point-in-time scanner result, not a guarantee against unknown vulnerabilities.
 
 All three image builds and isolated HTTPS/account-client smoke checks pass after remediation. PostgreSQL runs as UID 70 after initialization, the application role remains restricted, and migrations/health checks pass. The database image has a separate `DB_IMAGE_TAG` so app-only rollback cannot silently replace its runtime. The outstanding eight-scenario browser limitation remains unchanged. Raw reports contain only image/package metadata and remain outside Git.
+
+### Controlled local staging run
+
+See [PRIVATE-STAGING.md](PRIVATE-STAGING.md) for the 2026-10-16 execution record. The gated local stack passes 47 frontend tests, 62 backend tests, TypeScript/web/container builds, real HTTPS/account checks, protected tester access, session restoration/re-authentication after restart, seven-table backup/restore comparison, recovered-database API checks and a compatible-artifact rollback rehearsal. Secrets/permissions, running image identities and loopback-only bindings are checked by the new operator tools. Local-only module tests pass; full staging browser local mode remains unverified.
+
+The existing eight browser scenarios now support an owner-only tester credential file, scoped to the exact HTTPS origin; API interception/counting is limited to `/api/v1/` so same-origin staging assets are not accidentally blocked. To retry on a suitable browser runner after its local CA trust is configured:
+
+```sh
+BUBBLE_E2E_URL=https://localhost:8443 BUBBLE_E2E_API_URL=https://localhost:8443 \
+BUBBLE_E2E_DISPOSABLE=1 BUBBLE_E2E_REUSE_SERVER=1 \
+BUBBLE_TEST_AUTH_FILE=/absolute/protected/bubble-staging/tester-credentials.json \
+NODE_EXTRA_CA_CERTS=/absolute/protected/bubble-staging/ca.crt pnpm test:e2e
+```
+
+`NODE_EXTRA_CA_CERTS` configures Node, not browser trust. Do not set `ignoreHTTPSErrors` or bypass warnings. The current attempted run still fails at Chromium launch; one launch failure and seven not-run scenarios are **not** an eight-scenario pass. Traces may contain generated tester/account credentials and must remain ignored/private.

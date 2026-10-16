@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { stagingCredentials } from '../scripts/staging-auth.mjs';
 const randomUUID = () => crypto.randomUUID();
 
 const api = process.env.BUBBLE_E2E_API_URL || 'http://localhost:8085';
@@ -48,11 +49,11 @@ async function edit(page: Page, title: string, kind = 'note') {
 
 test('local notes survive offline editing, refresh and a new browser context', async ({ page, browser, baseURL }) => {
   const accountCalls: string[] = [];
-  page.on('request', request => { if (request.url().startsWith(api)) accountCalls.push(request.url()); });
+  page.on('request', request => { if (request.url().startsWith(api+'/api/v1/')) accountCalls.push(request.url()); });
   await seed(page);
   await page.goto('/file/local-original');
   await expect(page.getByText('Local private text', { exact: true })).toBeVisible();
-  await page.route(`${api}/**`, route => route.abort());
+  await page.route(`${api}/api/v1/**`, route => route.abort());
   await page.context().setOffline(true);
   await edit(page, 'Local original');
   await page.getByRole('textbox', { name: 'Note text', exact: true }).fill('Edited without internet');
@@ -63,7 +64,7 @@ test('local notes survive offline editing, refresh and a new browser context', a
   await page.context().setOffline(false);
   await page.reload();
   const state = await page.context().storageState();
-  const next = await browser.newContext({ baseURL, storageState: state });
+  const next = await browser.newContext({ baseURL, storageState: state, httpCredentials:stagingCredentials(baseURL??api) });
   const reopened = await next.newPage();
   await reopened.goto('/file/local-original');
   await expect(reopened.getByText('Edited without internet', { exact: true })).toBeVisible();
@@ -192,7 +193,7 @@ test('backend outage retains failed draft and local originals; selected copy is 
   await page.getByRole('button', { name: 'Open Local original note' }).click();
   await edit(page, 'Local original');
   await page.getByRole('textbox', { name: 'Note text', exact: true }).fill('Unsaved offline account draft');
-  await page.route(`${api}/**`, route => route.abort());
+  await page.route(`${api}/api/v1/**`, route => route.abort());
   await page.getByRole('button', { name: 'Save changes', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Note text', exact: true })).toHaveValue('Unsaved offline account draft');
   await expect(page.getByRole('alert').last()).toContainText(/Connection lost|Cannot reach your account/);
