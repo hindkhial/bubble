@@ -35,6 +35,32 @@ export function verifyRecovery({folder, environment, run, compose}) {
   fixture('restart');
   compose(['up', '--detach', '--no-build', '--wait', '--wait-timeout', '240']);
   fixture('restart');
+  const config = JSON.parse(compose(['config', '--format', 'json']));
+  const databaseContainer = compose(['ps', '-q', 'db']).trim();
+  const retained = {};
+  for (const service of ['web', 'backend']) {
+    const original = config.services[service].image;
+    assert.match(original, /^bubble-(web|backend):[a-z0-9-]+$/);
+    retained[service] = `bubble-${service}:${environment.STAGING_PROJECT}-retained`;
+    // Distinct immutable metadata, compatible application/schema. No claim
+    // that arbitrary older applications can consume future migration history.
+    run('docker', ['build', '--tag', retained[service], '--label', 'bubble.qa=compatible-retained-artifact', '-'], environment,
+      {input: `FROM ${original}\n`});
+    assert.notEqual(run('docker', ['image', 'inspect', '--format', '{{.Id}}', original]).trim(),
+      run('docker', ['image', 'inspect', '--format', '{{.Id}}', retained[service]]).trim());
+  }
+  const rollback = join(folder, 'rollback.compose.yml');
+  writeFileSync(rollback, `services:\n  web:\n    image: ${retained.web}\n  backend:\n    image: ${retained.backend}\n`, {mode: 0o600, flag: 'wx'});
+  compose(['-f', rollback, 'up', '--detach', '--no-build', '--wait', '--wait-timeout', '240']);
+  fixture('restart');
+  for (const service of ['web', 'backend']) assert.equal(
+    run('docker', ['inspect', '--format', '{{.Config.Image}}', compose(['ps', '-q', service]).trim()]).trim(), retained[service]);
+  assert.equal(compose(['ps', '-q', 'db']).trim(), databaseContainer);
+  compose(['up', '--detach', '--no-build', '--wait', '--wait-timeout', '240']);
+  fixture('restart');
+  assert.equal(compose(['ps', '-q', 'db']).trim(), databaseContainer);
+  run('docker', ['image', 'rm', retained.web, retained.backend]);
+  console.log('PASS: compatible app artifact rollback and return; same application/schema, database container unchanged');
   run('node', ['scripts/verify-private-staging.mjs']);
   console.log('PASS: migrations, seven-table backup/restore, recovered-backend operation and restart persistence');
 }
