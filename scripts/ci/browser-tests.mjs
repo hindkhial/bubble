@@ -2,9 +2,11 @@
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { homedir } from 'node:os';
 import { X509Certificate, randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { chromium } from '@playwright/test';
+import { verifyRecovery } from './recovery.mjs';
 import { preparePrivateStaging } from '../prepare-private-staging.mjs';
 
 assert.equal(process.platform, 'linux');
@@ -63,6 +65,7 @@ try {
   const authFile = join(folder, 'auth.json');
   writeFileSync(authFile, JSON.stringify({...auth, origin}), {mode: 0o600, flag: 'wx'});
   environment = {...process.env, STAGING_PROJECT: project, STAGING_ENV_FILE: join(secrets, 'staging.env'),
+    PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || join(homedir(), '.cache/ms-playwright'),
     BUBBLE_TEST_API_URL: origin, BUBBLE_E2E_URL: origin, BUBBLE_E2E_API_URL: origin, BUBBLE_E2E_REUSE_SERVER: '1', BUBBLE_E2E_DISPOSABLE: '1',
     BUBBLE_TEST_AUTH_FILE: authFile, NODE_EXTRA_CA_CERTS: caFile, BUBBLE_CI_OUTPUT: join(folder, 'results')};
   started = true; // also clean up a partially failed build/start
@@ -82,7 +85,13 @@ try {
   // Raw reports may contain generated passwords. Print only titles/status/counts.
   const report = JSON.parse(result.stdout);
   const visit = suites => { for (const suite of suites ?? []) {
-    for (const spec of suite.specs ?? []) console.log(`${spec.ok ? 'Passed' : 'Failed'}: ${spec.title}`);
+    for (const spec of suite.specs ?? []) {
+      console.log(`${spec.ok ? 'Passed' : 'Failed'}: ${spec.title}`);
+      for (const test of spec.tests ?? []) for (const result of test.results ?? []) for (const error of result.errors ?? []) {
+        const classification = error.message?.match(/Executable doesn't exist|ERR_CERT_AUTHORITY_INVALID|No usable sandbox|Target page, context or browser has been closed|Timeout [0-9]+ms exceeded/);
+        if (classification) console.log('Failure category: ' + classification[0]);
+      }
+    }
     visit(suite.suites);
   }};
   visit(report.suites);
@@ -92,6 +101,7 @@ try {
   assert.equal(report.stats.unexpected, 0);
   assert.equal(report.stats.skipped, 0);
   assert.equal(report.stats.flaky, 0);
+  verifyRecovery({folder, environment, run, compose});
 } catch (error) {
   // Do not print application responses, generated credentials, or raw reports.
   console.error('Browser CI failed: ' + error.message);

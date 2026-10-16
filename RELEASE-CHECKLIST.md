@@ -1,0 +1,28 @@
+# Controlled beta checklist
+
+Proposed version: **0.1.0-beta.1**. Status: **not approved for release**. Complete evidence against the exact candidate SHA; never infer a pass from a script existing.
+
+| Gate | Status | Evidence / action |
+| --- | --- | --- |
+| PR #7 merged; original branches preserved | Passed | integration af922352531da0669d8de60a29b75ec862cd0e17 |
+| Frozen frontend install, TypeScript, unit tests, web export | Passed | Initial local and hosted CI; final candidate results in TESTING.md |
+| Java 21 compile, PostgreSQL tests, packaging | Passed | 62 local and hosted tests; final candidate results in TESTING.md |
+| Secure browser CI, nine scenarios | Not Tested | Pending new hosted job; sandbox/TLS checks must pass |
+| Final candidate container scan | Not Tested | Existing runtime image scans are historical for a later build |
+| Dependency security release gate | Failed | Two unresolved high advisories; see RELEASE-SECURITY.md |
+| Current private health/TLS/network verification | Not Tested | Record latest execution in TESTING.md |
+| Backup/restore and compatible rollback rehearsal | Passed | Prior private staging rehearsal, PRIVATE-STAGING.md; repeat for release candidate |
+| Candidate-specific recovery drill | Not Tested | Repeat using disposable data, never overwrite operator data |
+| Incident/rotation procedure review | Passed | Procedure documented in RELEASE-OPERATIONS.md; execution not claimed |
+| Screen reader testing | Not Tested | Human execution required |
+| Complete keyboard focus-management testing | Not Tested | Include all dialogs, focus return and tab order |
+| Mobile/tablet/desktop visual review | Not Tested | Automated width assertions are partial evidence only |
+| Browser and text zoom | Not Tested | 200%/400% browser zoom, text scaling and reflow |
+| Physical iOS device | Not Tested | Device/browser/version and outcome required |
+| Physical Android device | Not Tested | Device/browser/version and outcome required |
+| Required branch checks configured by administrator | Not Tested | Require all three named CI jobs after successful runs |
+| Owner approval to release/deploy | Not Tested | Explicit approval required; no automatic release |
+
+Use the full manual matrix in BETA-TESTING.md. Record date, candidate SHA, environment, tester, Passed/Failed/Not Tested, and issue reference for each result. Keep synthetic fixtures only; never publish real notes, passwords, dumps, traces or screenshots containing private data.
+
+Release sequence: resolve blockers → verify candidate/restore/rollback → complete human gates → owner review → separate approved release/deployment task. A green build is not release approval.

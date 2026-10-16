@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [integration]
   push:
-    branches: [integration, release-readiness]
+    branches: [integration]
   workflow_dispatch:
 permissions:
   contents: read

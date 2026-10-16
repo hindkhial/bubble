@@ -1,6 +1,6 @@
 # Bubble testing and stability
 
-**Current verification (2026-10-16): all nine browser scenarios Passed** in the approved isolated Linux Chromium runner, with sandbox/TLS verification enabled and both macOS keychains unchanged. Frontend 52/backend 62 tests and builds pass. Earlier blocker/Not Tested records below are historical; see **Final verified browser result** and [BETA-TESTING.md](BETA-TESTING.md) for current evidence. Full manual responsive/screen-reader/focus checks remain Not Tested.
+**Previous beta verification (2026-10-16): all nine browser scenarios Passed** in the approved isolated Linux Chromium runner, with sandbox/TLS verification enabled and both macOS keychains unchanged. Frontend 52/backend 62 tests and builds pass. Earlier blocker/Not Tested records below are historical; see **Final verified browser result** and [BETA-TESTING.md](BETA-TESTING.md) for current evidence. Full manual responsive/screen-reader/focus checks remain Not Tested.
 
 ## Application setup
 
@@ -200,3 +200,12 @@ Base `af922352531da0669d8de60a29b75ec862cd0e17`; branch `release-readiness`.
 Local frontend verification used Node 24.19.0 and the pinned pnpm 10.18.3. The workflow targets Node 22 to match the existing frontend Docker build. Hosted Node 22 execution must be verified before requiring the checks. No lint script currently exists; no lint pass is claimed. Initial local unit execution hit the restricted operating-system temporary folder; rerunning with a workspace temporary directory passed all 52 tests.
 
 Security configuration review confirmed secure HttpOnly SameSite cookies, CSRF protection, explicit CORS, fail-fast deployment safety checks, Flyway validation with clean disabled, private loopback staging publication, tester authentication and stripped upstream Authorization. No runtime security configuration was altered. Existing secrets remain outside Git; neither macOS keychain was changed. No staging service was restarted and no application data was modified. See RELEASE-READINESS.md for candidate-specific checks and the approval process.
+
+
+### Expanded CI and security review
+
+The first hosted PR run [38973583064](https://github.com/hindkhial/bubble/actions/runs/38973583064) passed both frontend and backend jobs at 7200c5f1146a0f7d02030969c02ee30d979c1c16. The expanded run [38974038882](https://github.com/hindkhial/bubble/actions/runs/38974038882) passed frontend/backend at a7ccb08cf93c51978c4f7c4cb2b795a429c7ac3d but failed all nine browser scenarios during launch. Sandboxed browser TLS preflight and trust-removal checks passed. The child process's temporary HOME changed its browser-cache lookup; an explicit installed-browser path is now supplied. Final rerun results are pending.
+
+After dependency remediation, local frozen install, TypeScript and web export passed; **53 frontend tests pass**, including the new actual shell-quote injection regression. Backend remains 62 passing with real PostgreSQL. Audit changed from 1 critical/3 high/2 moderate to **0 critical/2 high/2 moderate**. The unresolved highs are explicit release blockers in RELEASE-SECURITY.md.
+
+Fresh scans of the existing private staging web/backend/PostgreSQL runtime images reported no vulnerabilities (OS and backend JAR coverage verified); this does not certify later candidate builds. Live private staging network/permissions/health checks and trusted HTTPS/gate/CSRF/CORS smoke passed without restarting operator services or changing user data. No new manual visual, accessibility, zoom, physical-device, secret-rotation or historical-image rollback execution is claimed.
