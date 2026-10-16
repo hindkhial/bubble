@@ -1,0 +1,21 @@
+# No production infrastructure is provisioned. Same secure base, separate profile.
+spring:
+  config:
+    import: optional:configtree:/run/secrets/
+  main:
+    banner-mode: off
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+server:
+  shutdown: graceful
+  forward-headers-strategy: native
+  tomcat:
+    redirect-context-root: false
+    remoteip:
+      internal-proxies: '172[.]30[.]87[.]10'
+logging:
+  level:
+    root: INFO
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+    org.springframework.web.servlet.PageNotFound: OFF

@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ProductionSecurityIntegrationTest {
     @Test void productionCookiesCorsAndAuthThrottleUseActualSecurityChain() throws Exception {
-        try(var context=PostgresTestDatabase.startWithOverrides(Map.of("server.port",0,"bubble.cors.allowed-origins","",
+        try(var context=PostgresTestDatabase.startWithOverrides(Map.of("server.port",0,"bubble.cors.allowed-origins","https://trusted.example",
                 "bubble.auth-limits.per-address-per-minute",3,"bubble.auth-limits.total-per-minute",4),"prod",BubbleApplication.class)) {
             String base="http://localhost:"+((WebServerApplicationContext)context).getWebServer().getPort();
             var client=HttpClient.newHttpClient();
