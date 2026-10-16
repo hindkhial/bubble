@@ -1,5 +1,7 @@
 # Bubble testing and stability
 
+**Current verification (2026-10-16): all nine browser scenarios Passed** in the approved isolated Linux Chromium runner, with sandbox/TLS verification enabled and both macOS keychains unchanged. Frontend 52/backend 62 tests and builds pass. Earlier blocker/Not Tested records below are historical; see **Final verified browser result** and [BETA-TESTING.md](BETA-TESTING.md) for current evidence. Full manual responsive/screen-reader/focus checks remain Not Tested.
+
 ## Application setup
 
 See [INTEGRATION.md](INTEGRATION.md) for normal local startup, required database variables, API URL configuration, session/CSRF behavior and workspace boundaries. Java 21, Maven, Node.js 22.6+, pnpm and PostgreSQL are required. Docker is required for the default backend integration tests. Local browser mode needs no account or backend.
@@ -162,3 +164,17 @@ Fresh verification passes 52 frontend tests, TypeScript, 62 PostgreSQL/backend t
 A fresh in-app browser navigation in this follow-up again failed with `ERR_CERT_AUTHORITY_INVALID` before the tester gate or any app assertion. Live gated HTTPS/account checks and container privacy checks pass against the new beta web image with Node's explicit CA; this does not change any browser scenario result.
 
 The owner declined macOS login-keychain changes. An isolated non-root Linux browser container was investigated instead. Its sandbox-enabled launch under default Docker restrictions failed with “No usable sandbox” before CA import or navigation; no CA has been trusted anywhere. The official container-only namespace/seccomp profile is prepared but requires approval before use. This is not a browser-suite execution or app failure. LOCAL-HTTPS.md records the complete fingerprint verification, trust/removal scope and observed prerequisite.
+
+#### Approved container-profile attempt
+
+The approved official Playwright 1.64.0 seccomp profile was re-fetched/verified and its applied contents inspected before startup. The non-root, cap-drop-ALL, no-new-privileges, read-only, no-port container retained Chromium's sandbox and TLS verification. After correcting temporary-home ownership to UID/GID 1001, sandbox startup progressed but failed at `sys_chroot("/proc/self/fdinfo/")`, before navigation/CA import. The official chroot rule requires CAP_SYS_CHROOT, which was intentionally absent; no capability or security bypass was added. The disposable container and its temporary state were removed. All nine application scenarios remain **Not Tested**. A one-rule chroot syscall proposal, without added capabilities, is prepared but not applied pending separate approval. Both macOS keychains remain untouched.
+
+## Final verified browser result
+
+The prior browser-blocked records above are historical. The current isolated Linux run passes **all nine scenarios**, zero failures/skips/flaky results, on Chrome for Testing 156.0.8078.4 / Playwright 1.64.0 against `bubble-web:beta-checked-state`. The sandbox and normal TLS verification stayed enabled. The full CA fingerprint was checked; Chromium rejected the certificate before private NSS import, accepted it after import, and rejected it again after removal. The disposable non-root/cap-drop-ALL/no-port container was removed and neither macOS keychain changed. The owner explicitly approved the official seccomp profile plus its single container-only chroot syscall exception; no further permission or capability was added. See LOCAL-HTTPS.md and BETA-TESTING.md for scope, policy/image hashes and cleanup evidence.
+
+The retained baseline had seven passes and two failures: missing browser checked-state semantics (a confirmed app accessibility defect), and a profile test refreshing before save completion (a synchronization error). The app now exposes checked/current/toggle states through supported browser attributes while preserving native behavior. Existing scenarios assert those semantics; profile persistence waits for the real success confirmation before refresh. The subsequent full suite has nine passes without retries. No assertion was removed to obtain a pass.
+
+After the fixes, 52 frontend tests, TypeScript, 62 real PostgreSQL/backend tests and packaging, web export/container builds, gated HTTPS/security smoke and private-network/container checks pass. Exact pre-existing synthetic fixture data matches after re-authentication of an expired session. No lint script exists. Raw reports/traces are private outside Git; JSON can contain synthetic credentials. Temporary-filesystem artifacts are collected through the live container before teardown rather than relying on stopped-container archive copying.
+
+Full manual responsive/accessibility matrix rows remain **Not Tested**. Automated 375/768/1440-pixel overflow and keyboard/ARIA checks are partial evidence, not physical-device, visual, screen-reader, zoom or complete focus-management certification. Browser verification succeeded in the isolated Linux runner; host macOS trust was intentionally left unchanged. Full manual verification and the documented operational gates remain required before public release.

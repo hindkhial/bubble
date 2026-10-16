@@ -64,7 +64,7 @@ export default function FileDetailScreen() {
         <Text style={styles.meta}>{item.meta}</Text>
         {isChecklist ? <View style={styles.bodyCard}>
           <Text style={styles.progress}>{progress.done} of {progress.total} done</Text>
-          {rows.map((row) => <Pressable key={row.id} accessibilityRole="checkbox" accessibilityLabel={row.text} accessibilityState={{ checked: row.done }} onPress={() => void Promise.resolve(toggleChecklistRow(item.id, row.id)).catch(()=>{})} style={styles.checklistRow}>
+          {rows.map((row) => <Pressable key={row.id} accessibilityRole="checkbox" accessibilityLabel={row.text} aria-checked={row.done} onPress={() => void Promise.resolve(toggleChecklistRow(item.id, row.id)).catch(()=>{})} style={styles.checklistRow}>
             <View style={[styles.checkbox, row.done && styles.checkboxDone]}><Text style={styles.checkmark}>{row.done ? '✓' : ''}</Text></View>
             <Text style={[styles.rowText, row.done && styles.rowDone]}>{row.text}</Text>
           </Pressable>)}

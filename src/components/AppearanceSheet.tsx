@@ -16,14 +16,14 @@ export function AppearanceSheet({ onClose }: { onClose: () => void }) {
           <Text style={styles.description}>A little more you, in every Bubble.</Text>
           <Text accessibilityRole="header" style={styles.label}>Mode</Text>
           <View style={styles.modes}>
-            {(account.mode==='account' ? ['light','dark','system'] as const : ['light','dark'] as const).map((option) => <Pressable key={option} accessibilityRole="radio" accessibilityState={{ checked: selectedMode === option }} disabled={account.busy || account.loading} onPress={() => setMode(option)} style={[styles.mode, selectedMode === option && styles.selected]}>
+            {(account.mode==='account' ? ['light','dark','system'] as const : ['light','dark'] as const).map((option) => <Pressable key={option} accessibilityRole="radio" aria-checked={selectedMode === option} disabled={account.busy || account.loading} onPress={() => setMode(option)} style={[styles.mode, selectedMode === option && styles.selected]}>
               <Text style={styles.modeText}>{option === 'light' ? 'Light' : option === 'dark' ? 'Dark' : 'System'}{selectedMode === option ? ' ✓' : ''}</Text>
             </Pressable>)}
           </View>
           <Text accessibilityRole="header" style={styles.label}>Customize your app</Text>
           <Text style={styles.description}>Choose your accent. Dark mode uses a deeper shade of the same color.</Text>
           <View style={styles.palette}>
-            {accentPalette.map((option) => <Pressable key={option.name} accessibilityRole="radio" accessibilityLabel={`${option.name} app color`} accessibilityState={{ checked: accent === option.name }} disabled={account.busy || account.loading} onPress={() => setAccent(option.name)} style={[styles.colorOption, accent === option.name && styles.selected]}>
+            {accentPalette.map((option) => <Pressable key={option.name} accessibilityRole="radio" accessibilityLabel={`${option.name} app color`} aria-checked={accent === option.name} disabled={account.busy || account.loading} onPress={() => setAccent(option.name)} style={[styles.colorOption, accent === option.name && styles.selected]}>
               <View style={[styles.swatch, { backgroundColor: mode === 'dark' ? option.dark : option.value }]}><Text style={styles.check}>{accent === option.name ? '✓' : ''}</Text></View>
               <Text style={styles.colorName}>{option.name}</Text>
             </Pressable>)}

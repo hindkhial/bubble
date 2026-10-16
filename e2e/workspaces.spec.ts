@@ -111,6 +111,7 @@ test('account note create, edit, pin, search, direct refresh and delete', async 
   await card.click({ button: 'right' });
   await page.getByRole('button', { name: 'Unpin', exact: true }).click();
   await page.getByRole('button', { name: 'Lists', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Lists', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(card).toHaveCount(0);
   await page.getByRole('button', { name: 'Notes', exact: true }).click();
   await card.click();
@@ -140,6 +141,7 @@ test('checklist items, completion and deletion persist through the editor', asyn
   await page.getByRole('checkbox', { name: 'Tea', exact: true }).click();
   await expect(page.getByRole('checkbox', { name: 'Tea', exact: true })).not.toBeChecked();
   await edit(page, 'Browser list', 'checklist');
+  await expect(page.getByRole('checkbox', { name: 'Item 1 complete', exact: true })).not.toBeChecked();
   await page.getByRole('button', { name: 'Remove item 1', exact: true }).click();
   await page.getByRole('button', { name: 'Add checklist item' }).click();
   await page.getByRole('textbox', { name: 'Checklist item 2', exact: true }).fill('Bread');
@@ -159,6 +161,8 @@ test('profile and account light, dark, system and accent preferences persist', a
   await page.getByRole('textbox', { name: 'Display name', exact: true }).fill('Updated tester');
   await page.getByRole('textbox', { name: 'Short bio', exact: true }).fill('A browser-tested bio');
   await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(page.getByText('Profile updated.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save changes', exact: true })).toHaveCount(0);
   await page.reload();
   await expect(page.getByText('Updated tester', { exact: true })).toBeVisible();
   await expect(page.getByText('A browser-tested bio', { exact: true })).toBeVisible();
@@ -186,6 +190,7 @@ test('backend outage retains failed draft and local originals; selected copy is 
   await page.goto('/account');
   await page.getByRole('button', { name: 'Review local notes and lists' }).click();
   await page.getByRole('checkbox', { name: 'Copy Local original' }).click();
+  await expect(page.getByRole('checkbox', { name: 'Copy Local original' })).toBeChecked();
   await page.getByRole('button', { name: 'Copy 1 selected items to my account' }).click();
   await expect(page.getByRole('alert').first()).toContainText('Copied 1 new items');
   expect(await page.evaluate(() => localStorage.getItem('bubble.items.v1'))).toBe(localBefore);
@@ -204,6 +209,7 @@ test('mobile navigation, empty search, clear action and validation', async ({ pa
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
   await page.getByRole('button', { name: 'Search tab' }).click();
+  await expect(page.getByRole('button', { name: 'Search tab' })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByText('A little space waiting to be filled', { exact: true })).toBeVisible();
   await page.getByRole('textbox', { name: 'Search everything' }).fill('missing');
   await expect(page.getByText('No matching thoughts yet', { exact: true })).toBeVisible();
@@ -214,6 +220,15 @@ test('mobile navigation, empty search, clear action and validation', async ({ pa
   await page.getByRole('textbox', { name: 'Display name', exact: true }).fill('');
   await page.getByRole('button', { name: 'Save changes', exact: true }).click();
   await expect(page.getByRole('alert').last()).toBeVisible();
+  await page.getByRole('textbox', { name: 'Display name', exact: true }).fill('Local browser tester');
+  await page.getByRole('button', { name: 'Use 🐱 avatar', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Use 🐱 avatar', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(page.getByText('Profile updated.', { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText('Local browser tester', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Use 🐱 avatar', exact: true })).toHaveAttribute('aria-pressed', 'true');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 

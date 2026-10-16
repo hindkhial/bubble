@@ -2,11 +2,11 @@
 
 ## Scope and current decision
 
-Reviewed on 2026-10-16. PR #6 had no blocking source/configuration findings after reviewing all 20 changed files and rerunning the frontend/backend/build and HTTPS/account checks. GitHub reported no checks or statuses. It merged into `integration` at `1ed5bb0beac7f737c57175242c26500676169b6d`. `beta-testing` starts from that merge. Original `frontend` and `backend` branches are preserved.
+Reviewed on 2026-10-16. PR #6 was reviewed and merged into `integration` at `1ed5bb0beac7f737c57175242c26500676169b6d`; `beta-testing` starts from that merge. Original `frontend` and `backend` branches are preserved.
 
-**Not ready to invite testers yet:** the actual staging UI could not load in the available real browser. Opening `https://localhost:8443` in the in-app browser failed with `net::ERR_CERT_AUTHORITY_INVALID`, before the tester login or Bubble UI. This is a failed browser-access prerequisite, not an application assertion failure. No certificate warning was bypassed or trust installed. The prior Chromium Mach-port launch restriction remains documented in [TESTING.md](TESTING.md). There is no unrestricted browser runner here; the headless suite was not rerun under the same restriction.
+**Current automated result: all nine browser scenarios Passed**, zero failures/skips/flaky results, on the fixed private web image using sandboxed Linux Chromium and an isolated certificate store. Both macOS keychains remain unchanged. Source review and passing browser/frontend/backend checks support merging this focused PR into integration after normal human review. No merge or public deployment was performed.
 
-All interface checks below are **Not Tested** in this review. Previous walkthrough evidence in TESTING.md is historical, not execution of this beta matrix. Unit tests, static review and live API checks do not certify browser behavior. No public deployment, remote infrastructure or tester invitations were performed.
+**Manual beta sign-off remains incomplete:** the matrix below is Not Tested as a full manual process. Automated functional/keyboard/viewport checks are partial evidence; full screen-reader output, focus management, visual spacing/zoom and real mobile keyboard review still require human execution. Tester/release sign-off is separate from code merge readiness. No remote infrastructure or tester invitations were performed. Certificate trust instructions, exact fingerprints, approved container policy and earlier prerequisite failures are recorded in [LOCAL-HTTPS.md](LOCAL-HTTPS.md).
 
 ## Safe tester setup and process
 
@@ -48,68 +48,68 @@ Run the functional rows in **both local-only and account mode** where supported;
 | A03 | Enable reduced motion before opening, then change it while Bubble is open. Modal/route transitions stop; disabling the preference restores normal transitions. Verify pointer interactions do not cause discomfort. | Not Tested |
 | A04 | Inspect light/dark text, placeholder text, selected/unselected controls, custom Bubble colors and photos for contrast and visible focus. Token tests are partial evidence, not a full rendered accessibility audit. | Not Tested |
 
-## Executed checks and source findings
+## Final passing browser run
 
-- **Passed:** 52 frontend tests, including local persistence/validation, profile/appearance, search/ordering, API errors, explicit-copy isolation and four reduced-motion observer cases. These are module tests, not browser storage/interaction proof.
-- **Passed:** 62 real PostgreSQL/backend tests, zero failures/errors/skips; Maven executable packaging. Includes ownership, authentication/CSRF, migrations/data preservation, settings and atomic checklist behavior.
-- **Passed:** TypeScript, Expo web export, whitespace checks. No lint script exists. The first export hit the environment's unwritable default Expo directory; configuring a writable tool-state directory resolved it without a source change.
-- **Passed:** live HTTPS gate/cookie/CSRF/CORS/route checks and real TypeScript client → Spring → PostgreSQL registration/login/logout/session, notes/checklists/search/pinning, profile/preferences and explicit-copy/local-original checks. Synthetic persistent fixture values were also compared exactly through the existing lifecycle helper. The original beta-preparation run used the earlier staging images. See the final-verification record below for the newer web image; beta UI behavior is still not browser-certified.
-- **Passed:** running container health/non-root/read-only secrets, restricted database role, loopback-only publishing and rejection on the host's non-loopback address. PostgreSQL/backend have no host ports. This is configuration/own-host evidence, not an external Internet probe.
-- **Failed prerequisite:** real in-app browser navigation to staging stopped at certificate authority validation. No Bubble screen was rendered; all UI matrix rows remain Not Tested.
-- **Not Tested:** the nine-scenario Playwright suite (the original eight plus one new keyboard/responsive scenario). Discovery/type checking passes; no unrestricted Chromium runner is available. Do not mark the original eight or the new scenario passed.
+On 2026-10-16 at 22:46 Africa/Casablanca (21:46 UTC), the complete nine-scenario suite ran on **Google Chrome for Testing 156.0.8078.4**, Playwright 1.64.0, Linux amd64 in the disposable test container. Duration was about 91.5 seconds. The retained JSON report records **9 expected passes, 0 unexpected failures, 0 skipped, 0 flaky**; configured retries are zero. Tests ran against the updated existing private HTTPS stack, using fictional accounts/content and fresh browser contexts. No personal browser profile/storage was used.
 
-Confirmed source defects fixed on this branch:
+| Browser scenario | Final result |
+| --- | --- |
+| Local offline editing/creation, refresh and storage restoration into a new context | Passed |
+| Registration, invalid credentials, session restoration, expiry and logout | Passed |
+| Account note creation/editing, pinning, body search, direct refresh and deletion | Passed |
+| Checklist completion, editor add/remove, row content and persistence | Passed |
+| Account profile/bio and Light/Dark/System/accent persistence | Passed |
+| Failed account-save draft retention, explicit local copy and local-original preservation | Passed |
+| Mobile navigation, empty/clear search, validation, local profile/emoji persistence | Passed |
+| Pending/failed account searches do not claim no matches | Passed |
+| Keyboard card options/pinning and no page overflow at 375, 768 and 1440 pixels | Passed |
 
-1. Unpinned cards offered actions only through long-press/context menus, leaving keyboard users without a normal control for pinning. Every card now has a labeled, focusable options button; pinned cards retain their pin symbol. A new browser regression checks Enter/Space pinning at three widths but awaits execution.
-2. All eight sheet/dialog sites used unconditional slide/fade transitions. A shared modal honors the device/browser reduced-motion preference; route animations also disable when requested. A single provider subscription defaults conservatively to no motion, handles preference changes and ignores stale asynchronous results after changes/unmount. Observer tests cover those cases and query failure. Full rendered motion behavior awaits browser testing.
-3. Error/delete text used the same dark red on dark surfaces (approximately 2.33:1 on the dark sheet), and muted small captions on colored light cards ranged about 2.41–4.30:1. A theme-aware destructive color and normal text color on colored captions improve contrast. Tests enforce at least 4.5:1 for destructive/muted text on neutral form surfaces and existing text/action combinations for all seven accents in both modes. This does not certify text over arbitrary photographs or all rendered states.
+### Failures found and corrected
 
-Source review also found labeled form inputs, semantic checklist/radio state and search announcements, flexible two-column grids, scrollable editors and bounded dialogs. Those patterns are retained. Actual focus visibility/trapping, screen-reader announcements, modal behavior, zoom, mobile keyboard, grid wrapping and visual spacing remain unverified. No responsive layout defect is claimed fixed without rendered evidence. A 36-pixel options target is retained within the existing geometry; tester review should check touch comfort.
+A retained baseline browser run had **7 Passed / 2 Failed**, not a clean pass. It identified a real accessibility defect: the checklist saved completion (HTTP 200 and a visible checkmark), but React Native Web did not expose legacy `accessibilityState.checked` as `aria-checked`. Checked state now uses the current cross-platform `aria-checked` alias in detail/editor checklists, local-copy choices and appearance radios. Web navigation exposes `aria-current`, and filter/avatar toggle buttons expose `aria-pressed` while preserving native selected state. Existing browser scenarios now assert these states as regressions; no new dependency or replacement mock was introduced.
 
-No storage keys, content models, account APIs, database schema or existing user fixtures were changed. No dependencies were added. The synthetic preservation check does not certify a real user's uninspected browser data. Existing personal browser tabs/storage were left untouched.
+The profile scenario had a test synchronization defect: it refreshed immediately after clicking Save, before the async save had completed; the trace showed no completed profile patch before refresh. It now waits for the existing **Profile updated.** success message and editor closure, then refreshes and verifies exact persisted values. The test still checks the persisted name/bio and all appearance modes. This is not a claim that refreshing during an unconfirmed in-flight save is safe.
+
+An earlier failing suite attempt completed but detailed temporary reports were not retained before container exit. It is not counted as a pass. The retained baseline above and final run both have private result records. Collection was corrected to stream artifacts out of the live temporary filesystem before teardown; no new host directory mount was added. Raw JSON/traces can contain synthetic credentials and remain outside Git in the protected operator workspace.
+
+### Security and cleanup evidence
+
+The owner separately approved the official version-matched seccomp profile and the single chroot rule exception. The applied policy was verified to differ from the official profile **only** by removing that rule's capability condition; its recorded SHA-256 is `322b86b4f7f5b597ed6a9c2cfd6193a4b249a51c8bc9cfba8ff1a485070b24e8`. No additional permission was used.
+
+Before each run, Docker inspection confirmed non-root `pwuser` UID/GID 1001, ALL capabilities dropped, no added capabilities/SYS_ADMIN, no privileged mode, no-new-privileges, read-only root, temporary home/tmp and no host ports or host directory mounts. Only the public CA and two test scripts were mounted read-only. Synthetic gate credentials were provided privately through stdin and copied owner-only into temporary home. The browser shared the existing web container's network namespace to reach the same `https://localhost:8443` without publishing another port; this grants only that existing network reachability, not host filesystem/Docker access.
+
+The **complete CA fingerprint** matched LOCAL-HTTPS.md before import. A fresh sandboxed Chromium rejected the certificate without trust; after adding only that CA with SSL trust to its private NSS store, normal certificate/hostname/expiry verification succeeded and Bubble rendered. After the suite, the CA was deleted and another fresh browser again rejected the certificate. The disposable container and temporary state were then removed; absence was verified. No browser/system-wide certificate exception or TLS/sandbox bypass was used. Both macOS keychains remain untouched; read-only host verification still rejects this private CA as expected.
+
+Tested artifacts:
+
+- Web: `bubble-web:beta-checked-state`, image ID `sha256:13e43dc7d4b707acaa331112d3b341137eecca655e22005f04b3a303a3c72d52`.
+- Test runner: `bubble-browser-review:checked-state`, image ID `sha256:52a28a218f33922fa6f5e930b6949fb188444403a4f41d81f889cfdb6f950dae`.
+- The protected web-only Compose override selects the fixed web image. Backend/database images and the data volume were retained. Application source in these images matches the final checked-state fix committed with this record; documentation changes do not require a web rebuild.
+
+### Final checks and remaining limits
+
+After the fixes: **52 frontend tests**, TypeScript, **62 real PostgreSQL/backend tests** and executable packaging, web export/container builds and whitespace checks pass. No lint script exists. Fresh gated HTTPS/security smoke and private container/network checks pass after the final web update. An old synthetic fixture session had expired and returned the expected 401; re-authentication succeeded and exact notes/checklist completion/profile/preferences still matched. No service restart is claimed for this last expiry/re-authentication check. Synthetic browser fixtures and the pre-existing synthetic fixture remained separate; personal notes were not inspected or altered.
+
+The nine browser scenarios are now genuinely Passed. **B01–B16, R01–R03 and A01–A04 remain Not Tested as full manual procedures.** Automated widths/ARIA assertions do not certify visual layout, a physical mobile keyboard, 200% zoom, VoiceOver/NVDA, complete focus order/trapping or rendered contrast on arbitrary photos. No Safari/Firefox/native-device or OS-reboot certification is claimed. The macOS in-app browser still lacks CA trust by design; the resolved execution path is the isolated Linux runner. Short-lived certificate renewal, approved tester access, current image scans and the existing session/offline/rollback limits remain release gates.
+
+Recommendation: **safe to merge the focused PR into integration after normal human review**, based on the passing browser/backend/frontend checks and reviewed security scope. Do not interpret merge readiness as public release approval. No merge or public deployment was performed.
+
+Additional follow-up files: `src/app/account.tsx`, `src/app/file/[id].tsx`, `src/app/search.tsx`, `src/components/AppearanceSheet.tsx`, `BottomNavigation.tsx`, `ChecklistEditorRows.tsx`, `EditProfileSheet.tsx` (component filenames under `src/components/`), and updated regressions in `e2e/workspaces.spec.ts`; evidence/instructions are in this guide, TESTING.md and LOCAL-HTTPS.md.
 
 ## Bug report form and exit gates
 
 Copy this form privately for each finding: tested commit/image, date, tester pseudonym, browser/version/OS, viewport/zoom, mode/theme/accent, checklist ID, reproducible steps, expected result, actual result, severity, redacted synthetic evidence, retest result. Do not include secrets or real notes. A screenshot/trace review is required before sharing; traces can contain credentials.
 
-Before starting a controlled beta: resolve certificate trust on an approved isolated browser; build the reviewed beta web artifact; complete all applicable matrix rows; run all nine browser scenarios on an unrestricted runner; review accessibility/responsive failures; confirm private access and current certificate/secrets/image scans; verify backup/restore instructions and preserve rollback artifacts. Any remaining nonblocking issue needs an owner and explicit acceptance. No public release is authorized by this document.
+Before starting a controlled beta: verify the approved isolated trust proof for the selected artifact; complete all applicable manual matrix rows; retain a passing run of all nine browser scenarios; review accessibility/responsive failures; confirm private access and current certificate/secrets/image scans; verify backup/restore instructions and preserve rollback artifacts. Any remaining nonblocking issue needs an owner and explicit acceptance. No public release is authorized by this document.
 
-## Changed files
 
-- Process/docs: `BETA-TESTING.md`, `README.md`, `TESTING.md`.
-- Browser regression: `e2e/workspaces.spec.ts`.
-- Route/profile modal integration: `src/app/_layout.tsx`, `src/app/you.tsx`.
-- Shared motion/preferences: `src/components/MotionAwareModal.tsx`, `src/theme/motion.ts`, `src/theme/Theme.tsx`.
-- Modal callers: `src/components/AddPreview.tsx`, `AppearanceSheet.tsx`, `CollectionGrid.tsx`, `ConfirmDialog.tsx`, `EditContentSheet.tsx`, `EditProfileSheet.tsx`, `ManagementMenu.tsx` (all under `src/components/`).
-- Card options/contrast: `src/components/BubbleCard.tsx`, `FileCard.tsx`, `PinnedMarker.tsx`, `ChecklistEditorRows.tsx` (all under `src/components/`), `src/theme/appearance.ts`.
+## Changed files in the complete PR
+
+- Evidence/instructions: `BETA-TESTING.md`, `LOCAL-HTTPS.md`, `README.md`, `TESTING.md`.
+- Browser regressions: `e2e/workspaces.spec.ts`.
+- Screens/navigation: `src/app/_layout.tsx`, `src/app/you.tsx`, `src/app/account.tsx`, `src/app/file/[id].tsx`, `src/app/search.tsx`.
+- Components (under `src/components/`): `AddPreview.tsx`, `AppearanceSheet.tsx`, `BottomNavigation.tsx`, `BubbleCard.tsx`, `ChecklistEditorRows.tsx`, `CollectionGrid.tsx`, `ConfirmDialog.tsx`, `EditContentSheet.tsx`, `EditProfileSheet.tsx`, `FileCard.tsx`, `ManagementMenu.tsx`, `MotionAwareModal.tsx`, `PinnedMarker.tsx`.
+- Theme/motion: `src/theme/Theme.tsx`, `src/theme/appearance.ts`, `src/theme/motion.ts`.
 - Module regressions: `tests/appearance.test.mjs`, `tests/motion.test.mjs`.
 
-## Final verification follow-up (2026-10-16)
-
-Reviewed all PR #7 source/test changes at `fd3edaa820cc29abc600715004cc85903fb81c24`, including modal props/context, preference listener lifecycle, card action labels/placement, contrast tokens and the ninth regression scenario. **No additional blocking application defect was confirmed by source review.** No application code or regression tests were changed in this follow-up; the existing tests were rerun. That conclusion does not establish rendered browser correctness.
-
-Read-only certificate diagnosis is now in [LOCAL-HTTPS.md](LOCAL-HTTPS.md), including platform-specific approval-gated import/removal instructions, the exact public CA/leaf fingerprints, expiry, and the separate browser-launch limitation. OpenSSL chain/server-purpose verification passes. A live Node TLS connection using the explicit CA and normal verification passes hostname validation and confirms the served leaf equals the file. macOS default trust verification reports `CSSMERR_TP_NOT_TRUSTED`; the CA is absent from the current login keychain. A fresh in-app browser attempt in this follow-up also failed with `ERR_CERT_AUTHORITY_INVALID` before the tester gate or any app assertion. This confirms the browser-access prerequisite still fails. **No trust store has been changed. The owner explicitly declined macOS login-keychain trust.** Trusting a CA is broader than trusting just the current localhost leaf and requires explicit owner approval.
-
-A new local web image `bubble-web:beta-review-fd3edaa` was built successfully from the reviewed PR #7 application source and started with an external web-only Compose override. The source changes in this follow-up are documentation only. The web service is healthy; backend/database images, database volume, HTTPS and tester gate remain in place. The original web image is retained and the selected override/previous image receipt stay outside Git. This is an update to the existing loopback-only private stack, not public deployment. Future operator invocations must include that web override to retain the selected beta image; the protected base environment still names the retained earlier release. Do not accidentally replace it while collecting beta results.
-
-Fresh results:
-
-| Check | Result |
-| --- | --- |
-| Frontend module tests | Passed: 52, zero failures/skips |
-| TypeScript | Passed |
-| Backend real PostgreSQL tests and executable packaging | Passed: 62, zero failures/errors/skips |
-| Private web image/export | Passed; healthy in existing private stack |
-| TLS chain, hostname and served-certificate equality with explicit CA | Passed; not browser trust proof |
-| Actual in-app HTTPS navigation | Failed prerequisite: ERR_CERT_AUTHORITY_INVALID, no app assertions |
-| Isolated browser trust proof | Not Tested; Linux runner sandbox prerequisite failed before import; container-only seccomp approval pending |
-| Existing synthetic note/checklist/profile/preferences after service restart and re-authentication | Passed: exact expected values compared; old in-memory session rejected |
-| Live gated TLS/account smoke and private container checks | Passed; synthetic data, only loopback web publishing, no database/backend host ports |
-| Nine browser scenarios | Not Tested; dependent on isolated browser trust and a runner supporting Chromium's sandbox |
-| Manual B01–B16, R01–R03, A01–A04 | Not Tested in this follow-up |
-
-The nine pending scenario results individually remain **Not Tested**: (1) local offline/storage restoration; (2) registration/login/session/logout; (3) account note CRUD/pins/search; (4) checklist editing/completion; (5) profile/theme preferences; (6) failed-save/copy isolation; (7) mobile navigation/validation; (8) pending/failed search; (9) keyboard card options across widths. Test discovery is not execution. The earlier Mach-port launch failure remains a historical infrastructure finding; no new browser-suite pass or new launch attempt is claimed here.
-
-Recommendation at this checkpoint: **hold PR #7 merge until approved HTTPS browser trust is verified and the nine scenarios run on a suitable runner**, or until the owner explicitly accepts the remaining verification risk. Source review and non-browser checks found no new blocker. Current rendered UI, focus/screen-reader behavior, mobile/tablet/desktop layout and browser data preservation remain unverified. Public release is not approved. Existing image scan records are point-in-time prior evidence, not a fresh scan of the new beta web image.
-
-The owner requested profile/container-only trust and declined macOS keychain changes. Full public CA fingerprint comparison against LOCAL-HTTPS.md passes. A digest-pinned official Linux Playwright image was built, but its non-root sandbox-enabled launch under default Docker restrictions failed with **No usable sandbox**, before navigation or any CA import. The disposable probe container was removed. No keychain, root store or NSS CA trust was modified. A specific container-only Playwright seccomp policy has been prepared but not applied, pending approval; details and cleanup scope are in LOCAL-HTTPS.md. All nine scenarios remain Not Tested. This new Linux prerequisite is distinct from the historical host macOS Mach-port failure.
+No dependencies, storage keys, content models, account APIs or database schema changed. Earlier PR changes add keyboard card options, preference-aware modal/route motion and contrast corrections; the verified follow-up fixes checked/current/toggle browser semantics and profile-test synchronization. Existing personal browser tabs/storage were untouched.
