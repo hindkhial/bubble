@@ -4,6 +4,7 @@ import {dirname,basename,join,relative,isAbsolute,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 const scanner='aquasec/trivy@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222';
+if(typeof process.getuid!=='function' || process.getuid()===0) throw new Error('Run image scanning as a non-root operator.');
 const input=process.argv[2];
 if(!input || !isAbsolute(input)) throw new Error('Pass a NEW absolute report directory outside Git.');
 const directory=join(realpathSync(dirname(input)),basename(input));
@@ -11,6 +12,9 @@ const repo=realpathSync(fileURLToPath(new URL('../',import.meta.url)));
 const location=relative(repo,directory);
 if(!(location==='..' || location.startsWith('..'+sep) || isAbsolute(location))) throw new Error('Reports must be outside the repo.');
 mkdirSync(directory,{mode:0o700});
+// Database downloads can exceed tmpfs capacity; keep temporary public scanner
+// data in the protected report mount, without relaxing container privileges.
+mkdirSync(join(directory,'tmp'),{mode:0o700});
 const run=(command,args)=>{
   const result=spawnSync(command,args,{cwd:repo,encoding:'utf8',maxBuffer:8*1024*1024});
   if(result.status!==0) throw new Error('Image scanning did not complete: '+command+' '+args[0]+'. No clean result is claimed.');
@@ -26,8 +30,8 @@ for(const service of ['backend','web','db']) {
   const runtimeManifest=container ? JSON.parse(run('docker',['inspect','--format','{{json .ImageManifestDescriptor}}',container]))?.digest : undefined;
   const archive=join(directory,service+'.tar');
   run('docker',['save',image,'--output',archive]);
-  run('docker',['run','--rm','-e','TRIVY_DISABLE_TELEMETRY=true','-v',directory+':/scan','-v','bubble-private-trivy-cache:/cache',
-    scanner,'image','--input','/scan/'+service+'.tar','--cache-dir','/cache','--timeout','10m','--scanners','vuln','--format','json','--output','/scan/'+service+'.json']);
+  run('docker',['run','--rm','--user',process.getuid()+':'+process.getgid(),'--cap-drop','ALL','--security-opt','no-new-privileges','--read-only','--tmpfs','/tmp:rw,nosuid,nodev,size=256m','-e','TRIVY_DISABLE_TELEMETRY=true','-e','TMPDIR=/scan/tmp','-v',directory+':/scan',
+    scanner,'image','--input','/scan/'+service+'.tar','--cache-dir','/scan/cache','--timeout','10m','--scanners','vuln','--format','json','--output','/scan/'+service+'.json']);
   const report=JSON.parse(readFileSync(join(directory,service+'.json'),'utf8'));
   if(!report.Results?.some(result=>result.Class==='os-pkgs') || (service==='backend' && !report.Results.some(result=>result.Type==='jar')))
     throw new Error('Expected OS/Java package coverage is missing; no clean result is claimed.');

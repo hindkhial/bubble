@@ -2,6 +2,7 @@ FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18
 RUN npm install --global pnpm@10.18.3
 WORKDIR /build
 COPY package.json pnpm-lock.yaml ./
+COPY patches ./patches
 RUN pnpm install --frozen-lockfile
 COPY . .
 ARG EXPO_PUBLIC_API_URL
