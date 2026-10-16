@@ -1,6 +1,6 @@
 # Bubble testing and stability
 
-**Previous beta verification (2026-10-16): all nine browser scenarios Passed** in the approved isolated Linux Chromium runner, with sandbox/TLS verification enabled and both macOS keychains unchanged. Frontend 52/backend 62 tests and builds pass. Earlier blocker/Not Tested records below are historical; see **Final verified browser result** and [BETA-TESTING.md](BETA-TESTING.md) for current evidence. Full manual responsive/screen-reader/focus checks remain Not Tested.
+**Current release-readiness verification (2026-10-16): all three GitHub CI jobs Passed** at `2eeee6c5b8e4a793016fd433ff5e209c4b0d7593`: 53 frontend tests, 62 backend tests, TypeScript, web build, backend packaging and all nine browser scenarios. The hosted recovery drill and temporary-trust removal also Passed. See the final hosted evidence below. Two high dependency advisories and human manual gates still block release. Earlier failure/pending records are historical.
 
 ## Application setup
 
@@ -204,8 +204,31 @@ Security configuration review confirmed secure HttpOnly SameSite cookies, CSRF p
 
 ### Expanded CI and security review
 
-The first hosted PR run [38973583064](https://github.com/hindkhial/bubble/actions/runs/38973583064) passed both frontend and backend jobs at 7200c5f1146a0f7d02030969c02ee30d979c1c16. The expanded run [38974038882](https://github.com/hindkhial/bubble/actions/runs/38974038882) passed frontend/backend at a7ccb08cf93c51978c4f7c4cb2b795a429c7ac3d but failed all nine browser scenarios during launch. Sandboxed browser TLS preflight and trust-removal checks passed. The child process's temporary HOME changed its browser-cache lookup; an explicit installed-browser path is now supplied. Final rerun results are pending.
+The first hosted PR run [38973583064](https://github.com/hindkhial/bubble/actions/runs/38973583064) passed both frontend and backend jobs at 7200c5f1146a0f7d02030969c02ee30d979c1c16. The expanded run [38974038882](https://github.com/hindkhial/bubble/actions/runs/38974038882) passed frontend/backend at a7ccb08cf93c51978c4f7c4cb2b795a429c7ac3d but failed all nine browser scenarios during launch. Sandboxed browser TLS preflight and trust-removal checks passed. The child process's temporary HOME changed its browser-cache lookup; an explicit installed-browser path is now supplied. The final rerun below supersedes these failures.
 
 After dependency remediation, local frozen install, TypeScript and web export passed; **53 frontend tests pass**, including the new actual shell-quote injection regression. Backend remains 62 passing with real PostgreSQL. Audit changed from 1 critical/3 high/2 moderate to **0 critical/2 high/2 moderate**. The unresolved highs are explicit release blockers in RELEASE-SECURITY.md.
 
 Fresh scans of the existing private staging web/backend/PostgreSQL runtime images reported no vulnerabilities (OS and backend JAR coverage verified); this does not certify later candidate builds. Live private staging network/permissions/health checks and trusted HTTPS/gate/CSRF/CORS smoke passed without restarting operator services or changing user data. No new manual visual, accessibility, zoom, physical-device, secret-rotation or historical-image rollback execution is claimed.
+
+
+### Final hosted evidence
+
+[GitHub Actions run 38974495598](https://github.com/hindkhial/bubble/actions/runs/38974495598), pull-request merge-candidate validation for source head `2eeee6c5b8e4a793016fd433ff5e209c4b0d7593`: **all three jobs Passed**. Frontend uses Node 22.23.3 and pnpm 10.18.3 on Ubuntu 24.04; backend uses Java 21 and real PostgreSQL Testcontainers. Browser job uses non-root Ubuntu 22.04, Playwright 1.64.0 and Chrome 156.0.8078.4 with sandboxing enabled.
+
+| Actual hosted result | Status |
+| --- | --- |
+| Frozen lockfile install, pnpm cache, TypeScript, 53 frontend tests, web export | Passed |
+| Maven dependency cache, Java 21 compile, 62 tests (no failures/errors/skips), package | Passed |
+| All nine existing browser scenarios | Passed: 9 expected, 0 unexpected/skipped/flaky; 88.66 seconds |
+| Untrusted TLS rejected before import; fingerprint-verified temporary NSS trust accepted | Passed |
+| Health, tester gate, cookie/CSRF/CORS and network isolation | Passed |
+| Flyway V1/V2, protected backup and transactional restore to fresh scratch DB | Passed |
+| Exact seven-table comparison and application operation against recovered DB | Passed |
+| Full service restart with retained volume, rejected old sessions and exact fixtures after reauthentication | Passed |
+| Return to original CI source database and final private health checks | Passed |
+| Temporary CA removed and fresh-browser TLS rejection reconfirmed | Passed |
+| Disposable CI Compose resources/volume and temporary files removed | Passed: cleanup commands completed |
+
+The nine scenarios cover local offline editing/restoration; registration/login/session/logout; note CRUD/pinning/search; checklist edits/completion; profile and themes; failed account writes and explicit local copy; mobile navigation/validation; pending/failed search; and keyboard card options at three viewport widths. These are automated assertions, not full manual visual/accessibility/device certification.
+
+Candidate container scanning remains required before release: the fresh local scan certified the existing staging images, not the later rebuilt CI images. Two unresolved high and two moderate frontend dependency advisories remain recorded in RELEASE-SECURITY.md. No public deployment, release, tag, operator secret rotation or arbitrary historical-image rollback was performed. Final documentation-only commits should be checked against their own PR CI status; this record identifies the exact executed source head rather than inventing a self-referential hash.

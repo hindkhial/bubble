@@ -7,12 +7,12 @@ Proposed version: **0.1.0-beta.1**. Status: **not approved for release**. Comple
 | PR #7 merged; original branches preserved | Passed | integration af922352531da0669d8de60a29b75ec862cd0e17 |
 | Frozen frontend install, TypeScript, unit tests, web export | Passed | Initial local and hosted CI; final candidate results in TESTING.md |
 | Java 21 compile, PostgreSQL tests, packaging | Passed | 62 local and hosted tests; final candidate results in TESTING.md |
-| Secure browser CI, nine scenarios | Not Tested | Pending new hosted job; sandbox/TLS checks must pass |
+| Secure browser CI, nine scenarios | Passed | GitHub run 38974495598; 9 passed, none skipped/flaky |
 | Final candidate container scan | Not Tested | Existing runtime image scans are historical for a later build |
 | Dependency security release gate | Failed | Two unresolved high advisories; see RELEASE-SECURITY.md |
-| Current private health/TLS/network verification | Not Tested | Record latest execution in TESTING.md |
+| Current private health/TLS/network verification | Passed | Live operator staging and disposable hosted CI; TESTING.md |
 | Backup/restore and compatible rollback rehearsal | Passed | Prior private staging rehearsal, PRIVATE-STAGING.md; repeat for release candidate |
-| Candidate-specific recovery drill | Not Tested | Repeat using disposable data, never overwrite operator data |
+| Candidate-specific recovery drill | Passed | Hosted source 2eeee6c: seven-table restore, recovered backend and restart persistence; repeat after runtime/schema changes |
 | Incident/rotation procedure review | Passed | Procedure documented in RELEASE-OPERATIONS.md; execution not claimed |
 | Screen reader testing | Not Tested | Human execution required |
 | Complete keyboard focus-management testing | Not Tested | Include all dialogs, focus return and tab order |

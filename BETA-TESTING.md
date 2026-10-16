@@ -113,3 +113,10 @@ Before starting a controlled beta: verify the approved isolated trust proof for 
 - Module regressions: `tests/appearance.test.mjs`, `tests/motion.test.mjs`.
 
 No dependencies, storage keys, content models, account APIs or database schema changed. Earlier PR changes add keyboard card options, preference-aware modal/route motion and contrast corrections; the verified follow-up fixes checked/current/toggle browser semantics and profile-test synchronization. Existing personal browser tabs/storage were untouched.
+
+
+## Hosted release-readiness verification
+
+[CI run 38974495598](https://github.com/hindkhial/bubble/actions/runs/38974495598) at source head `2eeee6c5b8e4a793016fd433ff5e209c4b0d7593` passed all nine scenarios, 53 frontend tests and 62 PostgreSQL/backend tests. Non-root sandboxed Chromium used fingerprint-verified temporary NSS trust on an ephemeral Linux runner; TLS rejection was verified before import and after removal. No macOS keychain was changed. Backup/restore compared seven tables exactly, verified recovered-backend operation and retained content after restart/reauthentication, then removed the disposable CI stack.
+
+This does not change the manual matrix statuses: screen readers, complete focus management, mobile/tablet/desktop visual review, browser/text zoom and physical iOS/Android execution remain **Not Tested**. Two unresolved high dependency advisories and final candidate image scanning remain release blockers/gates in RELEASE-SECURITY.md and RELEASE-CHECKLIST.md. No release or public deployment is approved by CI success.

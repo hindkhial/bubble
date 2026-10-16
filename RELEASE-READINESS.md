@@ -10,7 +10,7 @@ Frontend uses Node 22, pnpm 10.18.3, frozen lockfile installation, TypeScript, u
 
 Actions use verified full commit hashes with release comments. Jobs have read-only repository access, no persisted checkout credentials, no repository secrets, no deployment credentials, and no artifact uploads. Dependency install scripts and tests execute contributed code: keep these jobs on disposable hosted runners, never privileged staging runners. Do not use `pull_request_target`. pnpm package-store and Maven dependency caches use lockfile/POM keys and GitHub ref isolation; no secrets or built application outputs are cached, and caches are not consumed by privileged jobs.
 
-Review official release notes and advisories before updating action hashes. Rerun both jobs after updates. Use only synthetic test fixtures; never log real credentials or upload environment files, dumps, screenshots, traces or credential files.
+Review official release notes and advisories before updating action hashes. Rerun all jobs after updates. Use only synthetic test fixtures; never log real credentials or upload environment files, dumps, screenshots, traces or credential files.
 
 ## Release gates
 
@@ -30,7 +30,7 @@ Record local and hosted results separately in `TESTING.md`; pending checks are n
 
 ## Versioning
 
-Proposed first controlled beta: **0.1.0-beta.1**, following Semantic Versioning. Use increasing `beta.2`, `beta.3` prereleases for candidate changes; final `0.1.0` follows completion of release gates and separate approval. Record the exact Git SHA, image digests and migration versions per candidate. Do not reuse a published version/tag or move an existing tag. No tag or release exists as a result of this work.
+Proposed first controlled beta: **0.1.0-beta.1**, following [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). Use increasing `beta.2`, `beta.3` prereleases for candidate changes; final `0.1.0` follows completion of release gates and separate approval. Record the exact Git SHA, image digests and migration versions per candidate. Do not reuse a published version/tag or move an existing tag. No tag or release exists as a result of this work.
 
 Current Expo/npm version `0.1.0` and Maven development version `0.1.0-SNAPSHOT` are retained for existing build compatibility. Before an approved release, align package version to `0.1.0-beta.1`, Maven version and Docker artifact path together, and keep native numeric build identifiers separate. Do not rename the executable JAR without updating its Docker COPY path. The proposed release identifier is documented, not falsely represented as a published artifact.
 

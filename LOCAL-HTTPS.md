@@ -103,3 +103,12 @@ Sandboxed Chromium 156.0.8078.4 successfully performed the negative/positive tru
 The trust scope was this container's temporary home/store only, with SSL CA trust (`C,,`) for the exact fingerprint above. It could vouch for other names inside that container, so browsing was restricted to the controlled test site. No trust or credentials were baked into the test image; retained images contain public test code/dependencies only. Repeating the run requires a new temporary store and the same explicit fingerprint/configuration checks; approvals do not authorize any further policy expansion.
 
 The existing private web stack now selects `bubble-web:beta-checked-state` through its protected web-only override. Raw test artifacts and operator scripts/policies are retained privately outside Git; do not publish traces or credential files. The current result certifies the configured Chromium scenarios, not Safari/Firefox/native or the remaining full manual accessibility/responsive matrix. See BETA-TESTING.md for exact final results and hashes.
+
+
+## GitHub-hosted browser CI
+
+The release-readiness workflow uses a new disposable Linux runner and generates its own temporary CA for each run. It does **not** reuse the operator CA or its private key. The full generated SHA-256 fingerprint is independently obtained through OpenSSL, compared with Node X509Certificate, and the CA self-signature/expiry checked before NSS import. Consequently that per-run fingerprint differs from the fixed local operator fingerprint above; never substitute the local operator CA without verifying its documented full fingerprint and authorization.
+
+Only sandboxed Chromium processes given the fresh temporary browser HOME use that NSS root. The normal runner certificate database, global OS trust and macOS keychains are unchanged. The approved macOS Docker seccomp exception is unnecessary on this Ubuntu 22.04 hosted path; no host sandbox policies are relaxed. Negative TLS checks run before import and after root removal. The test store, generated keys, credentials and uniquely owned Compose data volume are deleted afterward, including normal failure cleanup. Forced termination is contained by disposal of the ephemeral hosted runner. The workflow uploads no browser traces/screenshots/raw credential-bearing reports.
+
+See TESTING.md for actual run outcomes; configuration presence alone is not a test pass.
