@@ -129,3 +129,7 @@ RELEASE-CANDIDATE-QA.md contains the current installed-version/exposure review, 
 Actual candidate follow-up: [hosted run 38977872733](https://github.com/hindkhial/bubble/actions/runs/38977872733) at `c64dad27d039e9271c4aa036971dd4140fa0b911` passed all automated jobs, including the nine scenarios and new rollback/image gates. This leaves all manual categories above Not Tested.
 
 Decoder remediation follow-up: fixed 0.5.0 with CommonJS packaging-only compatibility is locally verified with 55 frontend tests and web/iOS/Android exports. Audit now has two high and one moderate findings; no exclusions. Updated frontend runtime scan is clean. The earlier hosted 53-test result is a pre-decoder baseline; the new head requires its own complete CI run. Physical-device/manual matrix outcomes remain Not Tested.
+
+## Detailed human verification
+
+Use [MANUAL-QA.md](MANUAL-QA.md) for platform-specific screen-reader, keyboard/focus, layout, zoom, text-scaling and physical-device steps. All unexecuted checks remain **Not Tested**. [DEPENDENCY-RISKS.md](DEPENDENCY-RISKS.md) records the unresolved advisories; the two High findings remain release blockers. LOCAL-HTTPS.md specifies proposed profile-only trust and removal controls, with no Mac keychain changes.
