@@ -178,3 +178,25 @@ The retained baseline had seven passes and two failures: missing browser checked
 After the fixes, 52 frontend tests, TypeScript, 62 real PostgreSQL/backend tests and packaging, web export/container builds, gated HTTPS/security smoke and private-network/container checks pass. Exact pre-existing synthetic fixture data matches after re-authentication of an expired session. No lint script exists. Raw reports/traces are private outside Git; JSON can contain synthetic credentials. Temporary-filesystem artifacts are collected through the live container before teardown rather than relying on stopped-container archive copying.
 
 Full manual responsive/accessibility matrix rows remain **Not Tested**. Automated 375/768/1440-pixel overflow and keyboard/ARIA checks are partial evidence, not physical-device, visual, screen-reader, zoom or complete focus-management certification. Browser verification succeeded in the isolated Linux runner; host macOS trust was intentionally left unchanged. Full manual verification and the documented operational gates remain required before public release.
+
+## Release-readiness CI preparation — 2026-10-16
+
+Base `af922352531da0669d8de60a29b75ec862cd0e17`; branch `release-readiness`.
+
+| Check | Result |
+| --- | --- |
+| pnpm 10.18.3 frozen-lockfile installation | Passed |
+| TypeScript | Passed |
+| Frontend unit tests | Passed: 52, no failures/skips |
+| Production web export | Passed |
+| Java 21 Maven clean verify, real disposable PostgreSQL Testcontainers | Passed: 62, no failures/errors/skips; packaged backend |
+| Workflow syntax/expression validation (actionlint 1.7.12, checksum verified) | Passed; optional shellcheck integration not installed |
+| Tracked private-key/common access-token pattern scan | No matches; targeted scan, not a complete secret-history audit |
+| GitHub-hosted CI execution | Pending; local results do not certify hosted execution |
+| Fresh container/dependency vulnerability scan | Not Tested in this change; required for exact release candidate |
+| Nine browser scenarios on this CI-only change | Not Tested; previous verified run remains historical evidence |
+| Manual responsive, visual, accessibility, zoom, physical-device review | Not Tested; release gates in BETA-TESTING.md remain open |
+
+Local frontend verification used Node 24.19.0 and the pinned pnpm 10.18.3. The workflow targets Node 22 to match the existing frontend Docker build. Hosted Node 22 execution must be verified before requiring the checks. No lint script currently exists; no lint pass is claimed. Initial local unit execution hit the restricted operating-system temporary folder; rerunning with a workspace temporary directory passed all 52 tests.
+
+Security configuration review confirmed secure HttpOnly SameSite cookies, CSRF protection, explicit CORS, fail-fast deployment safety checks, Flyway validation with clean disabled, private loopback staging publication, tester authentication and stripped upstream Authorization. No runtime security configuration was altered. Existing secrets remain outside Git; neither macOS keychain was changed. No staging service was restarted and no application data was modified. See RELEASE-READINESS.md for candidate-specific checks and the approval process.
