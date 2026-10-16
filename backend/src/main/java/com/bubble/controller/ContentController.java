@@ -28,11 +28,13 @@ public class ContentController {
     @DeleteMapping("/notes/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteNote(@AuthenticationPrincipal AccountPrincipal user,@PathVariable UUID id) { service.deleteNote(user.id(),id); }
     @GetMapping("/checklists")
-    public PageView<ChecklistSummary> lists(@AuthenticationPrincipal AccountPrincipal user,
+    public PageView<?> lists(@AuthenticationPrincipal AccountPrincipal user,
             @RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size,
             @RequestParam(defaultValue="updatedAt") String sort,@RequestParam(defaultValue="desc") String direction,
-            @RequestParam(required=false) Boolean pinned,@RequestParam(required=false) String q) {
-        return service.lists(user.id(),page,size,sort,direction,pinned,q);
+            @RequestParam(required=false) Boolean pinned,@RequestParam(required=false) String q,
+            @RequestParam(defaultValue="false") boolean includeItems) {
+        return includeItems ? service.listsWithItems(user.id(),page,size,sort,direction,pinned,q)
+                : service.lists(user.id(),page,size,sort,direction,pinned,q);
     }
     @GetMapping("/checklists/{id}") public ChecklistView list(@AuthenticationPrincipal AccountPrincipal user,@PathVariable UUID id) { return service.list(user.id(),id); }
     @PostMapping("/checklists") @ResponseStatus(HttpStatus.CREATED)

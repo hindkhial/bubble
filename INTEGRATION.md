@@ -52,7 +52,7 @@ Production is not deployed. A future production setup must use same-site HTTPS, 
 
 `src/api/client.ts` centralizes configurable URLs, credentialed fetch, CSRF, timeouts and sanitized errors. CSRF tokens stay in memory, are obtained before mutations, and are refreshed after login/logout or a forbidden response. No mutation is automatically retried. The global browser fetch receiver is explicitly bound and regression-tested.
 
-`src/api/account.ts` maps typed responses to existing file/checklist shapes, reads every collection page, deduplicates IDs across shifting pages, and fetches checklist detail in bounded batches. Backend search uses `q` on notes/checklists; local mode keeps its original full local search. Account search is debounced and stale results are discarded. There is no snapshot isolation across paginated reads.
+`src/api/account.ts` maps typed responses to existing file/checklist shapes, reads every collection page, deduplicates IDs across shifting pages, and loads checklist items in detailed pages of at most 20 lists. Older backends fall back to bounded detail reads. Backend search uses `q` on notes/checklists; local mode keeps its original full local search. Account search is debounced and stale results are discarded. There is no snapshot isolation across paginated reads.
 
 Connected endpoints:
 
@@ -115,3 +115,5 @@ No dependencies were added. No original branch refs were modified, no real local
 ## Stability checks
 
 See [TESTING.md](TESTING.md) for the current test workflow, latest results, fixes and remaining browser-runner limitations.
+
+See [PERFORMANCE.md](PERFORMANCE.md) for checklist batching, GET cancellation and measured query/request budgets.

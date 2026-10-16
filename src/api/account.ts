@@ -23,20 +23,25 @@ export class AccountRepository {
   async login(email: string, password: string) { try {const result = await this.api.request<Account>('POST','/auth/login',{email,password}); this.api.resetCsrf(); return result;}catch(error){if(error instanceof ApiError && error.status===401)throw new ApiError('Email or password is incorrect.',401);throw error;} }
   async logout() { await this.api.request('POST','/auth/logout'); this.api.resetCsrf(); }
   me() { return this.api.request<Account>('GET','/users/me'); }
-  async pages(path: string): Promise<ServerItem[]> {
+  async pages(path: string, size = 100, signal?: AbortSignal): Promise<ServerItem[]> {
     const result: ServerItem[] = [];
     for (let page = 0; ; page++) {
-      const value = await this.api.request<Page<ServerItem>>('GET',path + (path.includes('?') ? '&' : '?') + `size=100&page=${page}`);
+      const value = await this.api.request<Page<ServerItem>>('GET',path + (path.includes('?') ? '&' : '?') + `size=${size}&page=${page}`, undefined, signal);
       result.push(...value.content);
       if (page + 1 >= value.totalPages) break;
     }
     return [...new Map(result.map(value => [value.id, value])).values()];
   }
-  async content(q = '') {
-    const suffix = q ? '?q='+encodeURIComponent(q) : '';
-    const [notes, lists] = await Promise.all([this.pages('/notes'+suffix), this.pages('/checklists'+suffix)]);
-    const detailed: ServerItem[] = [];
-    for (let start = 0; start < lists.length; start += 10) detailed.push(...await Promise.all(lists.slice(start,start+10).map(list => this.api.request<ServerItem>('GET','/checklists/'+list.id))));
+  async content(q = '', signal?: AbortSignal) {
+    const suffix = q ? '&q='+encodeURIComponent(q) : '';
+    const [notes, lists] = await Promise.all([this.pages('/notes'+(q?'?q='+encodeURIComponent(q):''),100,signal),
+      this.pages('/checklists?includeItems=true'+suffix,20,signal)]);
+    // Older backends ignore includeItems. Never turn their missing rows into an empty editable list.
+    const detailed=[...lists];
+    for(let start=0;start<lists.length;start+=10) await Promise.all(lists.slice(start,start+10).map(async(list,index)=>{
+      if(!Array.isArray(list.items)) detailed[start+index]=await this.api.request<ServerItem>('GET','/checklists/'+list.id,undefined,signal);
+    }));
+    if(detailed.some(list=>!Array.isArray(list.items))) throw new ApiError('The account returned incomplete checklist items. Refresh before editing.');
     return {items: [...notes.map(value => toItem(value)), ...detailed.map(value => toItem(value,true))], pinned: [...notes,...lists].filter(value => value.pinned).map(value => value.id)};
   }
   async saveNote(input: {title: string; body: string}, id?: string) {

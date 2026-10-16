@@ -6,6 +6,59 @@ import { copyLocalItems, importLedgerKey } from '../src/api/importLocal.ts';
 const response=(body,status=200)=>new Response(status===204?null:JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});
 const serverItem={id:'11111111-1111-4111-8111-111111111111',title:'Test',content:'Body',pinned:true,createdAt:'2026-01-01T00:00:00Z',updatedAt:'2026-01-02T00:00:00Z'};
 const memory=()=>{const data=new Map();return {getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value),data};};
+test('safe cancellation works without AbortSignal.any and releases caller listeners',async()=>{
+ const any=AbortSignal.any;AbortSignal.any=undefined;
+ try {
+  const caller=new AbortController();let removed=0;
+  const remove=caller.signal.removeEventListener.bind(caller.signal);
+  caller.signal.removeEventListener=(...args)=>{removed++;return remove(...args);};
+  const api=new ApiClient('http://localhost',async()=>response({ok:true}));
+  assert.deepEqual(await api.request('GET','/notes',undefined,caller.signal),{ok:true});
+  assert.equal(removed,1);
+ } finally {AbortSignal.any=any;}
+});
+test('cancellation while reading JSON remains an AbortError',async()=>{
+ const caller=new AbortController();
+ const api=new ApiClient('http://localhost',async()=>({ok:true,status:200,json:async()=>{caller.abort();throw new Error('body aborted');}}));
+ await assert.rejects(()=>api.request('GET','/notes',undefined,caller.signal),error=>error.name==='AbortError');
+});
+test('cancellation between pages sends no subsequent page request',async()=>{
+ const caller=new AbortController();let calls=0;
+ const repo=new AccountRepository(new ApiClient('http://localhost',async()=>{calls++;caller.abort();return response({content:[serverItem],totalPages:2});}));
+ await assert.rejects(()=>repo.pages('/notes',100,caller.signal),error=>error.name==='AbortError');assert.equal(calls,1);
+});
+test('account loading uses paginated checklist items without detail fan-out',async()=>{
+ const calls=[];
+ const repo=new AccountRepository(new ApiClient('http://localhost',async url=>{
+  calls.push(url);const lists=url.includes('/checklists');
+  return response({content:lists?Array.from({length:20},(_,i)=>({...serverItem,id:'list-'+i,items:[{id:'row-'+i,content:'Task',completed:false}]})):[],totalPages:1});
+ }));
+ const value=await repo.content('task');assert.equal(calls.length,2);assert.equal(value.items.length,20);
+ assert.ok(calls.find(url=>url.includes('includeItems=true')&&url.includes('size=20')&&url.includes('q=task')));
+ assert.equal(value.items[0].rows[0].text,'Task');
+});
+test('aborted safe reads stop before sending and cancel an in-flight request',async()=>{
+ let calls=0;const controller=new AbortController();controller.abort();
+ const api=new ApiClient('http://localhost',async()=>{calls++;return response({});});
+ await assert.rejects(()=>api.request('GET','/notes',undefined,controller.signal),error=>error.name==='AbortError');assert.equal(calls,0);
+ const pending=new AbortController();
+ const waiting=new ApiClient('http://localhost',async(_url,options)=>new Promise((resolve,reject)=>options.signal.addEventListener('abort',()=>reject(new Error('cancelled')),{once:true})));
+ const request=waiting.request('GET','/notes',undefined,pending.signal);pending.abort();
+ await assert.rejects(()=>request,error=>error.name==='AbortError');
+});
+test('older backend summaries fall back to owned detail reads without losing checklist rows',async()=>{
+ const calls=[];const repo=new AccountRepository(new ApiClient('http://localhost',async url=>{
+  calls.push(url);
+  if(url.includes('/notes'))return response({content:[],totalPages:1});
+  if(url.includes('?'))return response({content:[serverItem],totalPages:1});
+  return response({...serverItem,items:[{id:'legacy-row',content:'Keep this task',completed:true}]});
+ }));
+ const value=await repo.content();assert.equal(calls.length,3);assert.equal(value.items[0].rows[0].text,'Keep this task');assert.equal(value.items[0].rows[0].done,true);
+});
+test('incomplete checklist detail is rejected instead of presenting an empty editable list',async()=>{
+ const repo=new AccountRepository(new ApiClient('http://localhost',async url=>response(url.includes('/notes')?{content:[],totalPages:1}:url.includes('?')?{content:[serverItem],totalPages:1}:serverItem)));
+ await assert.rejects(()=>repo.content(),/incomplete checklist items/);
+});
 test('API URL rejects unsafe schemes and embedded credentials',()=>{assert.equal(apiBase('http://localhost:8080/'),'http://localhost:8080');for(const value of ['javascript:bad','https://user:pass@example.test','https://example.test?q=secret'])assert.throws(()=>apiBase(value));});
 test('credentials and CSRF are centralized and login refreshes the token',async()=>{
  const calls=[];const api=new ApiClient('http://localhost:8080',async(url,options)=>{calls.push({url,options});return response(url.endsWith('/csrf')?{token:'token-'+calls.length}:serverItem);});

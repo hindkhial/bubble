@@ -474,3 +474,7 @@ The post-update OSV check examined **114 resolved dependency coordinates** and r
 ## Frontend integration
 
 The dedicated integration branch connects Expo browser account mode using the existing session/CSRF APIs. See [../INTEGRATION.md](../INTEGRATION.md) for startup, privacy boundaries and validation. Two additional authenticated draft endpoints support atomic full-editor checklist saves: `POST /api/v1/checklists/with-items` (201) and `PUT /api/v1/checklists/{id}/content` (200). They accept `{title,items:[{id:null-or-existing-UUID,content,completed}]}`; omitted old rows are removed, array order is retained, IDs are owner/parent checked, and all changes roll back together. Existing item CRUD/reorder endpoints are retained. No migrations or dependencies changed. These modifications exist only on the integration branch until review.
+
+## Batched checklist reads
+
+`GET /api/v1/checklists?includeItems=true` returns paginated full checklists with ordered items. Detailed pages accept sizes 1–20; the existing summary response remains the default with sizes 1–100. Parent pagination and one owner-scoped bulk item query avoid collection fetch-join pagination and per-list lazy reads. See [PERFORMANCE.md](../PERFORMANCE.md) for query budgets, EXPLAIN evidence and regression coverage. No schema or connection-pool changes are needed.
