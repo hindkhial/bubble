@@ -35,3 +35,5 @@ See [PERFORMANCE.md](PERFORMANCE.md) for measured improvements, repeatable synth
 See [STAGING.md](STAGING.md) for loopback-only HTTPS containers, protected configuration, testing, backup/restore and rollback. No public deployment is configured or authorized.
 
 The [controlled local staging record](PRIVATE-STAGING.md) covers the tester password gate, running-service verification, image scans, restart/recovery evidence and the outstanding browser limitation.
+
+The [private beta testing guide](BETA-TESTING.md) provides the manual UX/accessibility matrix, current blockers and tester reporting process.

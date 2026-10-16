@@ -26,7 +26,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   checkText: { color: colors.action, fontSize: 22, fontWeight: '700' },
   input: { flex: 1, minHeight: 48, maxHeight: 120, borderWidth: 1, borderColor: colors.border, borderRadius: 15, paddingHorizontal: 12, paddingVertical: 10, color: colors.text, fontSize: 15, backgroundColor: colors.input },
   remove: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  removeText: { color: '#9C3F55', fontSize: 27, lineHeight: 30 },
+  removeText: { color: colors.destructive, fontSize: 27, lineHeight: 30 },
   add: { minHeight: 48, borderRadius: 16, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.lavenderSoft },
   addText: { color: colors.action, fontWeight: '700', fontSize: 14 },
 });

@@ -1,5 +1,6 @@
+import { MotionAwareModal as Modal } from './MotionAwareModal';
 import { useAccount } from '../state/Account';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { accentPalette, type ThemeColors } from '../theme/appearance';
 import { useTheme } from '../theme/Theme';
 

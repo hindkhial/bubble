@@ -1,9 +1,10 @@
+import { MotionAwareModal as Modal } from './MotionAwareModal';
 import { themedAvatarColor } from '../theme/appearance';
 import { useTheme } from '../theme/Theme';
 import type { ThemeColors } from '../theme/appearance';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigation } from 'expo-router';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Bubble, ChecklistRow, SampleItem } from '../data/sample';
 import { bubblePalette, createFormStyles } from './AddPreview';
 import { ChecklistEditorRows } from './ChecklistEditorRows';

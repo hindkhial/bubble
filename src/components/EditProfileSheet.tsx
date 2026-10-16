@@ -1,3 +1,4 @@
+import { MotionAwareModal as Modal } from './MotionAwareModal';
 import { useAccount } from '../state/Account';
 import { accentPalette, themedAvatarColor } from '../theme/appearance';
 import { useTheme } from '../theme/Theme';
@@ -6,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { BIO_LIMIT, DISPLAY_NAME_LIMIT, validateProfile } from '../utils/profile';
 import { useNavigation } from 'expo-router';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Profile } from '../state/Profile';
 import { createFormStyles } from './AddPreview';
 import { ConfirmDialog } from './ConfirmDialog';

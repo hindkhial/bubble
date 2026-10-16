@@ -1,6 +1,7 @@
+import { MotionAwareModal as Modal } from './MotionAwareModal';
 import { useTheme } from '../theme/Theme';
 import type { ThemeColors } from '../theme/appearance';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 export function ConfirmDialog({ visible, title, message, confirmLabel, onConfirm, onCancel, destructive = true, embedded = false }: {
   visible: boolean;
@@ -35,5 +36,5 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   keepText: { color: colors.action, fontSize: 15, fontWeight: '700' },
   confirm: { minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 5 },
   confirmText: { color: colors.action, fontSize: 15, fontWeight: '700' },
-  destructive: { color: '#9C3F55' },
+  destructive: { color: colors.destructive },
 });

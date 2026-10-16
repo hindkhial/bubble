@@ -232,3 +232,28 @@ test('pending and failed account searches do not claim there are no matches', as
   await page.getByRole('button', { name: 'Clear search', exact: true }).click();
   await expect(page.getByText('Searching…', { exact: true })).toHaveCount(0);
 });
+
+test('card options support keyboard pinning at mobile, tablet and desktop widths', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await seed(page);
+  await page.goto(`/bubble/${bubble.id}`);
+  for (const width of [375, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const options = page.getByRole('button', { name: 'Options for Local original note', exact: true });
+    await expect(options).toBeVisible();
+    await options.focus();
+    await expect(options).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('button', { name: 'Pin to top', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  }
+  await page.getByRole('button', { name: 'Options for Local original note', exact: true }).focus();
+  await page.keyboard.press('Space');
+  await page.getByRole('button', { name: 'Pin to top', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'Options for pinned Local original note', exact: true })).toBeVisible();
+  await page.reload();
+  await page.getByRole('button', { name: 'Options for pinned Local original note', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Unpin', exact: true })).toBeVisible();
+});

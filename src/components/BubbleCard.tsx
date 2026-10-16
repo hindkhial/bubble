@@ -37,7 +37,7 @@ export function BubbleCard({ bubble, pinned, onOpenActions }: { bubble: Bubble; 
       </View>
       <BubbleSheen id={bubble.id} />
     </Pressable>
-      {pinned && <PinnedMarker title={`${bubble.title} Bubble`} onPress={onOpenActions} />}
+      <PinnedMarker pinned={pinned} title={`${bubble.title} Bubble`} onPress={onOpenActions} />
     </View>
   );
 }
@@ -51,5 +51,5 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   caption: { minHeight: 93, paddingHorizontal: 14, paddingTop: 9, paddingBottom: 10, justifyContent: 'center' },
   marker: { color: colors.action, fontSize: 9, fontWeight: '800', letterSpacing: 0.7, marginBottom: 4 },
   title: { color: colors.text, fontSize: 16, lineHeight: 19, fontWeight: '700' },
-  count: { color: colors.muted, fontSize: 11, lineHeight: 14, marginTop: 3 },
+  count: { color: colors.text, fontSize: 11, lineHeight: 14, marginTop: 3 },
 });

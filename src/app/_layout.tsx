@@ -18,12 +18,12 @@ function Bootstrap() {
   return !account.ready ? <View style={{flex:1,justifyContent:'center'}}><ActivityIndicator accessibilityLabel="Opening your workspace" /></View> : <ThemeProvider><ThemedLayout /></ThemeProvider>;
 }
 function ThemedLayout() {
-  const { colors, mode } = useTheme();
+  const { colors, mode, reduceMotion } = useTheme();
   return (
     <SafeAreaProvider>
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
       <ProfileProvider><ContentProvider><PinsProvider>
-        <View style={{flex:1}}><AccountNotice /><Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} /></View>
+        <View style={{flex:1}}><AccountNotice /><Stack screenOptions={{ headerShown: false, ...(reduceMotion ? { animation: 'none' as const } : {}), contentStyle: { backgroundColor: colors.background } }} /></View>
       </PinsProvider></ContentProvider></ProfileProvider>
     </SafeAreaProvider>
   );

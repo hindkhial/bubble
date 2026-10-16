@@ -1,9 +1,10 @@
+import { MotionAwareModal as Modal } from './MotionAwareModal';
 import { useTheme } from '../theme/Theme';
 import type { ThemeColors } from '../theme/appearance';
 import { useMemo, useState } from 'react';
 import { orderCollectionEntries } from '../utils/collectionOrder';
 import { useRouter } from 'expo-router';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { CollectionEntry } from '../data/sample';
 import { usePins } from '../state/Pins';
 import { BubbleCard } from './BubbleCard';

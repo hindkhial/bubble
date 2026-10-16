@@ -1,10 +1,11 @@
+import { MotionAwareModal as Modal } from '../components/MotionAwareModal';
 import { useRouter } from 'expo-router';
 import { useAccount } from '../state/Account';
 import { AppearanceSheet } from '../components/AppearanceSheet';
 import { useTheme } from '../theme/Theme';
 import type { ThemeColors } from '../theme/appearance';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomNavigation } from '../components/BottomNavigation';
 import { EditProfileSheet } from '../components/EditProfileSheet';

@@ -11,7 +11,7 @@ export const accentPalette = [
 ] as const;
 export type AppearanceMode = 'light' | 'dark';
 export type AccentName = typeof accentPalette[number]['name'];
-export type ThemeColors = { [Key in keyof typeof colors]: string } & { input: string; onAction: string };
+export type ThemeColors = { [Key in keyof typeof colors]: string } & { input: string; onAction: string; destructive: string };
 
 export function getThemeColors(mode: AppearanceMode, accentName: AccentName): ThemeColors {
   const accent = accentPalette.find((option) => option.name === accentName) ?? accentPalette[0];
@@ -25,6 +25,7 @@ export function getThemeColors(mode: AppearanceMode, accentName: AccentName): Th
     border: dark ? '#4A414F' : colors.border,
     input: dark ? '#332D3A' : colors.white,
     onAction: dark ? '#211A28' : colors.white,
+    destructive: dark ? '#F0A8BC' : '#9C3F55',
     lavender: dark ? accent.dark : accent.value,
     lavenderSoft: dark ? accent.dark : accent.value,
     lavenderDeep: dark ? accent.dark : accent.value,

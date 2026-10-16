@@ -146,3 +146,9 @@ NODE_EXTRA_CA_CERTS=/absolute/protected/bubble-staging/ca.crt pnpm test:e2e
 ```
 
 `NODE_EXTRA_CA_CERTS` configures Node, not browser trust. Do not set `ignoreHTTPSErrors` or bypass warnings. The current attempted run still fails at Chromium launch; one launch failure and seven not-run scenarios are **not** an eight-scenario pass. Traces may contain generated tester/account credentials and must remain ignored/private.
+
+## Private beta review
+
+See [BETA-TESTING.md](BETA-TESTING.md) for the current execution matrix, safe tester setup, accessibility fixes, evidence and exit gates. The original eight browser scenarios and the new keyboard/responsive scenario are **Not Tested** in this review; listing/type checking is not execution. Real staging browser access failed with `ERR_CERT_AUTHORITY_INVALID` before any UI rendered. The earlier Chromium Mach-port launch restriction remains unresolved; no unrestricted browser runner is available and no warning/security protection was bypassed. All browser UX, responsive and screen-reader checks require human execution or an approved runner with correctly configured certificate trust.
+
+Fresh checks: 52 frontend tests, 62 PostgreSQL/backend tests plus packaging, TypeScript, web export and live HTTPS/account checks pass. The beta UI changes are not yet deployed to the local staging images and do not change storage keys or schemas. Historical counts/walkthroughs above describe earlier reviews.
