@@ -6,11 +6,24 @@ This prepares a **local, private** staging environment. It does not authorize ex
 
 Browser → `https://localhost:8443` → non-root Nginx → static Expo SPA and `/api/` → non-root Java 21/Spring Boot → PostgreSQL 17. The frontend and API share an origin, preserving credential cookies and existing CSRF behavior. Expo embeds the API origin at build time; changing it requires rebuilding the web image. `EXPO_PUBLIC_*` values are public, never secrets.
 
+The published HTTPS server requires a separate tester password for **all** frontend/assets/API routes. This Nginx gate does not replace Bubble's account login or CSRF protection, and its Authorization header is stripped before proxying. Internal health checks remain available only inside the containers. Do not remove the gate or expose an ungated older web image during rollback. App logout clears the Bubble session, not the browser's cached tester credentials; close the dedicated browser profile when finished. Revoke a tester by removing its bcrypt entry and recreating the web container.
+
 Only Nginx publishes a port, bound to **127.0.0.1**. PostgreSQL and Java have no host ports. Their Compose network is internal, with subnet `172.30.87.0/24`; only Nginx has fixed address `172.30.87.10`. Nginx additionally joins a normal edge bridge so Docker can forward the loopback port; neither PostgreSQL nor Java joins that bridge. Tomcat trusts forwarded headers from Nginx's exact internal address. Nginx overwrites incoming forwarded headers instead of trusting client-supplied values. If this subnet conflicts with an existing network, change the subnet, Nginx address and both deployed profiles' `internal-proxies` together, then rerun checks. Do not broaden trust or expose the backend directly.
 
 The provided files do not provision a production environment. `local`, `staging`, and `prod` profiles are separate. `local` keeps existing HTTP development behavior. Deployed profiles reject mixing with `local`, insecure cookies/origins, automatic Hibernate DDL, disabled Flyway validation/clean protection, SQL output or verbose client errors. Never deploy with the default local profile.
 
 ## Prerequisites and protected configuration
+
+For a **new** local setup, Node.js, OpenSSL and a bcrypt-capable Apache `htpasswd` utility can create the protected files without printing credentials:
+
+```sh
+node scripts/prepare-private-staging.mjs /absolute/protected/bubble-staging
+export STAGING_ENV_FILE=/absolute/protected/bubble-staging/staging.env
+```
+
+The parent directory must already exist. The helper refuses existing destinations and paths inside the repository. It generates independent database/tester passwords, a bcrypt tester file, an owner-only tester credential JSON file, and a seven-day local CA/server certificate. It does **not** install trust, configure external hosting or launch services. Before browser use, manually trust only `ca.crt` in an isolated test browser/profile according to local policy; never share `ca.key`. Renew the test certificate before its seven-day expiry. CLI checks explicitly trust `ca.crt` without disabling TLS verification.
+
+For an existing setup, preserve its project name, database volume and password files. Add a protected bcrypt file using interactive `htpasswd -B` and set `TESTER_PASSWORD_FILE` in its existing environment file; do not regenerate database passwords or reset the volume. Add/retain the separate `DB_IMAGE_TAG` for the reviewed PostgreSQL 17 derivative. Back up before recreating containers. File-backed secrets may require container recreation after file replacement; verify revocation/rotation rather than assuming a bind mount changed.
 
 Docker Engine/Desktop with Compose v2+; adequate image-build disk/memory; Java 21/Maven and Node 22.6+/pnpm for host checks. Base/PostgreSQL images are pinned to the digests used in verification. Before a remotely hosted staging release, scan the final images, review fixes, and record their digests; dependency repositories/build tools still prevent a bit-for-bit reproducibility guarantee. Update pins deliberately through a reviewed change. Keep the built release images; do not reuse a release tag for different code. There is no automatic registry push, cloud infrastructure, deployment workflow or telemetry service.
 
@@ -37,6 +50,7 @@ Copy `deploy/staging/.env.example` to ignored `deploy/staging/.env`, replace abs
 | `POSTGRES_PASSWORD_FILE` | Protected bootstrap administrator password file. |
 | `DB_PASSWORD_FILE` | Separate protected application-role password file. |
 | `TLS_CERT_FILE`, `TLS_KEY_FILE` | Protected certificate chain and private key, matching the origin. |
+| `TESTER_PASSWORD_FILE` | Protected bcrypt htpasswd file for the authorized tester gate. |
 | `STAGING_ENV_FILE`, `STAGING_PROJECT` | Optional helper overrides; project defaults to `bubble-private-staging`. |
 
 Compose fixes `SPRING_PROFILES_ACTIVE=staging`, `DB_URL=jdbc:postgresql://db:5432/bubble_staging`, `DB_USERNAME=bubble_app`, and the exact `CORS_ALLOWED_ORIGINS`. Spring imports `DB_PASSWORD` from `/run/secrets/DB_PASSWORD`. Direct JAR operation instead requires exporting `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `CORS_ALLOWED_ORIGINS`, and explicitly selecting `staging`. Never add credentials to a JDBC URL. Database traffic stays inside this single-host private network; use verified database TLS if moving it across hosts.
@@ -50,7 +64,8 @@ sh deploy/staging/compose.sh config --quiet
 sh deploy/staging/compose.sh build
 sh deploy/staging/compose.sh up -d --wait --wait-timeout 180
 sh deploy/staging/compose.sh ps
-curl --cacert /absolute/protected/bubble-staging/ca.crt https://localhost:8443/api/v1/health
+node scripts/verify-private-staging.mjs
+# Run the protected smoke check below; unauthenticated HTTPS health returns 401.
 ```
 
 The scripts deliberately run through `sh`; no executable-bit setup is required. Build stages install pinned frontend dependencies from the lockfile and package Maven for Java 21. Container builds skip test execution, so run the tests below separately before accepting an image. Runtime filesystems are read-only except temporary files; app containers drop capabilities, disallow privilege escalation and run as non-root. PostgreSQL uses its image's standard unprivileged database process and a dedicated named volume. Docker restart policy is `unless-stopped`; unhealthy state does not automatically restart a still-running process.
@@ -74,9 +89,39 @@ pnpm test
 pnpm typecheck
 pnpm build:web
 (cd backend && mvn verify)
-BUBBLE_TEST_API_URL=https://localhost:8443 NODE_EXTRA_CA_CERTS=/absolute/protected/bubble-staging/ca.crt node scripts/staging-smoke.mjs
-BUBBLE_TEST_API_URL=https://localhost:8443 BUBBLE_TEST_ORIGIN=https://localhost:8443 NODE_EXTRA_CA_CERTS=/absolute/protected/bubble-staging/ca.crt pnpm test:account-live
+export BUBBLE_TEST_API_URL=https://localhost:8443
+export BUBBLE_TEST_ORIGIN=https://localhost:8443
+export BUBBLE_TEST_AUTH_FILE=/absolute/protected/bubble-staging/tester-credentials.json
+export NODE_EXTRA_CA_CERTS=/absolute/protected/bubble-staging/ca.crt
+node scripts/staging-smoke.mjs
+pnpm test:account-live
 ```
+
+Tester credentials are read only from an absolute owner-only JSON file (`username`, `password`). They are never embedded in the frontend, URL, command arguments or Compose environment. For hand-created tester entries, create this client JSON outside Git with mode 0600. The test helper rejects credentials sent to HTTP or non-local origins. A browser tester may read the protected file locally and enter the credentials at the HTTPS prompt; do not paste them into chats/issues. Keep tester accounts separate from Bubble accounts, and give each tester its own password entry when adding people.
+
+For repeatable synthetic session/restart checks on the disposable staging database:
+
+```sh
+export BUBBLE_E2E_DISPOSABLE=1
+export BUBBLE_TEST_STATE_FILE=/absolute/protected/bubble-staging/lifecycle.json
+node --experimental-strip-types scripts/staging-lifecycle.mjs seed
+node --experimental-strip-types scripts/staging-lifecycle.mjs session
+sh deploy/staging/compose.sh restart
+sh deploy/staging/compose.sh up -d --no-build --wait --wait-timeout 180
+node --experimental-strip-types scripts/staging-lifecycle.mjs restart
+```
+
+`seed` refuses to overwrite an existing state file and leaves only its own fictional account/note/checklist. State includes synthetic credentials/cookies and must remain outside Git. `session` verifies a fresh client can resume the saved session. `restart` expects the old in-memory session to be rejected, signs the fixture account in again and compares persisted content/profile/preferences exactly. These are API/client checks, not browser UI coverage.
+
+To scan final local images, use a **new** report directory outside Git:
+
+```sh
+node scripts/scan-private-staging.mjs /absolute/protected/reports/new-release
+```
+
+The parent report directory must exist. The script exports only the three local runtime images, runs digest-pinned Trivy with telemetry disabled, and records image IDs, timestamps, severity counts and raw JSON reports. The scanner receives image archives and its dedicated public vulnerability-database cache volume, never the Docker socket or staging secrets. Critical/high findings exit nonzero; lower findings still require review. A download/scanner failure is not a clean result. Docker Scout is an alternative after operator login; it was unavailable without login here. Scans are point-in-time evidence, not protection from unknown vulnerabilities.
+
+The scanner expects Docker's OCI archive format (verified with Engine 29.8.2) and a host `tar` utility. It distinguishes index, platform-manifest and image-config digests, checks that a running service belongs to the scanned archive, and requires OS package analysis plus Java analysis for the backend. Unsupported archives or identity/coverage mismatch fail closed. `verify-private-staging.mjs` separately checks healthy non-root processes, read-only secrets, owner-only secret parents, restricted database role and actual host/network bindings; it probes only this host's own non-loopback IPv4 addresses, never an external target.
 
 Use the last two commands only against a disposable local test stack: the account check creates a fictional account and generated content, cleans up its content and leaves its fictional account. The TLS smoke checks routing, no-store/CSP, minimal health, cookies, CSRF and denied origins; it is not browser verification. No lint command currently exists. See [TESTING.md](TESTING.md) for the eight still-unverified Playwright scenarios and the manual checklist. Full browser verification is required before public release, even though integration accepted this documented limitation.
 
@@ -101,6 +146,17 @@ sh deploy/staging/compose.sh exec -T db psql -U postgres -d bubble_recovery -c '
 
 Compare synthetic row counts and exact note/checklist/profile/preferences values. A repeated restore must use another new database, not overwrite the old one. To serve the restored database, stop web/backend, explicitly change **only the staging** `DB_URL` to `bubble_recovery`, choose an image compatible with that dump's Flyway history, then recreate backend/web and verify health plus authenticated checks. The original database remains for investigation. A PostgreSQL major upgrade needs its own tested dump/restore or pg_upgrade plan; changing an image tag against the existing volume is not an upgrade procedure.
 
+Use a protected, external Compose override instead of editing the tracked base file:
+
+```yaml
+services:
+  backend:
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/bubble_recovery
+```
+
+Run `sh deploy/staging/compose.sh -f /absolute/protected/recovery.compose.yml up -d --no-build --wait --wait-timeout 180`, then the synthetic `restart` check. Nginx's Docker DNS resolver follows replacement backends without keeping a stale startup address. To return to the untouched source database, run the same `up` command without the override and repeat checks. This recovery was tested against a healthy source plus a separately restored database. If the source database is missing/unavailable, the database service's application SQL health probe must also be explicitly pointed at the recovered database in the override; otherwise it still probes `bubble_staging`. Diagnose a failing health check rather than removing it or resetting the volume.
+
 ## Release rollback and safe shutdown
 
 Record Git SHA, release image IDs/digests, configuration paths (not values), migration versions and verified backup location before changing anything. If a release fails: keep web/backend stopped, preserve the database volume/logs/images, inspect minimal health and migration failures, fix configuration and retry only after diagnosis. Do not reset data, blindly repair Flyway or automatically retry migrations with edited SQL.
@@ -114,6 +170,8 @@ sh deploy/staging/compose.sh up -d --no-build --wait --wait-timeout 180
 ```
 
 Do not change/recreate the database volume during app rollback. If a migration removed/renamed columns, changed data semantics, or a newer Flyway history is incompatible with the old app, **do not downgrade automatically**. Prefer a reviewed forward fix; otherwise restore the pre-release dump into a new isolated database and use the matching app image after explicitly accepting loss of writes since that backup. Never automatically reverse a destructive migration.
+
+Also retain `DB_IMAGE_TAG` unchanged and require the rollback web artifact to keep the tester gate. Re-run the TLS/gate smoke check and fixture `restart` check after each release switch. The recorded rehearsal uses distinct metadata-labelled candidate images of the same application/schema, then retained compatible artifacts; it proves container/image switching, session invalidation and data preservation, not compatibility with an arbitrary historical or destructive schema change. See [PRIVATE-STAGING.md](PRIVATE-STAGING.md) for the actual run and outstanding gates.
 
 ```sh
 sh deploy/staging/compose.sh stop

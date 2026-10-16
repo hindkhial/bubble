@@ -4,13 +4,16 @@ import { randomUUID } from 'node:crypto';
 import { ApiClient } from '../src/api/client.ts';
 import { AccountRepository } from '../src/api/account.ts';
 import { copyLocalItems } from '../src/api/importLocal.ts';
+import { stagingAuthorization } from './staging-auth.mjs';
 const base=process.env.BUBBLE_TEST_API_URL;
 if(!base || !['localhost','127.0.0.1'].includes(new URL(base).hostname))throw new Error('Set BUBBLE_TEST_API_URL to an explicitly disposable local backend.');
 let cookie='';
 const origin=process.env.BUBBLE_TEST_ORIGIN || 'http://localhost:8082';
 if(!['localhost','127.0.0.1'].includes(new URL(origin).hostname))throw new Error('Test origin must be localhost.');
+const authorization=stagingAuthorization(base);
 const fetchWithCookies=async(url,options)=>{
  const headers=new Headers(options?.headers);headers.set('Origin',origin);if(cookie)headers.set('Cookie',cookie);
+ if(authorization)headers.set('Authorization',authorization);
  const response=await fetch(url,{...options,headers});
  for(const value of response.headers.getSetCookie()) {if(value.startsWith('BUBBLE_SESSION='))cookie=value.split(';')[0];}
  return response;

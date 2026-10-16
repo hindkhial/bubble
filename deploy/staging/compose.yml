@@ -54,6 +54,7 @@ services:
     secrets:
       - {source: tls_cert, target: tls_cert}
       - {source: tls_key, target: tls_key}
+      - {source: testers, target: testers}
     ports: ['127.0.0.1:8443:8443']
     depends_on:
       backend: {condition: service_healthy}
@@ -85,3 +86,5 @@ secrets:
     file: ${TLS_CERT_FILE:?Set trusted TLS certificate file}
   tls_key:
     file: ${TLS_KEY_FILE:?Set TLS private key file}
+  testers:
+    file: ${TESTER_PASSWORD_FILE:?Set the protected tester htpasswd file}
