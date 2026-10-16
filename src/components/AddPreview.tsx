@@ -1,3 +1,4 @@
+import { MotionAwareModal as Modal } from './MotionAwareModal';
 import { useAccount } from '../state/Account';
 import { ACCOUNT_LIBRARY } from '../api/account';
 import { themedAvatarColor } from '../theme/appearance';
@@ -6,7 +7,7 @@ import type { ThemeColors } from '../theme/appearance';
 import { useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { newChecklistRow } from '../data/sample';
 import type { ChecklistRow } from '../data/sample';
 import { useContent } from '../state/Content';
@@ -228,7 +229,7 @@ export const createFormStyles = (colors: ThemeColors) => StyleSheet.create({
   swatchSelected: { borderWidth: 2, borderColor: colors.action },
   swatchCheck: { color: colors.action, fontSize: 19, fontWeight: '700' },
   help: { color: colors.muted, fontSize: 12, lineHeight: 18, marginTop: 10 },
-  error: { color: '#9C3F55', fontSize: 13, marginTop: 12 },
+  error: { color: colors.destructive, fontSize: 13, marginTop: 12 },
   destination: { minHeight: 50, borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center' },
   destinationChoice: { minHeight: 51, borderBottomWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center' },
   destinationText: { color: colors.text, fontSize: 15, fontWeight: '600' }, selected: { color: colors.action, marginLeft: 'auto', fontSize: 18 },

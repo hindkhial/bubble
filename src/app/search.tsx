@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from '../state/Account';
 import type { SampleItem } from '../data/sample';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomNavigation } from '../components/BottomNavigation';
 import { CollectionGrid } from '../components/CollectionGrid';
@@ -39,7 +39,7 @@ export default function SearchScreen() {
         <TextInput accessibilityLabel="Search everything" maxLength={account.mode==='account'?200:undefined} value={query} onChangeText={setQuery} placeholder="Search everything" placeholderTextColor={colors.muted} autoCapitalize="none" autoCorrect={false} style={[styles.input, { color: colors.text, backgroundColor: colors.input, borderColor: colors.border }]} />
         {query ? <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setQuery('')} style={styles.clear}><Text style={{ color: colors.action }}>Clear</Text></Pressable> : null}
       </View>
-      <View style={styles.filters}>{(account.mode==='account'?['All','Notes','Lists'] as const:['All','Bubbles','Notes','Lists'] as const).map((option) => <Pressable key={option} accessibilityRole="button" accessibilityState={{ selected: filter === option }} onPress={() => setFilter(option)} style={[styles.filter, { backgroundColor: filter === option ? colors.lavender : colors.surface, borderColor: colors.border }]}><Text style={{ color: colors.text }}>{option}</Text></Pressable>)}</View>
+      <View style={styles.filters}>{(account.mode==='account'?['All','Notes','Lists'] as const:['All','Bubbles','Notes','Lists'] as const).map((option) => <Pressable key={option} accessibilityRole="button" accessibilityState={{ selected: filter === option }} {...(Platform.OS === 'web' ? { 'aria-pressed': filter === option } : {})} onPress={() => setFilter(option)} style={[styles.filter, { backgroundColor: filter === option ? colors.lavender : colors.surface, borderColor: colors.border }]}><Text style={{ color: colors.text }}>{option}</Text></Pressable>)}</View>
       {storageError ? <Text accessibilityRole="alert" style={{ color: colors.text, marginBottom: 16 }}>{storageError}</Text> : null}
       <Text accessibilityLiveRegion="polite" style={{ color: colors.muted, marginBottom: 12 }}>{unavailable ? 'Open account options to sign in again, or use local mode.' : searching ? 'Searching…' : searchError || `${results.length} ${results.length === 1 ? 'result' : 'results'}`}</Text>
       {unavailable || searching || searchError ? null : results.length ? <CollectionGrid entries={results} scopeId="root" respectEntryScopes /> : <View style={[styles.empty, { backgroundColor: colors.surface }]}><Text style={[styles.emptyTitle, { color: colors.text }]}>{query.trim() ? 'No matching thoughts yet' : 'A little space waiting to be filled'}</Text><Text style={{ color: colors.muted, lineHeight: 21 }}>{query.trim() ? 'Try another word or choose a different filter.' : 'Create a note or checklist from Add, then find it here.'}</Text></View>}

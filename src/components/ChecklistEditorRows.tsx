@@ -10,7 +10,7 @@ export function ChecklistEditorRows({ rows, onChange, creating = false }: { rows
   const changeRow = (id: string, update: Partial<ChecklistRow>) => onChange(rows.map((row) => row.id === id ? { ...row, ...update } : row));
   return <View>
     {rows.map((row, index) => <View key={row.id} style={styles.row}>
-      {!creating ? <Pressable accessibilityRole="checkbox" accessibilityLabel={`Item ${index + 1} complete`} accessibilityState={{ checked: row.done }} onPress={() => changeRow(row.id, { done: !row.done })} style={[styles.check, row.done && styles.checked]}><Text style={styles.checkText}>{row.done ? '✓' : ''}</Text></Pressable> : null}
+      {!creating ? <Pressable accessibilityRole="checkbox" accessibilityLabel={`Item ${index + 1} complete`} aria-checked={row.done} onPress={() => changeRow(row.id, { done: !row.done })} style={[styles.check, row.done && styles.checked]}><Text style={styles.checkText}>{row.done ? '✓' : ''}</Text></Pressable> : null}
       <TextInput accessibilityLabel={`Checklist item ${index + 1}`} value={row.text} onChangeText={(text) => changeRow(row.id, { text })} placeholder="List item" placeholderTextColor={colors.muted} multiline style={styles.input} />
       <Pressable accessibilityRole="button" accessibilityLabel={`Remove item ${index + 1}`} onPress={() => onChange(rows.filter((candidate) => candidate.id !== row.id))} style={styles.remove}><Text style={styles.removeText}>×</Text></Pressable>
     </View>)}
@@ -26,7 +26,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   checkText: { color: colors.action, fontSize: 22, fontWeight: '700' },
   input: { flex: 1, minHeight: 48, maxHeight: 120, borderWidth: 1, borderColor: colors.border, borderRadius: 15, paddingHorizontal: 12, paddingVertical: 10, color: colors.text, fontSize: 15, backgroundColor: colors.input },
   remove: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  removeText: { color: '#9C3F55', fontSize: 27, lineHeight: 30 },
+  removeText: { color: colors.destructive, fontSize: 27, lineHeight: 30 },
   add: { minHeight: 48, borderRadius: 16, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.lavenderSoft },
   addText: { color: colors.action, fontWeight: '700', fontSize: 14 },
 });
