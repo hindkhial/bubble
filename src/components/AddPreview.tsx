@@ -1,10 +1,13 @@
+import { MotionAwareModal as Modal } from './MotionAwareModal';
+import { useAccount } from '../state/Account';
+import { ACCOUNT_LIBRARY } from '../api/account';
 import { themedAvatarColor } from '../theme/appearance';
 import { useTheme } from '../theme/Theme';
 import type { ThemeColors } from '../theme/appearance';
 import { useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { newChecklistRow } from '../data/sample';
 import type { ChecklistRow } from '../data/sample';
 import { useContent } from '../state/Content';
@@ -21,6 +24,7 @@ export const bubblePalette = [
 const palette = bubblePalette;
 
 export function AddPreview({ parentId = null, quickAction }: { parentId?: string | null; quickAction?: 'note' | 'checklist' }) {
+  const account=useAccount();
   const { colors, mode } = useTheme();
   const styles = createFormStyles(colors);
   const router = useRouter();
@@ -52,7 +56,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
     setDestination(parentId); setError(''); setReturnToFile(null); setDestinationReturn('note'); setPendingBubble(null);
   };
   const close = () => { setVisible(false); reset(); };
-  const open = () => { reset(); saving.current = false; setStep(quickAction ?? 'menu'); setVisible(true); };
+  const open = () => { if(account.mode==='account'&&!account.user){router.push('/account');return;}reset();if(account.mode==='account')setDestination(ACCOUNT_LIBRARY); saving.current = false; setStep(quickAction ?? 'menu'); setVisible(true); };
   const pickImage = async (target: 'cover' | 'photo') => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85, base64: Platform.OS === 'web' });
@@ -81,16 +85,17 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
       close();
     }
   };
-  const saveNote = () => {
+  const saveNote = async () => {
     if (saving.current) return;
     if (!body.trim()) { setError('Write a little text before saving your note.'); return; }
     if (!destination || (destination !== '__pending__' && !bubbleById(destination))) { setError('Choose a Bubble for this note.'); return; }
     saving.current = true;
     const destinationId = pendingBubble && destination === '__pending__'
       ? createBubble({ ...pendingBubble, parentId: null }).id : destination;
-    createNote({ title: noteTitle, body, bubbleId: destinationId });
+    try { await createNote({ title: noteTitle, body, bubbleId: destinationId });
     close();
     if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
+    } catch(problem) {setError(problem instanceof Error?problem.message:'Could not save.');saving.current=false;}
   };
   const savePhoto = () => {
     if (saving.current) return;
@@ -103,16 +108,17 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
     close();
     if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
   };
-  const saveChecklist = () => {
+  const saveChecklist = async () => {
     if (saving.current) return;
     if (!checklistRows.some((row) => row.text.trim())) { setError('Add at least one checklist item before saving.'); return; }
     if (!destination || (destination !== '__pending__' && !bubbleById(destination))) { setError('Choose a Bubble for this checklist.'); return; }
     saving.current = true;
     const destinationId = pendingBubble && destination === '__pending__'
       ? createBubble({ ...pendingBubble, parentId: null }).id : destination;
-    createChecklist({ title: checklistTitle, rows: checklistRows, bubbleId: destinationId });
+    try { await createChecklist({ title: checklistTitle, rows: checklistRows, bubbleId: destinationId });
     close();
     if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
+    } catch(problem) {setError(problem instanceof Error?problem.message:'Could not save.');saving.current=false;}
   };
 
   return <>
@@ -126,9 +132,9 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
             {step === 'menu' && <>
               <Text style={styles.title}>Add something</Text>
               <Text style={styles.intro}>Choose what you want to keep.</Text>
-              <Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('bubble'); }} style={styles.choice}><Text style={styles.choiceIcon}>◌</Text><View><Text style={styles.choiceTitle}>Bubble</Text><Text style={styles.choiceHelp}>A collection for things that belong together</Text></View><Text style={styles.chevron}>›</Text></Pressable>
+              {account.mode==='local' ? <Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('bubble'); }} style={styles.choice}><Text style={styles.choiceIcon}>◌</Text><View><Text style={styles.choiceTitle}>Bubble</Text><Text style={styles.choiceHelp}>A collection for things that belong together</Text></View><Text style={styles.chevron}>›</Text></Pressable> : null}
               <Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('note'); }} style={styles.choice}><Text style={styles.choiceIcon}>✎</Text><View><Text style={styles.choiceTitle}>Note</Text><Text style={styles.choiceHelp}>Write a thought, list, or link</Text></View><Text style={styles.chevron}>›</Text></Pressable>
-              <Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('photo'); }} style={styles.choice}><Text style={styles.choiceIcon}>▧</Text><View><Text style={styles.choiceTitle}>Photo</Text><Text style={styles.choiceHelp}>Keep an image with its details</Text></View><Text style={styles.chevron}>›</Text></Pressable>
+              {account.mode==='local' ? <Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('photo'); }} style={styles.choice}><Text style={styles.choiceIcon}>▧</Text><View><Text style={styles.choiceTitle}>Photo</Text><Text style={styles.choiceHelp}>Keep an image with its details</Text></View><Text style={styles.chevron}>›</Text></Pressable> : null}
               <Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('checklist'); }} style={styles.choice}><Text style={styles.choiceIcon}>☑</Text><View><Text style={styles.choiceTitle}>Checklist</Text><Text style={styles.choiceHelp}>A list to work through, together in one Bubble</Text></View><Text style={styles.chevron}>›</Text></Pressable>
             </>}
             {step === 'bubble' && <>
@@ -223,7 +229,7 @@ export const createFormStyles = (colors: ThemeColors) => StyleSheet.create({
   swatchSelected: { borderWidth: 2, borderColor: colors.action },
   swatchCheck: { color: colors.action, fontSize: 19, fontWeight: '700' },
   help: { color: colors.muted, fontSize: 12, lineHeight: 18, marginTop: 10 },
-  error: { color: '#9C3F55', fontSize: 13, marginTop: 12 },
+  error: { color: colors.destructive, fontSize: 13, marginTop: 12 },
   destination: { minHeight: 50, borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center' },
   destinationChoice: { minHeight: 51, borderBottomWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center' },
   destinationText: { color: colors.text, fontSize: 15, fontWeight: '600' }, selected: { color: colors.action, marginLeft: 'auto', fontSize: 18 },

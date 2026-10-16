@@ -1,3 +1,6 @@
+import { AccountNotice } from '../components/AccountNotice';
+import { AccountProvider, useAccount } from '../state/Account';
+import { ActivityIndicator, View } from 'react-native';
 import { ThemeProvider, useTheme } from '../theme/Theme';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -7,16 +10,20 @@ import { ContentProvider } from '../state/Content';
 import { ProfileProvider } from '../state/Profile';
 
 export default function RootLayout() {
-  return <ThemeProvider><ThemedLayout /></ThemeProvider>;
+  return <AccountProvider><Bootstrap /></AccountProvider>;
 }
 
+function Bootstrap() {
+  const account=useAccount();
+  return !account.ready ? <View style={{flex:1,justifyContent:'center'}}><ActivityIndicator accessibilityLabel="Opening your workspace" /></View> : <ThemeProvider><ThemedLayout /></ThemeProvider>;
+}
 function ThemedLayout() {
-  const { colors, mode } = useTheme();
+  const { colors, mode, reduceMotion } = useTheme();
   return (
     <SafeAreaProvider>
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
       <ProfileProvider><ContentProvider><PinsProvider>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} />
+        <View style={{flex:1}}><AccountNotice /><Stack screenOptions={{ headerShown: false, ...(reduceMotion ? { animation: 'none' as const } : {}), contentStyle: { backgroundColor: colors.background } }} /></View>
       </PinsProvider></ContentProvider></ProfileProvider>
     </SafeAreaProvider>
   );

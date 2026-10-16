@@ -1,6 +1,7 @@
+import { MotionAwareModal as Modal } from './MotionAwareModal';
 import { useTheme } from '../theme/Theme';
 import type { ThemeColors } from '../theme/appearance';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 export function ManagementMenu({ visible, title, onEdit, onDelete, onClose }: {
   visible: boolean; title: string; onEdit: () => void; onDelete: () => void; onClose: () => void;
@@ -27,7 +28,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   title: { color: colors.text, fontSize: 22, fontWeight: '700', marginBottom: 17 },
   action: { minHeight: 50, justifyContent: 'center', borderTopWidth: 1, borderColor: colors.border },
   actionText: { color: colors.text, fontSize: 16, fontWeight: '600' },
-  deleteText: { color: '#9C3F55', fontSize: 16, fontWeight: '700' },
+  deleteText: { color: colors.destructive, fontSize: 16, fontWeight: '700' },
   cancel: { marginTop: 10, minHeight: 48, borderRadius: 24, backgroundColor: colors.lavenderSoft, alignItems: 'center', justifyContent: 'center' },
   cancelText: { color: colors.action, fontSize: 15, fontWeight: '700' },
 });

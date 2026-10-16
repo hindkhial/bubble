@@ -1,3 +1,4 @@
+import { useAccount } from '../../state/Account';
 import { useTheme } from '../../theme/Theme';
 import type { ThemeColors } from '../../theme/appearance';
 import { useState } from 'react';
@@ -14,6 +15,7 @@ import { useContent } from '../../state/Content';
 import { spacing } from '../../theme/tokens';
 
 export default function BubbleDetailScreen() {
+  const account=useAccount();
   const { colors } = useTheme();
   const styles = createStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -43,7 +45,7 @@ export default function BubbleDetailScreen() {
         <View style={styles.toolbar}>
           <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace('/')} style={styles.backButton}><Text style={styles.backArrow}>‹</Text></Pressable>
           <Text style={styles.toolbarTitle} numberOfLines={1}>{bubble.title}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Manage ${bubble.title} Bubble`} onPress={() => setMenuOpen(true)} style={styles.manageButton}><Text style={styles.manageText}>···</Text></Pressable>
+          {account.mode==='local' ? <Pressable accessibilityRole="button" accessibilityLabel={`Manage ${bubble.title} Bubble`} onPress={() => setMenuOpen(true)} style={styles.manageButton}><Text style={styles.manageText}>···</Text></Pressable> : null}
         </View>
         <View style={styles.path}>
           <Pressable accessibilityRole="button" onPress={() => router.replace('/')}><Text style={styles.pathText}>Home</Text></Pressable>
@@ -60,7 +62,7 @@ export default function BubbleDetailScreen() {
           <View style={styles.empty}><Text style={styles.emptyIcon}>✧</Text><Text style={styles.emptyTitle}>Nothing here yet</Text><Text style={styles.emptyText}>A little room for your next thought.</Text></View>
         )}
       </ScrollView>
-      <View style={styles.bottom}><Text style={styles.sampleLabel}>Saved in this browser when storage is available</Text><AddPreview parentId={bubble.id} /></View>
+      <View style={styles.bottom}><Text style={styles.sampleLabel}>{account.mode==='account'?'Account library · connection required':'Saved in this browser when storage is available'}</Text><AddPreview parentId={bubble.id} /></View>
       <ManagementMenu visible={menuOpen} title={bubble.title} onClose={() => setMenuOpen(false)} onEdit={() => afterMenuCloses(() => setEditing(true))} onDelete={() => afterMenuCloses(() => setConfirmDelete(true))} />
       {editing && <EditContentSheet entry={bubble} onClose={() => setEditing(false)} onSave={(draft) => { updateBubble(bubble.id, draft); setEditing(false); }} />}
       <ConfirmDialog visible={confirmDelete} title={`Delete ${bubble.title}?`} message="This will delete this Bubble and everything inside it, including nested Bubbles and files. This cannot be undone." confirmLabel="Delete Bubble" onCancel={() => setConfirmDelete(false)} onConfirm={() => { const destination = bubble.parentId ? `/bubble/${bubble.parentId}` as const : '/' as const; setConfirmDelete(false); deleteBubble(bubble.id); router.replace(destination); }} />

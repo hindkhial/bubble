@@ -64,15 +64,15 @@ export default function FileDetailScreen() {
         <Text style={styles.meta}>{item.meta}</Text>
         {isChecklist ? <View style={styles.bodyCard}>
           <Text style={styles.progress}>{progress.done} of {progress.total} done</Text>
-          {rows.map((row) => <Pressable key={row.id} accessibilityRole="checkbox" accessibilityLabel={row.text} accessibilityState={{ checked: row.done }} onPress={() => toggleChecklistRow(item.id, row.id)} style={styles.checklistRow}>
+          {rows.map((row) => <Pressable key={row.id} accessibilityRole="checkbox" accessibilityLabel={row.text} aria-checked={row.done} onPress={() => void Promise.resolve(toggleChecklistRow(item.id, row.id)).catch(()=>{})} style={styles.checklistRow}>
             <View style={[styles.checkbox, row.done && styles.checkboxDone]}><Text style={styles.checkmark}>{row.done ? '✓' : ''}</Text></View>
             <Text style={[styles.rowText, row.done && styles.rowDone]}>{row.text}</Text>
           </Pressable>)}
         </View> : item.body ? <View style={styles.bodyCard}><Text selectable style={styles.body}>{item.body}</Text></View> : null}
       </ScrollView>
       {manageable && <ManagementMenu visible={menuOpen} title={item.title} onClose={() => setMenuOpen(false)} onEdit={() => afterMenuCloses(() => setEditing(true))} onDelete={() => afterMenuCloses(() => setConfirmDelete(true))} />}
-      {manageable && editing && <EditContentSheet entry={item} onClose={() => setEditing(false)} onSave={(draft) => { if (isChecklist) updateChecklist(item.id, draft); else updateNote(item.id, draft); setEditing(false); }} />}
-      <ConfirmDialog visible={confirmDelete} title={`Delete ${item.title}?`} message={`This ${isChecklist ? 'checklist' : 'note'} will be removed from its Bubble. This cannot be undone.`} confirmLabel={`Delete ${isChecklist ? 'checklist' : 'note'}`} onCancel={() => setConfirmDelete(false)} onConfirm={() => { setConfirmDelete(false); if (isChecklist) deleteChecklist(item.id); else deleteNote(item.id); router.replace(`/bubble/${bubble.id}`); }} />
+      {manageable && editing && <EditContentSheet entry={item} onClose={() => setEditing(false)} onSave={async (draft) => { if (isChecklist) await updateChecklist(item.id, draft); else await updateNote(item.id, draft); setEditing(false); }} />}
+      <ConfirmDialog visible={confirmDelete} title={`Delete ${item.title}?`} message={`This ${isChecklist ? 'checklist' : 'note'} will be removed from its Bubble. This cannot be undone.`} confirmLabel={`Delete ${isChecklist ? 'checklist' : 'note'}`} onCancel={() => setConfirmDelete(false)} onConfirm={async () => { try {if(isChecklist)await deleteChecklist(item.id);else await deleteNote(item.id);setConfirmDelete(false);router.replace(`/bubble/${bubble.id}`);}catch{/* Account banner keeps the failure visible; nothing is optimistically removed. */} }} />
     </SafeAreaView>
   );
 }

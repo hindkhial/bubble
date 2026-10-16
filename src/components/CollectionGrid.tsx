@@ -1,8 +1,10 @@
+import { MotionAwareModal as Modal } from './MotionAwareModal';
 import { useTheme } from '../theme/Theme';
 import type { ThemeColors } from '../theme/appearance';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { orderCollectionEntries } from '../utils/collectionOrder';
 import { useRouter } from 'expo-router';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { CollectionEntry } from '../data/sample';
 import { usePins } from '../state/Pins';
 import { BubbleCard } from './BubbleCard';
@@ -16,22 +18,16 @@ export function CollectionGrid({ entries, scopeId, respectEntryScopes = false }:
   const router = useRouter();
   const { pinsFor, togglePin } = usePins();
   const [selected, setSelected] = useState<CollectionEntry | null>(null);
+  const [actionError,setActionError]=useState('');
   const [limitReached, setLimitReached] = useState(false);
   const entryScope = (entry: CollectionEntry) => respectEntryScopes ? entry.kind === 'bubble' ? entry.value.parentId ?? 'root' : entry.value.bubbleId : scopeId;
-  const pins = respectEntryScopes ? entries.flatMap((entry) => pinsFor(entryScope(entry))) : pinsFor(scopeId);
-  const ordered = [...entries].sort((a, b) => {
-    const aPin = pins.indexOf(entryKey(a));
-    const bPin = pins.indexOf(entryKey(b));
-    if (aPin === -1 && bPin === -1) return 0;
-    if (aPin === -1) return 1;
-    if (bPin === -1) return -1;
-    return aPin - bPin;
-  });
+  const { pins, ordered } = useMemo(() => orderCollectionEntries(entries, scopeId, respectEntryScopes, pinsFor),
+    [entries, scopeId, respectEntryScopes, pinsFor]);
   const columns: CollectionEntry[][] = [[], []];
   ordered.forEach((entry, index) => columns[index % 2].push(entry));
 
   const openActions = (entry: CollectionEntry) => {
-    setLimitReached(false);
+    setLimitReached(false);setActionError('');
     setSelected(entry);
   };
   const closeActions = () => {
@@ -44,10 +40,9 @@ export function CollectionGrid({ entries, scopeId, respectEntryScopes = false }:
     closeActions();
     router.push(destination);
   };
-  const toggleSelectedPin = () => {
+  const toggleSelectedPin = async () => {
     if (!selected) return;
-    if (togglePin(entryScope(selected), entryKey(selected))) closeActions();
-    else setLimitReached(true);
+    try {if (await togglePin(entryScope(selected), entryKey(selected))) closeActions();else setLimitReached(true);}catch(problem){setActionError(problem instanceof Error?problem.message:'Could not pin.');}
   };
 
   return (
@@ -57,7 +52,7 @@ export function CollectionGrid({ entries, scopeId, respectEntryScopes = false }:
           <View key={index} style={styles.column}>
             {column.map((entry) => {
               const key = entryKey(entry);
-              const pinned = pins.includes(key);
+              const pinned = pins.has(key);
               return entry.kind === 'bubble'
                 ? <BubbleCard key={key} bubble={entry.value} pinned={pinned} onOpenActions={() => openActions(entry)} />
                 : <FileCard key={key} item={entry.value} pinned={pinned} onOpenActions={() => openActions(entry)} />;
@@ -71,9 +66,10 @@ export function CollectionGrid({ entries, scopeId, respectEntryScopes = false }:
             <View style={styles.handle} />
             <Text style={styles.sheetType}>{selected?.kind === 'bubble' ? 'BUBBLE' : selected?.value.type}</Text>
             <Text style={styles.sheetTitle} numberOfLines={2}>{selected?.value.title}</Text>
+            {actionError ? <Text accessibilityRole="alert" style={styles.limit}>{actionError}</Text> : null}
             {limitReached && <Text accessibilityRole="alert" style={styles.limit}>You can pin up to 3 items here. Unpin one first.</Text>}
             <Pressable accessibilityRole="button" onPress={openSelected} style={styles.action}><Text style={styles.actionText}>Open</Text></Pressable>
-            <Pressable accessibilityRole="button" onPress={toggleSelectedPin} style={styles.action}><Text style={styles.actionText}>{selected && pins.includes(entryKey(selected)) ? 'Unpin' : 'Pin to top'}</Text></Pressable>
+            <Pressable accessibilityRole="button" onPress={toggleSelectedPin} style={styles.action}><Text style={styles.actionText}>{selected && pins.has(entryKey(selected)) ? 'Unpin' : 'Pin to top'}</Text></Pressable>
             <Pressable accessibilityRole="button" onPress={closeActions} style={styles.cancel}><Text style={styles.cancelText}>Cancel</Text></Pressable>
           </Pressable>
         </Pressable>

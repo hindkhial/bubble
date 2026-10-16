@@ -1,3 +1,5 @@
+import { useAccount } from './Account';
+import { ACCOUNT_LIBRARY } from '../api/account';
 import { useLocalState } from '../storage/useLocalState';
 import { createContext, useContext, useMemo, useRef, useState } from 'react';
 import type { PropsWithChildren } from 'react';
@@ -22,21 +24,44 @@ type ContentContextValue = {
   bubbleCountLabel: (id: string) => string;
   collectionContents: (id: string) => CollectionEntry[];
   createBubble: (input: NewBubble) => Bubble;
-  createNote: (input: NewNote) => SampleItem;
+  createNote: (input: NewNote) => SampleItem | Promise<SampleItem>;
   createPhoto: (input: NewPhoto) => SampleItem;
-  createChecklist: (input: NewChecklist) => SampleItem;
+  createChecklist: (input: NewChecklist) => SampleItem | Promise<SampleItem>;
   updateBubble: (id: string, changes: BubbleChanges) => void;
-  updateNote: (id: string, changes: NoteChanges) => void;
-  updateChecklist: (id: string, changes: ChecklistChanges) => void;
-  toggleChecklistRow: (itemId: string, rowId: string) => void;
+  updateNote: (id: string, changes: NoteChanges) => void | Promise<unknown>;
+  updateChecklist: (id: string, changes: ChecklistChanges) => void | Promise<unknown>;
+  toggleChecklistRow: (itemId: string, rowId: string) => void | Promise<unknown>;
   deleteBubble: (id: string) => void;
-  deleteNote: (id: string) => void;
-  deleteChecklist: (id: string) => void;
+  deleteNote: (id: string) => void | Promise<unknown>;
+  deleteChecklist: (id: string) => void | Promise<unknown>;
 };
 
 const ContentContext = createContext<ContentContextValue | null>(null);
 
-export function ContentProvider({ children }: PropsWithChildren) {
+export function ContentProvider({children}: PropsWithChildren) {
+  const account=useAccount();
+  return account.mode === 'account' ? <RemoteContent>{children}</RemoteContent> : <LocalContent>{children}</LocalContent>;
+}
+function RemoteContent({children}: PropsWithChildren) {
+  const account=useAccount();
+  const bubble: Bubble = {id:ACCOUNT_LIBRARY,title:'Account library',description:'Notes and checklists saved to your account. Bubbles and photos stay local.',parentId:null,order:0,cardImageRatio:1};
+  const unsupported = (): never => {throw new Error('Bubbles and photos are available in local mode only.');};
+  const value: ContentContextValue = {
+    hydrated: !account.loading, storageError: account.error || (account.mode === 'account' && !account.user ? 'Sign in from You → Account, or use local mode.' : null),
+    bubbles: [bubble], items: account.items, bubbleById: id=>id===ACCOUNT_LIBRARY?bubble:undefined,
+    itemById: id=>account.items.find(item=>item.id===id),childBubbles: parent=>parent===null?[bubble]:[],
+    bubbleCountLabel: ()=>`${account.items.length} files`,collectionContents: ()=>[...account.items].sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id)).map(value=>({kind:'file',value})),
+    createBubble:unsupported,createPhoto:unsupported,updateBubble:unsupported,deleteBubble:unsupported,
+    createNote:input=>account.saveNote(input),createChecklist:input=>account.saveChecklist(input),
+    updateNote:(id,input)=>account.saveNote(input,id),updateChecklist:(id,input)=>account.saveChecklist(input,id),
+    toggleChecklistRow:async(id,rowId)=>{const item=account.items.find(item=>item.id===id);const row=item?.rows?.find(row=>row.id===rowId);if(!item||!row)return;
+      await account.saveChecklist({title:item.title,rows:(item.rows??[]).map(value=>value.id===rowId?{...value,done:!value.done}:value)},id);},
+    deleteNote:async id=>{const item=account.items.find(item=>item.id===id);if(item)await account.remove(item);},
+    deleteChecklist:async id=>{const item=account.items.find(item=>item.id===id);if(item)await account.remove(item);},
+  };
+  return <ContentContext.Provider value={value}>{children}</ContentContext.Provider>;
+}
+function LocalContent({ children }: PropsWithChildren) {
   const [bubbles, setBubbles, bubblesError, bubblesLoaded] = useLocalState<Bubble[]>('bubble.bubbles.v1', () => [], (value): value is Bubble[] => Array.isArray(value) && value.every((entry) => entry && typeof entry.id === 'string' && typeof entry.title === 'string' && typeof entry.order === 'number'));
   const [items, setItems, itemsError, itemsLoaded] = useLocalState<SampleItem[]>('bubble.items.v1', () => [], (value): value is SampleItem[] => Array.isArray(value) && value.every((entry) => entry && typeof entry.id === 'string' && typeof entry.bubbleId === 'string' && typeof entry.title === 'string' && typeof entry.body === 'string' && typeof entry.order === 'number' && ['NOTE', 'PHOTO', 'CHECKLIST'].includes(entry.type) && (entry.rows === undefined || (Array.isArray(entry.rows) && entry.rows.every((row: { text?: unknown; done?: unknown }) => row && typeof row.text === 'string' && typeof row.done === 'boolean')))));
   const sequence = useRef(0);

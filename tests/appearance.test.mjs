@@ -34,3 +34,15 @@ test('text and action colors remain readable for every mode and accent', () => {
     assert.ok(contrast(colors.onAction, colors.action) >= 4.5, `${mode} ${accent.name} button`);
   }
 });
+
+// Caption/meta text on colored cards uses colors.text (covered above).
+// Destructive/error text sits on these neutral form/menu surfaces.
+test('destructive labels and muted form text meet normal text contrast in both themes', () => {
+  for (const mode of ['light', 'dark']) for (const accent of accentPalette) {
+    const colors = getThemeColors(mode, accent.name);
+    for (const surface of [colors.background, colors.surface, colors.input]) {
+      assert.ok(contrast(colors.destructive, surface) >= 4.5, `${mode} destructive text`);
+      assert.ok(contrast(colors.muted, surface) >= 4.5, `${mode} muted text`);
+    }
+  }
+});

@@ -1,3 +1,4 @@
+import { useAccount } from './Account';
 import { useLocalState } from '../storage/useLocalState';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { PropsWithChildren } from 'react';
@@ -7,12 +8,17 @@ const MAX_PINS = 3;
 type PinState = Record<string, string[]>;
 type PinsContextValue = {
   pinsFor: (scopeId: string) => string[];
-  togglePin: (scopeId: string, key: string) => boolean;
+  togglePin: (scopeId: string, key: string) => boolean | Promise<boolean>;
 };
 
 const PinsContext = createContext<PinsContextValue | null>(null);
 
-export function PinsProvider({ children }: PropsWithChildren) {
+export function PinsProvider({children}: PropsWithChildren) {
+  const account=useAccount();
+  if(account.mode === 'account')return <PinsContext.Provider value={{pinsFor:()=>account.pins.map(id=>`file:${id}`),togglePin:async(_scope,key)=>{const item=account.items.find(item=>`file:${item.id}`===key);if(!item)return false;await account.pin(item);return true;}}}>{children}</PinsContext.Provider>;
+  return <LocalPins>{children}</LocalPins>;
+}
+function LocalPins({ children }: PropsWithChildren) {
   const [pins, setPins, storageError, pinsLoaded] = useLocalState<PinState>('bubble.pins.v1', () => ({}), (value): value is PinState => !!value && typeof value === 'object' && !Array.isArray(value) && Object.values(value).every((keys) => Array.isArray(keys) && keys.every((key) => typeof key === 'string')));
   const { bubbles, items, hydrated } = useContent();
 

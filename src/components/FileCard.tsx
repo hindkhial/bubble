@@ -40,10 +40,10 @@ export function FileCard({ item, pinned, onOpenActions }: { item: SampleItem; pi
         {isNote && <Text style={styles.preview} numberOfLines={3}>{item.preview}</Text>}
         {isChecklist && <View style={styles.checklistPreview}>{checklistRows.slice(0, 3).map((row) => <Text key={row.id} style={[styles.preview, row.done && styles.completed]} numberOfLines={2}>{row.done ? '☑' : '☐'}  {row.text}</Text>)}</View>}
         {isChecklist && <Text style={styles.progress}>{progress.done} of {progress.total} done</Text>}
-        <Text style={styles.meta}>{item.meta}</Text>
+        <Text style={[styles.meta, item.type === 'PHOTO' && { color: colors.text }]}>{item.meta}</Text>
       </View>
     </Pressable>
-      {pinned && <PinnedMarker title={`${item.title} ${item.type.toLowerCase()}`} onPress={onOpenActions} />}
+      <PinnedMarker pinned={pinned} title={`${item.title} ${item.type.toLowerCase()}`} onPress={onOpenActions} />
     </View>
   );
 }

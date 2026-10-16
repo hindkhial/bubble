@@ -8,3 +8,27 @@ dist/
 
 expo-env.d.ts
 # @end expo-cli
+# Local integration configuration; Expo public URLs are not secrets.
+.env
+.env.*
+!.env.example
+
+# Browser test artifacts
+playwright-report/
+test-results/
+
+.pnpm-store/
+
+# Staging secrets, TLS material and backups are never source files.
+deploy/staging/private/
+deploy/staging/backups/
+*.key
+*.pem
+*.crt
+*.cer
+*.p12
+*.pfx
+*.dump
+*.htpasswd
+tester-credentials.json
+lifecycle.json
