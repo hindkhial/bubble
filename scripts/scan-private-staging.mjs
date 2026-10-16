@@ -26,8 +26,8 @@ for(const service of ['backend','web','db']) {
   const runtimeManifest=container ? JSON.parse(run('docker',['inspect','--format','{{json .ImageManifestDescriptor}}',container]))?.digest : undefined;
   const archive=join(directory,service+'.tar');
   run('docker',['save',image,'--output',archive]);
-  run('docker',['run','--rm','-e','TRIVY_DISABLE_TELEMETRY=true','-v',directory+':/scan','-v','bubble-private-trivy-cache:/cache',
-    scanner,'image','--input','/scan/'+service+'.tar','--cache-dir','/cache','--timeout','10m','--scanners','vuln','--format','json','--output','/scan/'+service+'.json']);
+  run('docker',['run','--rm','--user',process.getuid()+':'+process.getgid(),'--cap-drop','ALL','--security-opt','no-new-privileges','--read-only','--tmpfs','/tmp:rw,nosuid,nodev,size=256m','-e','TRIVY_DISABLE_TELEMETRY=true','-v',directory+':/scan',
+    scanner,'image','--input','/scan/'+service+'.tar','--cache-dir','/scan/cache','--timeout','10m','--scanners','vuln','--format','json','--output','/scan/'+service+'.json']);
   const report=JSON.parse(readFileSync(join(directory,service+'.json'),'utf8'));
   if(!report.Results?.some(result=>result.Class==='os-pkgs') || (service==='backend' && !report.Results.some(result=>result.Type==='jar')))
     throw new Error('Expected OS/Java package coverage is missing; no clean result is claimed.');

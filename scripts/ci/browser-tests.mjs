@@ -102,6 +102,8 @@ try {
   assert.equal(report.stats.skipped, 0);
   assert.equal(report.stats.flaky, 0);
   verifyRecovery({folder, environment, run, compose});
+  const scan = JSON.parse(run('node', ['scripts/scan-private-staging.mjs', join(folder, 'image-scan')]));
+  console.log('PASS: final candidate runtime image scan ' + JSON.stringify(scan.images.map(({service, scannedConfig, counts}) => ({service, scannedConfig, counts}))));
 } catch (error) {
   // Do not print application responses, generated credentials, or raw reports.
   console.error('Browser CI failed: ' + error.message);
