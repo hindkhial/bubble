@@ -12,6 +12,7 @@ This is a release candidate plan, not a published release.
 
 ### Security
 - Pin pnpm 10.18.3 and override shell-quote to 1.11.0 and source-map-js to 1.2.2; add a shell-quoting regression test.
+- Update web-exposed decode-uri-component to fixed 0.5.0 with a tracked CommonJS packaging-only patch and real query-parser regressions.
 - Track unresolved dependency advisories as release blockers rather than suppressing them.
 
 ### Existing beta functionality retained

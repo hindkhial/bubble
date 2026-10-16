@@ -4,6 +4,7 @@ import {dirname,basename,join,relative,isAbsolute,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 const scanner='aquasec/trivy@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222';
+if(typeof process.getuid!=='function' || process.getuid()===0) throw new Error('Run image scanning as a non-root operator.');
 const input=process.argv[2];
 if(!input || !isAbsolute(input)) throw new Error('Pass a NEW absolute report directory outside Git.');
 const directory=join(realpathSync(dirname(input)),basename(input));

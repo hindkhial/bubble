@@ -28,3 +28,5 @@ Use the full manual matrix in BETA-TESTING.md. Record date, candidate SHA, envir
 Release sequence: resolve blockers → verify candidate/restore/rollback → complete human gates → owner review → separate approved release/deployment task. A green build is not release approval.
 
 Security/QA follow-up: RELEASE-CANDIDATE-QA.md records actual exposure and detailed human execution steps. The per-head PR check is authoritative for newly added automated scan/rollback checks; earlier Passed entries identify their historical scope. Required human checks above remain Not Tested.
+
+Decoder follow-up: official 0.5.0 plus an export-only CommonJS compatibility patch resolves the web-exposed moderate advisory. Local frontend tests now total 55; audit is 0 critical / 2 high / 1 moderate. The rebuilt frontend image scanned clean with verified config identity. Full per-head CI remains mandatory; high tooling and manual gates remain open.

@@ -2,22 +2,22 @@
 
 Assessment: **not ready for candidate approval or public release**. Version remains proposed `0.1.0-beta.1`. No release/tag, public deployment or merge is authorized by this record.
 
-The security/QA follow-up is added to the existing draft PR #8 because it closes gates already identified by that PR. `frontend`, `backend` and `integration` are preserved. Application UI, API, persistence keys and schema are unchanged; the pnpm lockfile is retained because no compatible security update was found for the remaining findings.
+The security/QA follow-up is added to the existing draft PR #8 because it closes gates already identified by that PR. `frontend`, `backend` and `integration` are preserved. Application UI, API, persistence keys and schema are unchanged; the only dependency update is the fixed decoder 0.5.0 with a tracked export-only CommonJS compatibility patch and its lockfile entries.
 
 ## Dependency exposure review — 2026-10-16
 
-Current full pnpm audit: **0 critical, 2 high, 2 moderate**. No findings are ignored, downgraded or excluded. Published npm versions and the reviewed advisories were checked again, not inferred from an older report.
+Current full pnpm audit after decoder remediation: **0 critical, 2 high, 1 moderate**. No findings are ignored, downgraded or excluded. Published npm versions and the reviewed advisories were checked again, not inferred from an older report.
 
 | Installed dependency | Patched release | Actual observed exposure and decision |
 | --- | --- | --- |
 | node-forge 1.4.0 — High, GHSA-86w9-cpqp-85rv | None published; npm latest remains 1.4.0 | Installed through Expo CLI/certificate tooling. Its RSA PKCS#1 signature-verification flaw concerns malformed nested ASN.1 sequences/low-exponent keys. Expo certificate helpers call certificate/signature verification. Bubble does not accept these certificates through its notes/account API; staging TLS uses OpenSSL/Nginx/Node, not Forge. No Forge source appears in the inspected production web map. Build/development certificate workflows remain affected: **release blocker**, not dismissed as dev-only. |
 | braces 3.0.3 — High, GHSA-vfj7-8cjw-p6xm | None published; npm latest remains 3.0.3 | Installed through Expo/Metro → micromatch; nested brace patterns can exhaust the stack. The reviewed Metro watcher calls micromatch with the fixed `**/*` glob, not note/search input; that call does not demonstrate a reachable nested-brace exploit. Vulnerable brace-expansion APIs remain installed, and the review does not prove all tooling paths unreachable. Neither braces nor micromatch appears in the inspected web map. Untrusted build inputs/tooling remain a risk: **release blocker**. |
 | uuid 7.0.3 — Moderate, GHSA-w5hq-g745-h8pq | 11.1.1 or newer | Via xcode 3.0.1. Reviewed xcode call is `uuid.v4()` without an output buffer; the advisory concerns v3/v5/v6 buffer bounds. The installed uuid 7 package is absent from the web map. Expo's separately bundled `src/uuid` implementation is a different artifact and is not certified by that observation. Avoid an unnecessary multi-major transitive replacement; finding stays visible. |
-| decode-uri-component 0.2.2 — Moderate, GHSA-vcc3-ghjq-m6fr | 0.5.0 | Present through Expo Router → query-string 7.1.3 and included in the web map: URL decoding has an actual client-side input surface. Fixed 0.5.0 is ESM-only; query-string 7 requires a callable CommonJS export (`require(...)`, then function call). An isolated substitution test confirmed `decodeComponent is not a function` on query parsing. A blind override breaks that contract. A compatible upstream consumer update or separately reviewed adapter/backport is required; unresolved. Previous documentation incorrectly listed the affected range endpoint 0.4.2 as the installed version; corrected here. |
+| decode-uri-component 0.2.2 → 0.5.0 — Moderate resolved, GHSA-vcc3-ghjq-m6fr | 0.5.0 | Present through Expo Router → query-string 7.1.3 and included in the web map: URL decoding has an actual client-side input surface. Fixed 0.5.0 is ESM-only; query-string 7 requires a callable CommonJS export (`require(...)`, then function call). An isolated substitution test confirmed `decodeComponent is not a function` on query parsing. A blind override breaks that contract. Resolved using the official 0.5.0 decoding implementation with a tracked patch changing only `export default` to `module.exports` and package `type` to CommonJS. No decoding algorithm changes were made. Actual query-string Unicode/array/empty-value round trips and a bounded malformed-input subprocess pass. Previous documentation incorrectly listed the affected range endpoint 0.4.2 as the installed version; corrected here. |
 
 Sources: [Forge advisory](https://github.com/advisories/GHSA-86w9-cpqp-85rv), [braces advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm), [uuid advisory](https://github.com/advisories/GHSA-w5hq-g745-h8pq), [decoder advisory](https://github.com/advisories/GHSA-vcc3-ghjq-m6fr). No published safe high-severity update is available under the current dependency graph. Do not downgrade to another affected version or replace cryptographic code with an unreviewed patch. No new high advisory is claimed fixed.
 
-Inventory evidence: a fresh production Expo web export with the candidate HTTPS API origin and source maps outside Git contained 850 source entries: 0 Forge, 0 braces, 0 micromatch, 0 installed uuid@7 entries, and 1 decoder@0.2.2 entry. This is source-map evidence for this web export, not certification of native bundles, build tooling or unknown reachability. No source maps are added to the shipped Nginx image.
+Inventory evidence: a fresh production Expo web export with the candidate HTTPS API origin and source maps outside Git contained 850 source entries: 0 Forge, 0 braces, 0 micromatch, 0 installed uuid@7 entries, and 1 fixed decoder@0.5.0 entry (the pre-fix export contained 0.2.2). This is source-map evidence for this web export, not certification of native bundles, build tooling or unknown reachability. No source maps are added to the shipped Nginx image.
 
 ## Final-image scan gate
 
@@ -36,13 +36,17 @@ Local scan run (started 2026-10-16T22:44:18.179Z) completed with the final candi
 | web | `sha256:fbd6c5497634675716b158f10486a57455ef69e42ee31d4aaccc8ca19c548004` | None reported |
 | db | `sha256:d89c03006f679a056dd0b2b650e0ea801ef98e297bb5f879c593f684d44dd7e1` | None reported |
 
+### Updated decoder image
+
+The updated frontend image was rebuilt after the decoder change and rescanned with normal database freshness checks (no skip/ignore flags). Archive/config identity and OS coverage were verified: `sha256:58b508b12f05af689ffa242b070ad154a9dca9b2675643ca94d4c66a3028daf6`, zero reported vulnerabilities. Backend/PostgreSQL code and their locally scanned image identities are unchanged. CI independently rebuilds/scans all three runtime images for each head. The table above and hosted baseline below identify pre-decoder artifacts and must not be mistaken for this updated frontend.
+
 ## Automated verification and rollback scope
 
-Local frozen installation, TypeScript and all 53 frontend tests and Java 21 Maven packaging with 62 PostgreSQL-backed tests passed after scanner changes; production web export and frontend/backend Docker builds passed. Existing authenticated, ownership/CSRF, isolation, migration, account/local-mode and persistence coverage is rerun by CI; inspect the exact source head in PR #8 rather than transferring a historical pass.
+Local frozen installation, TypeScript, all 55 frontend tests and Java 21 Maven packaging with 62 PostgreSQL-backed tests passed; production web export, iOS/Android bundle exports and frontend/backend Docker builds passed. Native bundle export is not physical-device testing. Existing authenticated, ownership/CSRF, isolation, migration, account/local-mode and persistence coverage is rerun by CI; inspect the exact source head in PR #8 rather than transferring a historical pass.
 
 The existing nine browser scenarios remain mandatory with Chromium sandbox and normal TLS verification. Their Linux test-only NSS trust is removed and rejection reconfirmed afterward. CI also verifies V1/V2, backup/transactional restore, seven-table equality, recovered-backend operation and restart persistence. The added rollback drill switches to distinct, metadata-labelled compatible artifacts and back while preserving the exact database container and synthetic fixture data. It uses the same application/schema and does **not** certify arbitrary historical releases or destructive migration downgrades. Such a release requires its own compatibility review and restore plan.
 
-## Hosted verification evidence
+## Pre-decoder hosted verification baseline
 
 [GitHub run 38977872733](https://github.com/hindkhial/bubble/actions/runs/38977872733) passed all three jobs at `c64dad27d039e9271c4aa036971dd4140fa0b911`. Frontend: 53 tests, TypeScript and web build. Backend: 62 PostgreSQL-backed tests and packaging. Browser: 9 passed, zero skipped/unexpected/flaky (89.33 seconds), sandbox/TLS prechecks and trust removal. New recovery, compatible artifact rollback and final-image scans also Passed. Scanner coverage binds each archive to the running image; no runtime vulnerabilities were reported. CI scanned config digests:
 
