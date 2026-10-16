@@ -29,3 +29,7 @@ See [TESTING.md](TESTING.md) for isolated browser tests, full-stack checks and c
 ## Performance
 
 See [PERFORMANCE.md](PERFORMANCE.md) for measured improvements, repeatable synthetic benchmarks and remaining limits.
+
+## Private staging preparation
+
+See [STAGING.md](STAGING.md) for loopback-only HTTPS containers, protected configuration, testing, backup/restore and rollback. No public deployment is configured or authorized.

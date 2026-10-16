@@ -1,0 +1,84 @@
+services:
+  db:
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/POSTGRES_PASSWORD
+    secrets: [POSTGRES_PASSWORD, DB_PASSWORD]
+    volumes:
+      - data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/10-bubble.sql:ro
+    networks: [private]
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test: [CMD-SHELL, 'PGPASSWORD="$$(cat /run/secrets/DB_PASSWORD)" psql -h 127.0.0.1 -U bubble_app -d bubble_staging -v ON_ERROR_STOP=1 -tAc "SELECT 1" > /dev/null']
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    logging: &logging
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+  backend:
+    image: bubble-backend:${RELEASE_TAG:?Set a unique RELEASE_TAG}
+    build: {context: ../../backend}
+    environment:
+      SPRING_PROFILES_ACTIVE: staging
+      DB_URL: jdbc:postgresql://db:5432/bubble_staging
+      DB_USERNAME: bubble_app
+      CORS_ALLOWED_ORIGINS: ${STAGING_ORIGIN:?Set the HTTPS frontend origin}
+    secrets: [DB_PASSWORD]
+    depends_on:
+      db: {condition: service_healthy}
+    networks: [private]
+    user: '10001:10001'
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 768m
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging: *logging
+  web:
+    image: bubble-web:${RELEASE_TAG:?Set a unique RELEASE_TAG}
+    build:
+      context: ../..
+      dockerfile: deploy/staging/frontend.Dockerfile
+      args:
+        EXPO_PUBLIC_API_URL: ${STAGING_ORIGIN:?Set the HTTPS frontend origin}
+    secrets:
+      - {source: tls_cert, target: tls_cert}
+      - {source: tls_key, target: tls_key}
+    ports: ['127.0.0.1:8443:8443']
+    depends_on:
+      backend: {condition: service_healthy}
+    networks:
+      private:
+        ipv4_address: 172.30.87.10
+      edge: {}
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging: *logging
+networks:
+  edge: {}
+  private:
+    internal: true
+    ipam:
+      config: [{subnet: 172.30.87.0/24}]
+volumes:
+  data:
+secrets:
+  POSTGRES_PASSWORD:
+    file: ${POSTGRES_PASSWORD_FILE:?Set bootstrap password file}
+  DB_PASSWORD:
+    file: ${DB_PASSWORD_FILE:?Set application password file}
+  tls_cert:
+    file: ${TLS_CERT_FILE:?Set trusted TLS certificate file}
+  tls_key:
+    file: ${TLS_KEY_FILE:?Set TLS private key file}
