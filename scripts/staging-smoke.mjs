@@ -8,6 +8,7 @@ for(const path of ['/','/you','/search','/file/synthetic-fixture']) {
   assert.equal(response.status,200);
   assert.ok(response.headers.get('cache-control').includes('no-store'));
   assert.ok(response.headers.get('content-security-policy').includes("frame-ancestors 'none'"));
+  assert.equal(response.headers.get('strict-transport-security'),null);
   assert.ok((await response.text()).includes('id="root"'));
 }
 assert.equal((await fetch(base+'/_expo/missing.js')).status,404);
@@ -17,6 +18,7 @@ const csrf=await fetch(base+'/api/v1/auth/csrf');
 const cookie=csrf.headers.get('set-cookie');
 for(const flag of ['Secure','HttpOnly','SameSite=Lax']) assert.ok(cookie.includes(flag));
 assert.ok(csrf.headers.get('cache-control').includes('no-store'));
+assert.equal(csrf.headers.get('strict-transport-security'),null);
 assert.equal((await fetch(base+'/api/v1/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).status,403);
 const denied=await fetch(base+'/api/v1/health',{headers:{Origin:'https://untrusted.example'}});
 assert.equal(denied.status,403);assert.equal(denied.headers.get('access-control-allow-origin'),null);
