@@ -8,6 +8,7 @@ This is a release candidate plan, not a published release.
 - Read-only, commit-pinned GitHub Actions checks for integration PRs: frontend types/tests/web build and Java 21/PostgreSQL tests/backend packaging.
 - Private HTTPS browser CI using the existing nine scenarios, enabled Chromium sandboxing and temporary browser-only certificate trust.
 - Release checklist, security findings, versioning and private operations guidance.
+- Final-candidate image scanning in CI with a restricted non-root scanner, compatible artifact rollback drill and a detailed manual QA checklist.
 
 ### Security
 - Pin pnpm 10.18.3 and override shell-quote to 1.11.0 and source-map-js to 1.2.2; add a shell-quoting regression test.

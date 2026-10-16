@@ -58,6 +58,8 @@ export function verifyRecovery({folder, environment, run, compose}) {
   assert.equal(compose(['ps', '-q', 'db']).trim(), databaseContainer);
   compose(['up', '--detach', '--no-build', '--wait', '--wait-timeout', '240']);
   fixture('restart');
+  for (const service of ['web', 'backend']) assert.equal(
+    run('docker', ['inspect', '--format', '{{.Config.Image}}', compose(['ps', '-q', service]).trim()]).trim(), config.services[service].image);
   assert.equal(compose(['ps', '-q', 'db']).trim(), databaseContainer);
   run('docker', ['image', 'rm', retained.web, retained.backend]);
   console.log('PASS: compatible app artifact rollback and return; same application/schema, database container unchanged');

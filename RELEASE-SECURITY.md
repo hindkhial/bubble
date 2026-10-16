@@ -13,7 +13,7 @@ Initial pnpm audit: one critical, three high and two moderate advisories. After 
 | node-forge 1.4.0, Expo CLI/certificate tooling | High GHSA-86w9-cpqp-85rv | **Release blocker**: advisory reports no patched version; do not claim exploitability absent or silently accept risk |
 | braces 3.0.3, Expo/Metro micromatch chain | High GHSA-vfj7-8cjw-p6xm | **Release blocker**: advisory reports no patched version; obtain a compatible upstream fix or separately reviewed removal |
 | uuid 7.0.3 via xcode | Moderate GHSA-w5hq-g745-h8pq | Outstanding; do not force a major-version transitive upgrade without native-tooling verification |
-| decode-uri-component 0.4.2 via query-string | Moderate GHSA-vcc3-ghjq-m6fr | Outstanding; review compatible query-string/decoder update before release |
+| decode-uri-component 0.2.2 via query-string | Moderate GHSA-vcc3-ghjq-m6fr | Outstanding; review compatible query-string/decoder update before release |
 
 These paths include development/build tooling; runtime reachability is not established for every finding. Dependency audit coverage still applies: do not equate clean runtime images with a clean toolchain. Follow the [shell-quote advisory](https://github.com/advisories/GHSA-pqg4-j6r4-53mv), [source-map-js advisory](https://github.com/advisories/GHSA-68fv-2mgg-jv7q), [node-forge advisory](https://github.com/advisories/GHSA-86w9-cpqp-85rv) and [braces advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm). Rerun `pnpm audit --json` with the exact lockfile before release; nonzero results must be investigated.
 
@@ -30,3 +30,10 @@ Only `contents: read`; no secrets, publishing or deployment credentials. Full ac
 Targeted tracked-file scan found no private-key or common GitHub/AWS token patterns; only placeholder env examples are tracked. This is not a complete historical secret audit. Browser CI generates unique synthetic credentials, keeps them outside the checkout, prints only safe scenario summaries, disables traces/screenshots and uploads no reports. Temporary root trust is confined to a fresh NSS database for sandboxed Chromium on a disposable Linux runner; default runner NSS and macOS keychains are untouched. Verify TLS rejection before import and after removal. Resource cleanup runs in finally; hosted-runner disposal is the cancellation/timeout backstop.
 
 Release remains blocked by unresolved high advisories and outstanding human checks even if all automated CI jobs are green.
+
+
+## Release candidate follow-up
+
+See RELEASE-CANDIDATE-QA.md for refreshed installed/patched versions, source-level exposure, the ESM/CommonJS decoder compatibility constraint and human checklists. The two high advisories still have no published patched releases; no unsafe downgrade, broad framework upgrade, audit exclusion or unreviewed crypto patch is applied. Current audit remains 0 critical / 2 high / 2 moderate. Both highs remain blockers even though their tooling packages were absent from this inspected web bundle.
+
+CI now scans the final images it actually builds and runs, with non-root/capability-free scanner isolation. The compatible-artifact rollback drill explicitly verifies image selection and unchanged database container identity; it does not certify arbitrary historical-schema rollback. Manual checks remain Not Tested. Latest per-head results and image digests are in PR #8's checks, not inferred from the earlier scans above.
