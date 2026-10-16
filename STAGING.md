@@ -32,6 +32,7 @@ Copy `deploy/staging/.env.example` to ignored `deploy/staging/.env`, replace abs
 | Variable | Purpose |
 | --- | --- |
 | `RELEASE_TAG` | Local backend/web image release tag; preserve the previous images for rollback. |
+| `DB_IMAGE_TAG` | Independently retained PostgreSQL 17 image tag; do not change it during an app-only rollback. |
 | `STAGING_ORIGIN` | Exact HTTPS origin with no path/trailing slash; local recipe uses `https://localhost:8443`. Used for CORS and frontend build. |
 | `POSTGRES_PASSWORD_FILE` | Protected bootstrap administrator password file. |
 | `DB_PASSWORD_FILE` | Separate protected application-role password file. |
@@ -123,5 +124,7 @@ sh deploy/staging/compose.sh down
 Java handles SIGTERM with a 20-second graceful phase; Compose allows 30 seconds. Sessions are in-memory: backend restart signs account users out, but does not erase their persisted content. There is no zero-downtime guarantee, session replication, offline account sync or installable offline shell. **Never use `down -v`, prune volumes, or change the project name to “fix” existing staging data.** An intentionally disposable automated fixture stack can remove only its own confirmed test volume after verification.
 
 ## References
+
+The PostgreSQL runtime derives from the pinned official image but uses Alpine `su-exec` instead of its bundled Go-based `gosu`. The pinned entrypoint's single privilege-drop call is checked before replacement; the database still drops root privileges. This removes inherited vulnerable Go standard-library code rather than suppressing scanner findings. Runtime zlib/libpng packages have explicit minimum patched versions. Rebuild and rescan all three final images after base/package updates; changing these helpers does not change PostgreSQL's major version or migrate data.
 
 Implementation follows [Compose health/start ordering](https://docs.docker.com/compose/how-tos/startup-order/), [file-backed secrets](https://docs.docker.com/reference/compose-file/secrets/), [Expo web export/SPA behavior](https://docs.expo.dev/guides/publishing-websites/), [Nginx proxy header controls](https://nginx.org/en/docs/http/ngx_http_proxy_module.html), and [PostgreSQL 17 restore tooling](https://www.postgresql.org/docs/17/app-pgrestore.html). These controls require the runtime checks above; they do not certify a public deployment.

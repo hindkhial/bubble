@@ -1,6 +1,9 @@
 services:
   db:
-    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    image: bubble-postgres:${DB_IMAGE_TAG:?Set an independently retained database image tag}
+    build:
+      context: ../..
+      dockerfile: deploy/staging/postgres.Dockerfile
     environment:
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres

@@ -5,7 +5,7 @@ COPY src ./src
 RUN mvn -B -ntp -DskipTests package
 
 FROM eclipse-temurin:21-jre-alpine@sha256:51ab5e3302e7141ce665ca3ea85e8b5cd648eafbc3c0c90dd79d6537684e4555
-RUN apk add --no-cache curl && addgroup -S -g 10001 bubble && adduser -S -D -u 10001 -G bubble bubble
+RUN apk add --no-cache curl 'zlib>=1.3.2-r1' 'libpng>=1.6.59-r0' && addgroup -S -g 10001 bubble && adduser -S -D -u 10001 -G bubble bubble
 WORKDIR /app
 COPY --from=build --chown=10001:10001 /build/target/bubble-backend-0.1.0-SNAPSHOT.jar /app/bubble.jar
 USER 10001:10001
