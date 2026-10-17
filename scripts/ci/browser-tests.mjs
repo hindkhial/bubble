@@ -105,7 +105,36 @@ try {
   assert.equal(report.stats.skipped, 0);
   assert.equal(report.stats.flaky, 0);
   verifyRecovery({folder, environment, run, compose});
-  const scan = JSON.parse(run('node', ['scripts/scan-private-staging.mjs', join(folder, 'image-scan')]));
+  const scanResult = spawnSync('node', ['scripts/scan-private-staging.mjs', join(folder, 'image-scan')],
+    {env: environment, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024});
+  // The scanner processes public image packages only. Keep its diagnostics
+  // allowlisted rather than exposing raw child output or staging credentials.
+  for (const line of (scanResult.stderr ?? '').split('\n')) {
+    if (line.startsWith('SCAN_DIAGNOSTIC ')) {
+      try {
+        const diagnostic = JSON.parse(line.slice('SCAN_DIAGNOSTIC '.length));
+        const allowed = ['disk-space', 'permission', 'registry-rate-limit', 'network', 'certificate', 'database-download'];
+        console.error('Image scanner diagnostic: ' + JSON.stringify({
+          command: ['docker', 'sh', 'tar'].includes(diagnostic.command) ? diagnostic.command : 'other',
+          operation: ['run', 'save', 'image', 'inspect', '-xOf'].includes(diagnostic.operation) ? diagnostic.operation : 'other',
+          exit: Number.isInteger(diagnostic.exit) ? diagnostic.exit : null,
+          categories: Array.isArray(diagnostic.categories) ? diagnostic.categories.filter(value => allowed.includes(value)) : [],
+        }));
+      } catch { console.error('Image scanner diagnostic unavailable'); }
+    }
+  }
+  if (scanResult.status !== 0) {
+    if (scanResult.status === 2) {
+      const finding = JSON.parse(scanResult.stdout);
+      console.error('Image vulnerability gate: ' + JSON.stringify(finding.images.map(({service, counts}) => ({service, counts}))));
+    } else {
+      const known = ['Expected OS/Java package coverage is missing', 'Scanner config digest is absent from the exported archive',
+        'Running image is not the scanned archive/config', 'Unsupported image archive descriptor'];
+      console.error('Image scan failure category: ' + (known.find(message => scanResult.stderr?.includes(message)) ?? 'scanner execution; see classified diagnostic'));
+    }
+    throw new Error('Image scanning failed with exit ' + scanResult.status + '; no clean result is claimed');
+  }
+  const scan = JSON.parse(scanResult.stdout);
   console.log('PASS: final candidate runtime image scan ' + JSON.stringify(scan.images.map(({service, scannedConfig, counts}) => ({service, scannedConfig, counts}))));
 } catch (error) {
   // Do not print application responses, generated credentials, or raw reports.
