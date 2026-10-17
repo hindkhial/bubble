@@ -4,12 +4,14 @@ import { accentPalette, themedAvatarColor } from '../theme/appearance';
 import { useTheme } from '../theme/Theme';
 import type { ThemeColors } from '../theme/appearance';
 import { useEffect, useRef, useState } from 'react';
+import { validatePickedImage } from '../storage/profilePhotoCore';
 import * as ImagePicker from 'expo-image-picker';
 import { BIO_LIMIT, DISPLAY_NAME_LIMIT, validateProfile } from '../utils/profile';
 import { useNavigation } from 'expo-router';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Profile } from '../state/Profile';
 import { createFormStyles } from './AddPreview';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ConfirmDialog } from './ConfirmDialog';
 import { ProfileAvatar } from './ProfileAvatar';
 
@@ -17,6 +19,7 @@ const avatarColors = accentPalette;
 
 export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profile; onSave: (profile: Profile) => void | Promise<unknown>; onClose: () => void }) {
   const account=useAccount();
+  const insets = useSafeAreaInsets();
   const [avatarReference,setAvatarReference]=useState(profile.avatarReference??'');
   const { colors, mode } = useTheme();
   const styles = createFormStyles(colors);
@@ -55,11 +58,15 @@ export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profil
   const pickImage = async () => {
     setPicking(true);
     try {
+      if (Platform.OS !== 'web') {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) throw new Error('Photo access is denied. Allow access in iPhone Settings, or keep your emoji avatar.');
+      }
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85, base64: Platform.OS === 'web' });
       if (!mounted.current) return;
-      if (!result.canceled && result.assets?.[0]) { setImageUri(Platform.OS === 'web' && result.assets[0].base64 ? `data:${result.assets[0].mimeType || 'image/jpeg'};base64,${result.assets[0].base64}` : result.assets[0].uri); setError(''); }
-    } catch {
-      if (mounted.current) setError('Could not open your photos. Please try again.');
+      if (!result.canceled && result.assets?.[0]) { validatePickedImage(result.assets[0]); setImageUri(Platform.OS === 'web' && result.assets[0].base64 ? `data:${result.assets[0].mimeType || 'image/jpeg'};base64,${result.assets[0].base64}` : result.assets[0].uri); setError(''); }
+    } catch (problem) {
+      if (mounted.current) setError(problem instanceof Error ? problem.message : 'Could not open your photos. Please try again.');
     } finally {
       if (mounted.current) setPicking(false);
     }
@@ -78,7 +85,7 @@ export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profil
   return <Modal visible transparent animationType="slide" onRequestClose={attemptClose}>
     <KeyboardAvoidingView style={styles.scrim} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Pressable style={StyleSheet.absoluteFill} onPress={attemptClose} />
-      <View style={[styles.sheet, local.sheet]} accessibilityViewIsModal>
+      <View style={[styles.sheet, local.sheet, { paddingBottom: Math.max(30, insets.bottom) }]} accessibilityViewIsModal>
         <View style={styles.handle} />
         <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={styles.title}>Edit profile</Text>

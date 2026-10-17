@@ -1,3 +1,4 @@
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MotionAwareModal as Modal } from './MotionAwareModal';
 import { themedAvatarColor } from '../theme/appearance';
 import { useTheme } from '../theme/Theme';
@@ -17,6 +18,7 @@ export function EditContentSheet({ entry, onSave, onClose }: {
   onSave: (draft: Draft) => void | Promise<unknown>;
   onClose: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const { colors, mode } = useTheme();
   const styles = createFormStyles(colors);
   const navigation = useNavigation();
@@ -75,7 +77,7 @@ export function EditContentSheet({ entry, onSave, onClose }: {
     <Modal visible animationType="slide" transparent onRequestClose={attemptClose}>
       <KeyboardAvoidingView style={styles.scrim} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Pressable style={StyleSheet.absoluteFill} onPress={attemptClose} />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: Math.max(30, insets.bottom) }]} accessibilityViewIsModal>
           <View style={styles.handle} />
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <Text style={styles.title}>{isBubble ? 'Edit Bubble' : isChecklist ? 'Edit checklist' : 'Edit note'}</Text>

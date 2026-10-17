@@ -32,3 +32,7 @@ deploy/staging/backups/
 *.htpasswd
 tester-credentials.json
 lifecycle.json
+
+# Native projects are generated from Expo configuration.
+/ios/
+/android/

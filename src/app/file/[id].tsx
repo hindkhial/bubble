@@ -2,7 +2,7 @@ import { useTheme } from '../../theme/Theme';
 import type { ThemeColors } from '../../theme/appearance';
 import { useState } from 'react';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { EditContentSheet } from '../../components/EditContentSheet';
@@ -17,7 +17,7 @@ export default function FileDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { bubbleById, itemById, updateNote, deleteNote, updateChecklist, toggleChecklistRow, deleteChecklist } = useContent();
+  const { hydrated, storageError, bubbleById, itemById, updateNote, deleteNote, updateChecklist, toggleChecklistRow, deleteChecklist } = useContent();
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -28,6 +28,10 @@ export default function FileDetailScreen() {
   };
   const item = itemById(id);
   const bubble = item ? bubbleById(item.bubbleId) : undefined;
+
+  if (!hydrated || storageError) return <SafeAreaView style={styles.screen}>
+    {!hydrated ? <ActivityIndicator accessibilityLabel="Loading saved content" /> : <><Text accessibilityRole="alert" style={{ color: colors.text }}>{storageError}</Text><Pressable accessibilityRole="button" onPress={() => router.replace('/')}><Text style={{ color: colors.action }}>Return home</Text></Pressable></>}
+  </SafeAreaView>;
 
   if (!item || !bubble) {
     return <Redirect href="/" />;

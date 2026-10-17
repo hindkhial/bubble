@@ -1,7 +1,8 @@
 import { profileChanges } from '../api/account';
 import { useAccount } from './Account';
+import { persistProfilePhoto, profilePhotoUri } from '../storage/profilePhoto';
 import { useLocalState } from '../storage/useLocalState';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext } from 'react';
 import type { PropsWithChildren } from 'react';
 import { colors } from '../theme/tokens';
 
@@ -15,8 +16,10 @@ export function ProfileProvider({children}: PropsWithChildren) {
   return <LocalProfile>{children}</LocalProfile>;
 }
 function LocalProfile({ children }: PropsWithChildren) {
-  const [profile, updateProfile, storageError] = useLocalState<Profile>('bubble.profile.v1', () => ({ displayName: 'Bubble', avatarColor: colors.lavenderSoft, bio: '' }), (value): value is Profile => !!value && typeof value === 'object' && 'displayName' in value && typeof value.displayName === 'string' && 'avatarColor' in value && typeof value.avatarColor === 'string' && 'bio' in value && typeof value.bio === 'string');
-  return <ProfileContext.Provider value={{ profile, updateProfile, storageError }}>{children}</ProfileContext.Provider>;
+  const [profile, , storageError, , commitProfile] = useLocalState<Profile>('bubble.profile.v1', () => ({ displayName: 'Bubble', avatarColor: colors.lavenderSoft, bio: '' }), (value): value is Profile => !!value && typeof value === 'object' && 'displayName' in value && typeof value.displayName === 'string' && 'avatarColor' in value && typeof value.avatarColor === 'string' && 'bio' in value && typeof value.bio === 'string' && (!('imageUri' in value) || value.imageUri === undefined || typeof value.imageUri === 'string') && (!('avatarEmoji' in value) || value.avatarEmoji === undefined || typeof value.avatarEmoji === 'string') && (!('avatarReference' in value) || value.avatarReference == null || typeof value.avatarReference === 'string'));
+  const resolvedImage = profilePhotoUri(profile.imageUri);
+  const photoError = profile.imageUri && !resolvedImage ? 'Your saved photo is unavailable. Choose it again; your profile data is unchanged.' : null;
+  return <ProfileContext.Provider value={{ profile: { ...profile, imageUri: resolvedImage }, updateProfile: next => persistProfilePhoto(profile.imageUri, next.imageUri, reference => commitProfile({ ...next, imageUri: reference })), storageError: storageError || photoError }}>{children}</ProfileContext.Provider>;
 }
 
 export function useProfile() {

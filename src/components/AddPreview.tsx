@@ -1,3 +1,4 @@
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MotionAwareModal as Modal } from './MotionAwareModal';
 import { useAccount } from '../state/Account';
 import { ACCOUNT_LIBRARY } from '../api/account';
@@ -25,6 +26,7 @@ const palette = bubblePalette;
 
 export function AddPreview({ parentId = null, quickAction }: { parentId?: string | null; quickAction?: 'note' | 'checklist' }) {
   const account=useAccount();
+  const insets = useSafeAreaInsets();
   const { colors, mode } = useTheme();
   const styles = createFormStyles(colors);
   const router = useRouter();
@@ -81,8 +83,8 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
       setDestination('__pending__'); setTitle(''); setDescription(''); setError('');
       setStep(returnToFile); setReturnToFile(null); saving.current = false;
     } else {
-      createBubble({ title, description, color, parentId, cover, cardImageRatio });
-      close();
+      try { createBubble({ title, description, color, parentId, cover, cardImageRatio }); close(); }
+      catch (problem) { setError(problem instanceof Error ? problem.message : "Could not save."); saving.current = false; }
     }
   };
   const saveNote = async () => {
@@ -90,9 +92,10 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
     if (!body.trim()) { setError('Write a little text before saving your note.'); return; }
     if (!destination || (destination !== '__pending__' && !bubbleById(destination))) { setError('Choose a Bubble for this note.'); return; }
     saving.current = true;
+    try {
     const destinationId = pendingBubble && destination === '__pending__'
       ? createBubble({ ...pendingBubble, parentId: null }).id : destination;
-    try { await createNote({ title: noteTitle, body, bubbleId: destinationId });
+    await createNote({ title: noteTitle, body, bubbleId: destinationId });
     close();
     if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
     } catch(problem) {setError(problem instanceof Error?problem.message:'Could not save.');saving.current=false;}
@@ -102,20 +105,23 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
     if (!photo) { setError('Choose a photo before saving.'); return; }
     if (!destination || (destination !== '__pending__' && !bubbleById(destination))) { setError('Choose a Bubble for this photo.'); return; }
     saving.current = true;
+    try {
     const destinationId = pendingBubble && destination === '__pending__'
       ? createBubble({ ...pendingBubble, parentId: null }).id : destination;
     createPhoto({ title: photoTitle, description: photoDescription, bubbleId: destinationId, image: { uri: photo.uri }, cardImageRatio: photo.ratio });
     close();
     if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
+    } catch (problem) { setError(problem instanceof Error ? problem.message : 'Could not save.'); saving.current = false; }
   };
   const saveChecklist = async () => {
     if (saving.current) return;
     if (!checklistRows.some((row) => row.text.trim())) { setError('Add at least one checklist item before saving.'); return; }
     if (!destination || (destination !== '__pending__' && !bubbleById(destination))) { setError('Choose a Bubble for this checklist.'); return; }
     saving.current = true;
+    try {
     const destinationId = pendingBubble && destination === '__pending__'
       ? createBubble({ ...pendingBubble, parentId: null }).id : destination;
-    try { await createChecklist({ title: checklistTitle, rows: checklistRows, bubbleId: destinationId });
+    await createChecklist({ title: checklistTitle, rows: checklistRows, bubbleId: destinationId });
     close();
     if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
     } catch(problem) {setError(problem instanceof Error?problem.message:'Could not save.');saving.current=false;}
@@ -126,7 +132,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
     <Modal animationType="slide" transparent visible={visible} onRequestClose={close}>
       <KeyboardAvoidingView style={styles.scrim} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Pressable style={StyleSheet.absoluteFill} onPress={close} />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: Math.max(30, insets.bottom) }]} accessibilityViewIsModal>
           <View style={styles.handle} />
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {step === 'menu' && <>
@@ -224,7 +230,7 @@ export const createFormStyles = (colors: ThemeColors) => StyleSheet.create({
   pick: { minHeight: 48, borderRadius: 16, borderWidth: 1, borderColor: colors.action, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.lavenderSoft },
   pickText: { color: colors.action, fontSize: 14, fontWeight: '700' },
   remove: { paddingVertical: 8, alignSelf: 'center' }, removeText: { color: colors.muted, fontSize: 12 },
-  swatches: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  swatches: { flexWrap: 'wrap', flexDirection: 'row', gap: 12, marginTop: 4 },
   swatch: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },
   swatchSelected: { borderWidth: 2, borderColor: colors.action },
   swatchCheck: { color: colors.action, fontSize: 19, fontWeight: '700' },
