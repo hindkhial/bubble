@@ -1,11 +1,12 @@
+import { usePreventRemove } from 'expo-router/react-navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MotionAwareModal as Modal } from './MotionAwareModal';
 import { themedAvatarColor } from '../theme/appearance';
 import { useTheme } from '../theme/Theme';
 import type { ThemeColors } from '../theme/appearance';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigation } from 'expo-router';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Bubble, ChecklistRow, SampleItem } from '../data/sample';
 import { bubblePalette, createFormStyles } from './AddPreview';
 import { ChecklistEditorRows } from './ChecklistEditorRows';
@@ -43,16 +44,18 @@ export function EditContentSheet({ entry, onSave, onClose }: {
   const saving = useRef(false);
   const dirty = title !== initial.title || description !== initial.description || color !== initial.color || body !== initial.body || JSON.stringify(rows) !== JSON.stringify(initial.rows);
 
-  useEffect(() => navigation.addListener('beforeRemove', (event) => {
-    if (bypass.current || !dirty) return;
-    event.preventDefault();
-    blockedAction.current = event.data.action;
+  usePreventRemove(dirty, ({ data }) => {
+    if (bypass.current) { navigation.dispatch(data.action); return; }
+    if (saving.current) return;
+    blockedAction.current = data.action;
+    Keyboard.dismiss();
     setDiscardOpen(true);
-  }), [navigation, dirty]);
+  });
 
   const leave = () => { bypass.current = true; onClose(); };
   const attemptClose = () => {
-    if (dirty) setDiscardOpen(true);
+    if (saving.current) return;
+    if (dirty) { blockedAction.current = null; Keyboard.dismiss(); setDiscardOpen(true); }
     else leave();
   };
   const discard = () => {
@@ -77,9 +80,9 @@ export function EditContentSheet({ entry, onSave, onClose }: {
     <Modal visible animationType="slide" transparent onRequestClose={attemptClose}>
       <KeyboardAvoidingView style={styles.scrim} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Pressable style={StyleSheet.absoluteFill} onPress={attemptClose} />
-        <View style={[styles.sheet, { paddingBottom: Math.max(30, insets.bottom) }]} accessibilityViewIsModal>
+        <View style={[styles.sheet, { paddingBottom: Math.max(30, insets.bottom) }]} accessibilityViewIsModal={!discardOpen} accessibilityElementsHidden={discardOpen} importantForAccessibility={discardOpen ? 'no-hide-descendants' : 'auto'}>
           <View style={styles.handle} />
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <Text style={styles.title}>{isBubble ? 'Edit Bubble' : isChecklist ? 'Edit checklist' : 'Edit note'}</Text>
             <Text style={styles.intro}>Your changes will appear right away.</Text>
             <Text style={styles.label}>Title {isBubble ? '*' : '(optional)'}</Text>
@@ -101,7 +104,7 @@ export function EditContentSheet({ entry, onSave, onClose }: {
             <Pressable accessibilityRole="button" onPress={attemptClose} style={styles.cancel}><Text style={styles.cancelText}>Cancel</Text></Pressable>
           </ScrollView>
         </View>
-        <ConfirmDialog visible={discardOpen} title="Discard changes?" message="Your unsaved edits will be lost." confirmLabel="Discard changes" onCancel={() => setDiscardOpen(false)} onConfirm={discard} destructive={false} embedded />
+        <ConfirmDialog visible={discardOpen} title="Discard changes?" message="Your unsaved edits will be lost." confirmLabel="Discard changes" onCancel={() => { blockedAction.current = null; setDiscardOpen(false); }} onConfirm={discard} destructive={false} embedded />
       </KeyboardAvoidingView>
     </Modal>
   </>;

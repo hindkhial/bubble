@@ -10,7 +10,7 @@ export function ChecklistEditorRows({ rows, onChange, creating = false }: { rows
   const changeRow = (id: string, update: Partial<ChecklistRow>) => onChange(rows.map((row) => row.id === id ? { ...row, ...update } : row));
   return <View>
     {rows.map((row, index) => <View key={row.id} style={styles.row}>
-      {!creating ? <Pressable accessibilityRole="checkbox" accessibilityLabel={`Item ${index + 1} complete`} aria-checked={row.done} onPress={() => changeRow(row.id, { done: !row.done })} style={[styles.check, row.done && styles.checked]}><Text style={styles.checkText}>{row.done ? '✓' : ''}</Text></Pressable> : null}
+      {!creating ? <Pressable accessibilityRole="checkbox" accessibilityLabel={`Checklist item ${index + 1}: ${row.text.trim() || 'Untitled'}`} accessibilityState={{ checked: row.done }} aria-checked={row.done} onPress={() => changeRow(row.id, { done: !row.done })} style={[styles.check, row.done && styles.checked]}><Text style={styles.checkText}>{row.done ? '✓' : ''}</Text></Pressable> : null}
       <TextInput accessibilityLabel={`Checklist item ${index + 1}`} value={row.text} onChangeText={(text) => changeRow(row.id, { text })} placeholder="List item" placeholderTextColor={colors.muted} multiline style={styles.input} />
       <Pressable accessibilityRole="button" accessibilityLabel={`Remove item ${index + 1}`} onPress={() => onChange(rows.filter((candidate) => candidate.id !== row.id))} style={styles.remove}><Text style={styles.removeText}>×</Text></Pressable>
     </View>)}

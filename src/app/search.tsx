@@ -32,7 +32,7 @@ export default function SearchScreen() {
   const unavailable = account.mode==='account' && !account.user;
   const results = searchEverything(account.mode==='account'?[]:bubbles, account.mode==='account'&&query.trim()?remote??[]:items, query, filter, pins);
   return <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+    <ScrollView keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       <Text accessibilityRole="header" style={[styles.heading, { color: colors.text }]}>Search</Text>
       <Text style={{ color: colors.muted, marginBottom: 20 }}>{account.mode==='account'?'Search your private account notes and lists. A connection is required.':'Find a thought, a list, or a little detail. All on your device.'}</Text>
       <View style={styles.searchRow}>

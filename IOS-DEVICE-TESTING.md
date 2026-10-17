@@ -1,5 +1,7 @@
 # Physical iPhone validation
 
+**Owner-deferred (2026-10-17):** the physical phone is not connecting to the Mac. Continue Simulator work; all physical tests remain Not Tested. No signing, provisioning, Developer Mode or installation approval is inferred from this deferral. See IOS-SIMULATOR-TESTING.md for the active scope.
+
 ## Entry checks — 2026-10-17
 
 Baseline: ios-native-foundation, 6118f0eccd315fb2377ec58c072c51c396efea2f; PR #9 is draft/unmerged into integration. Original frontend, backend and integration branches are unchanged.

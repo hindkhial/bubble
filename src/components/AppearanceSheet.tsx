@@ -1,7 +1,7 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MotionAwareModal as Modal } from './MotionAwareModal';
 import { useAccount } from '../state/Account';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { accentPalette, type ThemeColors } from '../theme/appearance';
 import { useTheme } from '../theme/Theme';
 
@@ -31,7 +31,7 @@ export function AppearanceSheet({ onClose }: { onClose: () => void }) {
             </Pressable>)}
           </View>
           {storageError ? <Text accessibilityRole="alert" style={styles.note}>{storageError}</Text> : null}
-          <Text style={styles.note}>{account.mode==='account' ? 'Account changes apply after the server confirms them. A connection is required.' : 'Changes apply immediately and are saved in this browser when local storage is available.'}</Text>
+          <Text style={styles.note}>{account.mode==='account' ? 'Account changes apply after the server confirms them. A connection is required.' : `Changes apply immediately and are saved ${Platform.OS === 'web' ? 'in this browser' : 'on this device'} when local storage is available.`}</Text>
           <Pressable accessibilityRole="button" onPress={onClose} style={styles.close}><Text style={styles.modeText}>Done</Text></Pressable>
         </ScrollView>
       </View>

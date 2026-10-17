@@ -1,3 +1,4 @@
+import { usePreventRemove } from 'expo-router/react-navigation';
 import { MotionAwareModal as Modal } from './MotionAwareModal';
 import { useAccount } from '../state/Account';
 import { accentPalette, themedAvatarColor } from '../theme/appearance';
@@ -8,7 +9,7 @@ import { validatePickedImage } from '../storage/profilePhotoCore';
 import * as ImagePicker from 'expo-image-picker';
 import { BIO_LIMIT, DISPLAY_NAME_LIMIT, validateProfile } from '../utils/profile';
 import { useNavigation } from 'expo-router';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Profile } from '../state/Profile';
 import { createFormStyles } from './AddPreview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -40,15 +41,16 @@ export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profil
   const saving = useRef(false);
   const dirty = name !== profile.displayName || avatarColor !== profile.avatarColor || bio !== profile.bio || imageUri !== profile.imageUri || avatarEmoji !== (profile.avatarEmoji ?? '') || avatarReference !== (profile.avatarReference??'');
 
-  useEffect(() => navigation.addListener('beforeRemove', (event) => {
-    if (bypass.current || !dirty) return;
-    event.preventDefault();
-    blockedAction.current = event.data.action;
+  usePreventRemove(dirty, ({ data }) => {
+    if (bypass.current) { navigation.dispatch(data.action); return; }
+    if (saving.current) return;
+    blockedAction.current = data.action;
+    Keyboard.dismiss();
     setDiscardOpen(true);
-  }), [navigation, dirty]);
+  });
 
   const leave = () => { bypass.current = true; onClose(); };
-  const attemptClose = () => { if (dirty) setDiscardOpen(true); else leave(); };
+  const attemptClose = () => { if (saving.current) return; if (dirty) { blockedAction.current = null; Keyboard.dismiss(); setDiscardOpen(true); } else leave(); };
   const discard = () => {
     bypass.current = true;
     setDiscardOpen(false);
@@ -85,9 +87,9 @@ export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profil
   return <Modal visible transparent animationType="slide" onRequestClose={attemptClose}>
     <KeyboardAvoidingView style={styles.scrim} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Pressable style={StyleSheet.absoluteFill} onPress={attemptClose} />
-      <View style={[styles.sheet, local.sheet, { paddingBottom: Math.max(30, insets.bottom) }]} accessibilityViewIsModal>
+      <View style={[styles.sheet, local.sheet, { paddingBottom: Math.max(30, insets.bottom) }]} accessibilityViewIsModal={!discardOpen} accessibilityElementsHidden={discardOpen} importantForAccessibility={discardOpen ? 'no-hide-descendants' : 'auto'}>
         <View style={styles.handle} />
-        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={styles.title}>Edit profile</Text>
           <Text style={styles.intro}>Make this space feel like yours.</Text>
           <View style={local.preview}><ProfileAvatar profile={{ displayName: name, avatarColor, bio, imageUri, avatarEmoji }} size={72} /></View>
@@ -112,7 +114,7 @@ export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profil
           <Pressable accessibilityRole="button" onPress={attemptClose} style={styles.cancel}><Text style={styles.cancelText}>Cancel</Text></Pressable>
         </ScrollView>
       </View>
-      <ConfirmDialog visible={discardOpen} title="Discard changes?" message="Your unsaved edits will be lost." confirmLabel="Discard changes" onCancel={() => setDiscardOpen(false)} onConfirm={discard} destructive={false} embedded />
+      <ConfirmDialog visible={discardOpen} title="Discard changes?" message="Your unsaved edits will be lost." confirmLabel="Discard changes" onCancel={() => { blockedAction.current = null; setDiscardOpen(false); }} onConfirm={discard} destructive={false} embedded />
     </KeyboardAvoidingView>
   </Modal>;
 }

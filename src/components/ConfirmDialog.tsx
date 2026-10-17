@@ -16,7 +16,7 @@ export function ConfirmDialog({ visible, title, message, confirmLabel, onConfirm
   const { colors } = useTheme();
   const styles = createStyles(colors);
   if (!visible) return null;
-  const content = <View style={[styles.scrim, embedded && StyleSheet.absoluteFill]}>
+  const content = <View accessibilityViewIsModal style={[styles.scrim, embedded && StyleSheet.absoluteFill]}>
       <View accessibilityRole="alert" style={styles.dialog}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.message}>{message}</Text>
