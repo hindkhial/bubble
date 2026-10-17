@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
+import { nativeApiBase } from '../api/native';
 import { Platform } from 'react-native';
 import { ApiClient, ApiError } from '../api/client';
 import { AccountRepository, type Account, type Preferences, type ServerProfile } from '../api/account';
@@ -6,7 +7,10 @@ import type { SampleItem } from '../data/sample';
 import { copyLocalItems } from '../api/importLocal';
 import { browserStorage, type ClientStorage } from '../storage/browser';
 const MODE_KEY = 'bubble.workspace.v1';
-export function configuredApi() { return process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080'; }
+export function configuredApi() {
+  if (Platform.OS === 'web') return process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080';
+  try { return nativeApiBase(process.env.EXPO_PUBLIC_API_URL); } catch { return ''; }
+}
 function useAccountState() {
   const repository = useMemo(() => new AccountRepository(new ApiClient(configuredApi())), []);
   const [mode, setMode] = useState<'local' | 'account'>('local');

@@ -113,3 +113,23 @@ Before starting a controlled beta: verify the approved isolated trust proof for 
 - Module regressions: `tests/appearance.test.mjs`, `tests/motion.test.mjs`.
 
 No dependencies, storage keys, content models, account APIs or database schema changed. Earlier PR changes add keyboard card options, preference-aware modal/route motion and contrast corrections; the verified follow-up fixes checked/current/toggle browser semantics and profile-test synchronization. Existing personal browser tabs/storage were untouched.
+
+
+## Hosted release-readiness verification
+
+[CI run 38974495598](https://github.com/hindkhial/bubble/actions/runs/38974495598) at source head `2eeee6c5b8e4a793016fd433ff5e209c4b0d7593` passed all nine scenarios, 53 frontend tests and 62 PostgreSQL/backend tests. Non-root sandboxed Chromium used fingerprint-verified temporary NSS trust on an ephemeral Linux runner; TLS rejection was verified before import and after removal. No macOS keychain was changed. Backup/restore compared seven tables exactly, verified recovered-backend operation and retained content after restart/reauthentication, then removed the disposable CI stack.
+
+This does not change the manual matrix statuses: screen readers, complete focus management, mobile/tablet/desktop visual review, browser/text zoom and physical iOS/Android execution remain **Not Tested**. Two unresolved high dependency advisories and final candidate image scanning remain release blockers/gates in RELEASE-SECURITY.md and RELEASE-CHECKLIST.md. No release or public deployment is approved by CI success.
+
+
+## Candidate security/QA follow-up
+
+RELEASE-CANDIDATE-QA.md contains the current installed-version/exposure review, candidate image evidence and a device/tool-specific human checklist. All six required manual categories remain **Not Tested**: the actual in-app staging browser was blocked by ERR_CERT_AUTHORITY_INVALID and no host trust was altered. Physical devices and screen-reader control are unavailable here. Narrow automated keyboard/viewport assertions remain separate from full human QA. Two high dependency advisories remain blockers, along with the documented moderate findings; no audit suppression or incompatible transitive upgrade was used.
+
+Actual candidate follow-up: [hosted run 38977872733](https://github.com/hindkhial/bubble/actions/runs/38977872733) at `c64dad27d039e9271c4aa036971dd4140fa0b911` passed all automated jobs, including the nine scenarios and new rollback/image gates. This leaves all manual categories above Not Tested.
+
+Decoder remediation follow-up: fixed 0.5.0 with CommonJS packaging-only compatibility is locally verified with 55 frontend tests and web/iOS/Android exports. Audit now has two high and one moderate findings; no exclusions. Updated frontend runtime scan is clean. The earlier hosted 53-test result is a pre-decoder baseline; the new head requires its own complete CI run. Physical-device/manual matrix outcomes remain Not Tested.
+
+## Detailed human verification
+
+Use [MANUAL-QA.md](MANUAL-QA.md) for platform-specific screen-reader, keyboard/focus, layout, zoom, text-scaling and physical-device steps. All unexecuted checks remain **Not Tested**. [DEPENDENCY-RISKS.md](DEPENDENCY-RISKS.md) records the unresolved advisories; the two High findings remain release blockers. LOCAL-HTTPS.md specifies proposed profile-only trust and removal controls, with no Mac keychain changes.

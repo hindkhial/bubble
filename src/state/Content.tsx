@@ -62,8 +62,8 @@ function RemoteContent({children}: PropsWithChildren) {
   return <ContentContext.Provider value={value}>{children}</ContentContext.Provider>;
 }
 function LocalContent({ children }: PropsWithChildren) {
-  const [bubbles, setBubbles, bubblesError, bubblesLoaded] = useLocalState<Bubble[]>('bubble.bubbles.v1', () => [], (value): value is Bubble[] => Array.isArray(value) && value.every((entry) => entry && typeof entry.id === 'string' && typeof entry.title === 'string' && typeof entry.order === 'number'));
-  const [items, setItems, itemsError, itemsLoaded] = useLocalState<SampleItem[]>('bubble.items.v1', () => [], (value): value is SampleItem[] => Array.isArray(value) && value.every((entry) => entry && typeof entry.id === 'string' && typeof entry.bubbleId === 'string' && typeof entry.title === 'string' && typeof entry.body === 'string' && typeof entry.order === 'number' && ['NOTE', 'PHOTO', 'CHECKLIST'].includes(entry.type) && (entry.rows === undefined || (Array.isArray(entry.rows) && entry.rows.every((row: { text?: unknown; done?: unknown }) => row && typeof row.text === 'string' && typeof row.done === 'boolean')))));
+  const [bubbles, , bubblesError, bubblesLoaded, setBubbles] = useLocalState<Bubble[]>('bubble.bubbles.v1', () => [], (value): value is Bubble[] => Array.isArray(value) && value.every((entry) => entry && typeof entry.id === 'string' && typeof entry.title === 'string' && typeof entry.order === 'number'));
+  const [items, , itemsError, itemsLoaded, setItems] = useLocalState<SampleItem[]>('bubble.items.v1', () => [], (value): value is SampleItem[] => Array.isArray(value) && value.every((entry) => entry && typeof entry.id === 'string' && typeof entry.bubbleId === 'string' && typeof entry.title === 'string' && typeof entry.body === 'string' && typeof entry.order === 'number' && ['NOTE', 'PHOTO', 'CHECKLIST'].includes(entry.type) && (entry.rows === undefined || (Array.isArray(entry.rows) && entry.rows.every((row: { text?: unknown; done?: unknown }) => row && typeof row.text === 'string' && typeof row.done === 'boolean')))));
   const sequence = useRef(0);
 
   const value = useMemo<ContentContextValue>(() => {

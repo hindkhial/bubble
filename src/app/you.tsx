@@ -5,7 +5,7 @@ import { AppearanceSheet } from '../components/AppearanceSheet';
 import { useTheme } from '../theme/Theme';
 import type { ThemeColors } from '../theme/appearance';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomNavigation } from '../components/BottomNavigation';
 import { EditProfileSheet } from '../components/EditProfileSheet';
@@ -58,7 +58,7 @@ export default function YouScreen() {
       <View style={styles.about}>
         <Text accessibilityRole="header" style={styles.settingTitle}>About Bubble</Text>
         <Text style={styles.sectionText}>Bubble is a little space for the things you want to keep close. Gather your notes, lists, photos, and everyday thoughts into Bubbles, and return to them whenever you need a quiet moment.</Text>
-        <Text style={styles.sessionNote}>{account.mode==='account'?'Account content is saved to the server after confirmation. Local data stays separate.':'Profile and content are saved in this browser when local storage is available.'}</Text>
+        <Text style={styles.sessionNote}>{account.mode==='account'?'Account content is saved to the server after confirmation. Local data stays separate.':Platform.OS === 'web' ? 'Profile and content are saved in this browser when local storage is available.' : 'Profile and content stay on this iPhone. Storage errors are shown above.'}</Text>
       </View>
     </ScrollView>
     <BottomNavigation active="you" />

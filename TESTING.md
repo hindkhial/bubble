@@ -1,6 +1,6 @@
 # Bubble testing and stability
 
-**Current verification (2026-10-16): all nine browser scenarios Passed** in the approved isolated Linux Chromium runner, with sandbox/TLS verification enabled and both macOS keychains unchanged. Frontend 52/backend 62 tests and builds pass. Earlier blocker/Not Tested records below are historical; see **Final verified browser result** and [BETA-TESTING.md](BETA-TESTING.md) for current evidence. Full manual responsive/screen-reader/focus checks remain Not Tested.
+**Verified release-readiness baseline (2026-10-16): all three GitHub CI jobs Passed** at `2eeee6c5b8e4a793016fd433ff5e209c4b0d7593`: 53 frontend tests, 62 backend tests, TypeScript, web build, backend packaging and all nine browser scenarios. The hosted recovery drill and temporary-trust removal also Passed. See the final hosted evidence below. Two high dependency advisories and human manual gates still block release. Earlier failure/pending records are historical.
 
 ## Application setup
 
@@ -178,3 +178,109 @@ The retained baseline had seven passes and two failures: missing browser checked
 After the fixes, 52 frontend tests, TypeScript, 62 real PostgreSQL/backend tests and packaging, web export/container builds, gated HTTPS/security smoke and private-network/container checks pass. Exact pre-existing synthetic fixture data matches after re-authentication of an expired session. No lint script exists. Raw reports/traces are private outside Git; JSON can contain synthetic credentials. Temporary-filesystem artifacts are collected through the live container before teardown rather than relying on stopped-container archive copying.
 
 Full manual responsive/accessibility matrix rows remain **Not Tested**. Automated 375/768/1440-pixel overflow and keyboard/ARIA checks are partial evidence, not physical-device, visual, screen-reader, zoom or complete focus-management certification. Browser verification succeeded in the isolated Linux runner; host macOS trust was intentionally left unchanged. Full manual verification and the documented operational gates remain required before public release.
+
+## Release-readiness CI preparation — 2026-10-16
+
+Base `af922352531da0669d8de60a29b75ec862cd0e17`; branch `release-readiness`.
+
+| Check | Result |
+| --- | --- |
+| pnpm 10.18.3 frozen-lockfile installation | Passed |
+| TypeScript | Passed |
+| Frontend unit tests | Passed: 52, no failures/skips |
+| Production web export | Passed |
+| Java 21 Maven clean verify, real disposable PostgreSQL Testcontainers | Passed: 62, no failures/errors/skips; packaged backend |
+| Workflow syntax/expression validation (actionlint 1.7.12, checksum verified) | Passed; optional shellcheck integration not installed |
+| Tracked private-key/common access-token pattern scan | No matches; targeted scan, not a complete secret-history audit |
+| GitHub-hosted CI execution | Pending; local results do not certify hosted execution |
+| Fresh container/dependency vulnerability scan | Not Tested in this change; required for exact release candidate |
+| Nine browser scenarios on this CI-only change | Not Tested; previous verified run remains historical evidence |
+| Manual responsive, visual, accessibility, zoom, physical-device review | Not Tested; release gates in BETA-TESTING.md remain open |
+
+Local frontend verification used Node 24.19.0 and the pinned pnpm 10.18.3. The workflow targets Node 22 to match the existing frontend Docker build. Hosted Node 22 execution must be verified before requiring the checks. No lint script currently exists; no lint pass is claimed. Initial local unit execution hit the restricted operating-system temporary folder; rerunning with a workspace temporary directory passed all 52 tests.
+
+Security configuration review confirmed secure HttpOnly SameSite cookies, CSRF protection, explicit CORS, fail-fast deployment safety checks, Flyway validation with clean disabled, private loopback staging publication, tester authentication and stripped upstream Authorization. No runtime security configuration was altered. Existing secrets remain outside Git; neither macOS keychain was changed. No staging service was restarted and no application data was modified. See RELEASE-READINESS.md for candidate-specific checks and the approval process.
+
+
+### Expanded CI and security review
+
+The first hosted PR run [38973583064](https://github.com/hindkhial/bubble/actions/runs/38973583064) passed both frontend and backend jobs at 7200c5f1146a0f7d02030969c02ee30d979c1c16. The expanded run [38974038882](https://github.com/hindkhial/bubble/actions/runs/38974038882) passed frontend/backend at a7ccb08cf93c51978c4f7c4cb2b795a429c7ac3d but failed all nine browser scenarios during launch. Sandboxed browser TLS preflight and trust-removal checks passed. The child process's temporary HOME changed its browser-cache lookup; an explicit installed-browser path is now supplied. The final rerun below supersedes these failures.
+
+After dependency remediation, local frozen install, TypeScript and web export passed; **53 frontend tests pass**, including the new actual shell-quote injection regression. Backend remains 62 passing with real PostgreSQL. Audit changed from 1 critical/3 high/2 moderate to **0 critical/2 high/2 moderate**. The unresolved highs are explicit release blockers in RELEASE-SECURITY.md.
+
+Fresh scans of the existing private staging web/backend/PostgreSQL runtime images reported no vulnerabilities (OS and backend JAR coverage verified); this does not certify later candidate builds. Live private staging network/permissions/health checks and trusted HTTPS/gate/CSRF/CORS smoke passed without restarting operator services or changing user data. No new manual visual, accessibility, zoom, physical-device, secret-rotation or historical-image rollback execution is claimed.
+
+
+### Final hosted evidence
+
+[GitHub Actions run 38974495598](https://github.com/hindkhial/bubble/actions/runs/38974495598), pull-request merge-candidate validation for source head `2eeee6c5b8e4a793016fd433ff5e209c4b0d7593`: **all three jobs Passed**. Frontend uses Node 22.23.3 and pnpm 10.18.3 on Ubuntu 24.04; backend uses Java 21 and real PostgreSQL Testcontainers. Browser job uses non-root Ubuntu 22.04, Playwright 1.64.0 and Chrome 156.0.8078.4 with sandboxing enabled.
+
+| Actual hosted result | Status |
+| --- | --- |
+| Frozen lockfile install, pnpm cache, TypeScript, 53 frontend tests, web export | Passed |
+| Maven dependency cache, Java 21 compile, 62 tests (no failures/errors/skips), package | Passed |
+| All nine existing browser scenarios | Passed: 9 expected, 0 unexpected/skipped/flaky; 88.66 seconds |
+| Untrusted TLS rejected before import; fingerprint-verified temporary NSS trust accepted | Passed |
+| Health, tester gate, cookie/CSRF/CORS and network isolation | Passed |
+| Flyway V1/V2, protected backup and transactional restore to fresh scratch DB | Passed |
+| Exact seven-table comparison and application operation against recovered DB | Passed |
+| Full service restart with retained volume, rejected old sessions and exact fixtures after reauthentication | Passed |
+| Return to original CI source database and final private health checks | Passed |
+| Temporary CA removed and fresh-browser TLS rejection reconfirmed | Passed |
+| Disposable CI Compose resources/volume and temporary files removed | Passed: cleanup commands completed |
+
+The nine scenarios cover local offline editing/restoration; registration/login/session/logout; note CRUD/pinning/search; checklist edits/completion; profile and themes; failed account writes and explicit local copy; mobile navigation/validation; pending/failed search; and keyboard card options at three viewport widths. These are automated assertions, not full manual visual/accessibility/device certification.
+
+Candidate container scanning remains required before release: the fresh local scan certified the existing staging images, not the later rebuilt CI images. Two unresolved high and two moderate frontend dependency advisories remain recorded in RELEASE-SECURITY.md. No public deployment, release, tag, operator secret rotation or arbitrary historical-image rollback was performed. Final documentation-only commits should be checked against their own PR CI status; this record identifies the exact executed source head rather than inventing a self-referential hash.
+
+
+## Candidate security and QA follow-up — 2026-10-16
+
+PR #8 remains a draft targeting integration. Candidate follow-up changes are limited to scanner isolation, exact-image scanning within the browser CI job, a compatible-artifact rollback rehearsal and QA/security documentation. No UI, backend APIs, data keys, schema, dependency versions or lockfile changes were made.
+
+Local results: frozen installation, TypeScript, all 53 frontend tests, source-mapped production web export and both candidate Docker builds Passed. Java 21 Maven clean verify also Passed: 62 PostgreSQL-backed tests, no failures/errors/skips, and backend packaging. Fresh pinned Trivy scans of candidate web/backend and PostgreSQL runtime images Passed with zero reported vulnerabilities at all severities; OS/JAR coverage and archive identities were checked. Exact config digests are in RELEASE-CANDIDATE-QA.md. Audit remains 0 critical, 2 high and 2 moderate; no safe published high-severity patches were available. The decoder's installed version was corrected in documentation to 0.2.2, and its fixed ESM-only release was checked against the existing CommonJS consumer before rejecting a blind override.
+
+The first restricted scan failed because database downloads exhausted the bounded tmpfs; no pass was claimed. Downloads now use the owner-only report mount while keeping a non-root scanner, dropped capabilities, read-only root and no secrets/socket mounts. The real candidate scan passed after that change. The first hosted follow-up run also failed at scanning; frontend/backend checks passed. Current per-head hosted browser/recovery/rollback/image results are recorded in the PR checks and PR summary; do not infer them solely from local success or the earlier release-readiness run.
+
+Manual QA: opening actual private staging in the in-app browser Failed with ERR_CERT_AUTHORITY_INVALID. Screen reader, complete keyboard/focus, full visual layouts, browser/text zoom and physical iOS/Android checks were therefore **Not Tested**, not passed. No certificate warning bypass, host trust change or physical-device result is claimed. Use RELEASE-CANDIDATE-QA.md and the existing BETA-TESTING.md matrix for human execution.
+
+Rollback scope: the new automated drill selects distinct metadata-labelled artifacts with the same application/schema, asserts actual image selection, checks fixtures after reauthentication, preserves database container identity and returns to candidate images. This verifies compatible app switching only; destructive/unknown historical-schema rollback remains outside this evidence. Proposed version stays 0.1.0-beta.1. No merge, release/tag or public deployment occurs.
+
+Hosted candidate follow-up [38977872733](https://github.com/hindkhial/bubble/actions/runs/38977872733) at source `c64dad27d039e9271c4aa036971dd4140fa0b911`: all three jobs **Passed**. Verified 53 frontend tests/types/web build; 62 real PostgreSQL/backend tests/package; all 9 browser scenarios (0 failures/skips/flaky); V1/V2 migrations; seven-table backup/restore and recovered-backend operation; compatible artifact rollback/return with database container unchanged; final running-image scans (zero reported vulnerabilities); and temporary trust removal. Scanner identity/digest evidence and unchanged manual gates are in RELEASE-CANDIDATE-QA.md. A final current-head CI run is required after the review-note commit; its results are recorded in the PR summary/checks rather than assigning a future pass here.
+
+Tracked and proposed-file review found no private-key/common GitHub/AWS credential-pattern matches and no new credential dumps, secret files or private user data. This is a targeted review, not a complete historical secret audit.
+
+
+### Decoder security remediation
+
+A later targeted update resolves the web-exposed decoder advisory: 0.2.2 → official fixed 0.5.0, with a tracked packaging-only patch restoring the callable CommonJS export expected by query-string 7. The parser algorithm is otherwise byte-for-byte upstream code. Blind substitution was first shown to fail; patched real-consumer Unicode/space/array/null round trips and a time-bounded malformed-percent-input subprocess pass. Frozen installation, TypeScript, all **55 frontend tests**, production web export and both iOS/Android bundle exports Passed. Those exports are not physical-device tests. The Docker build copies patch files before dependency installation and Passed. The rebuilt frontend runtime scan reports zero vulnerabilities and its config/archive identity was verified; backend/PostgreSQL image code/identities are unchanged from their clean local scans.
+
+Full audit is now **0 critical, 2 high, 1 moderate** without any audit exclusion. The two high packages have no published fixes; uuid remains moderate. Dependency and lockfile edits are limited to this decoder update/compatibility patch. The historical 53-test/two-moderate and pre-decoder image records above remain baseline evidence only. Current-head GitHub outcomes and fresh image digests are recorded in the PR summary/checks after execution, not inferred from these local results. All required manual gates remain Not Tested.
+
+## Detailed human verification
+
+Use [MANUAL-QA.md](MANUAL-QA.md) for platform-specific screen-reader, keyboard/focus, layout, zoom, text-scaling and physical-device steps. All unexecuted checks remain **Not Tested**. [DEPENDENCY-RISKS.md](DEPENDENCY-RISKS.md) records the unresolved advisories; the two High findings remain release blockers. LOCAL-HTTPS.md specifies proposed profile-only trust and removal controls, with no Mac keychain changes.
+
+### Security-assessment follow-up execution
+
+At source bf9daf57199e49a3b4815114006ebb3cb0971942 with documentation-only assessment changes, local reruns passed: 55 frontend tests (0 failures/skips), TypeScript, production web export, Java 21 Maven clean verify/package with 62 PostgreSQL-backed tests (0 failures/errors/skips), actionlint and diff whitespace checks. Optional shellcheck is unavailable. Full audit still reports 0 critical/2 high/1 moderate, with no muted findings. The live operator certificate matched LOCAL-HTTPS.md and connection-scoped TLS verification passed; no trust-store changes were performed. The subsequent final documentation head must receive its own GitHub checks, including all nine browser scenarios, exact runtime-image scans and synthetic recovery/data-preservation drills; use its exact PR check/run rather than transferring historical results. Human checks in MANUAL-QA.md remain Not Tested.
+
+## iPhone native foundation verification
+
+See IOS-NATIVE.md for the iPhone-first target, approved development identifier, exact native setup steps, storage/photo architecture and separate verification stages. Local TypeScript, 68 tests (including real SQLite file close/reopen, schema rollback/newer-version refusal, corrupt-data/write failures, photo commit/cleanup ordering and HTTPS config), Expo configuration, SDK dependency compatibility and supported iOS prebuild passed. iOS Hermes/assets and browser-regression exports passed; final source checks are reported on the foundation PR. No backend source changed; PR CI reruns backend tests and browser regression checks.
+
+Xcode 26.6 is now installed. The Simulator probe/build attempt failed during restricted CoreSimulator/DerivedData build preparation. CocoaPods was absent at that initial attempt; the subsequent setup below resolves that tool dependency while system Ruby remains unchanged. Native compilation did not pass, Simulator launch and native process-restart persistence remain Not Tested, and no physical device or account cookie flow was executed. Node SQLite reopen tests do not certify the Expo native module on iOS. Do not call the foundation fully validated until a real Simulator build/launch and restart checks succeed. No Apple registration/signing/distribution, cloud build, release or deployment was performed. Existing High dependency findings and human QA gates remain open.
+
+The initial foundation CI run had 8/9 browser scenarios pass; the outage scenario exposed a recoverable-error detail guard unmounting an editor. The guard was corrected to block only initial hydration/missing-content failures. The existing local browser scenario now also injects a storage quota failure and asserts draft retention plus unchanged saved content before retrying successfully. The nine-scenario suite remains mandatory on the corrective head; no pass is claimed for the failed run.
+
+## Simulator build follow-up (2026-10-17)
+
+On ios-native-foundation baseline 8194f4249d1ab7ae976578d36684b9a5f90363cc, approved workspace-only tooling now runs Ruby 3.4.8, Bundler 2.6.9 and CocoaPods 1.17.0. Tool versions/transitive dependencies are pinned by .ruby-version, Gemfile and Gemfile.lock. `bundle check` and `pod --version` passed. CocoaPods installed **110 pods**, generated Bubble.xcworkspace and completed native code generation. React Native's supported project-local cache option resolved an otherwise denied shared-cache write; all six React Native/Hermes archives matched published Maven checksums. No system installation, keychain/security-setting change, native project cleanup or user-data write occurred.
+
+Fresh local Expo dependency compatibility, TypeScript and **68 frontend tests passed**, zero failures/skips. These include Node SQLite file reopen/regression checks, not Expo native process-restart verification. The follow-up changes only tooling pins, ignore rules and documentation; backend and browser suites were not rerun locally and prior CI results are historical. Use the exact follow-up head's GitHub checks separately.
+
+Three real unsigned Debug Simulator workspace build attempts, including a retry after host runtime installation, **failed before compilation (exit 66)**: relative/absolute paths reported workspace recognition errors with CoreSimulator XPC, temporary-file and file-type-detection restrictions. Xcodeproj can parse the workspace and both projects; the recognition error still requires unrestricted Xcode investigation. The runtime registry was initially empty; after the owner completed host setup, iOS 26.5 (23F77) is registered/mounted with verified signature metadata and Intel/Apple Silicon support. The session still cannot enumerate devices/connect to CoreSimulator. Access to host Simulator/cache folders was not granted, and native launch could not be verified.
+
+Install/launch/Home, note editing, checklist completion, native SQLite restart preservation, profile/photo persistence, appearance, navigation/keyboard/safe areas and offline workflows are all **Not Tested**. No critical native defect can be ruled out from this blocked build. See IOS-NATIVE.md for the exact execution matrix and owner Terminal/Xcode continuation steps. Existing unresolved dependency findings and manual accessibility/physical-device release gates stay open. No merge, distribution or deployment was performed.
+
+Tooling commit **d7183b60990f50701d09c5f58956b8ee0181c471**: [GitHub run 39001317314](https://github.com/hindkhial/bubble/actions/runs/39001317314) completed successfully in all three jobs: 68 frontend tests/types/web build, 62 PostgreSQL backend tests/package with zero failures/errors/skips, nine browser scenarios with zero skipped/unexpected/flaky. Temporary browser TLS trust/sandbox controls passed. This documentation-only runtime follow-up must not be presented as a new native test pass; its own head checks are separate.

@@ -3,7 +3,7 @@ import { useTheme } from '../../theme/Theme';
 import type { ThemeColors } from '../../theme/appearance';
 import { useState } from 'react';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AddPreview } from '../../components/AddPreview';
 import { CollectionGrid } from '../../components/CollectionGrid';
@@ -21,7 +21,7 @@ export default function BubbleDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { bubbleById, bubbleCountLabel, collectionContents, updateBubble, deleteBubble } = useContent();
+  const { hydrated, storageError, bubbleById, bubbleCountLabel, collectionContents, updateBubble, deleteBubble } = useContent();
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -32,7 +32,10 @@ export default function BubbleDetailScreen() {
   };
   const bubble = bubbleById(id);
 
+  if (!hydrated) return <SafeAreaView style={styles.screen}><ActivityIndicator accessibilityLabel="Loading saved content" /></SafeAreaView>;
+
   if (!bubble) {
+    if (storageError) return <SafeAreaView style={styles.screen}><Text accessibilityRole="alert" style={{ color: colors.text }}>{storageError}</Text><Pressable accessibilityRole="button" style={{ minHeight: 48, justifyContent: 'center' }} onPress={() => router.replace('/')}><Text style={{ color: colors.action }}>Return home</Text></Pressable></SafeAreaView>;
     return <Redirect href="/" />;
   }
 
@@ -48,7 +51,7 @@ export default function BubbleDetailScreen() {
           {account.mode==='local' ? <Pressable accessibilityRole="button" accessibilityLabel={`Manage ${bubble.title} Bubble`} onPress={() => setMenuOpen(true)} style={styles.manageButton}><Text style={styles.manageText}>···</Text></Pressable> : null}
         </View>
         <View style={styles.path}>
-          <Pressable accessibilityRole="button" onPress={() => router.replace('/')}><Text style={styles.pathText}>Home</Text></Pressable>
+          <Pressable accessibilityRole="button" style={{ minHeight: 48, justifyContent: 'center' }} onPress={() => router.replace('/')}><Text style={styles.pathText}>Home</Text></Pressable>
           {parent && <><Text style={styles.pathChevron}>›</Text><Pressable accessibilityRole="button" onPress={() => router.push(`/bubble/${parent.id}`)}><Text style={styles.pathText} numberOfLines={1}>{parent.title}</Text></Pressable></>}
           <Text style={styles.pathChevron}>›</Text><Text style={styles.pathCurrent} numberOfLines={1}>{bubble.title}</Text>
         </View>
@@ -65,7 +68,7 @@ export default function BubbleDetailScreen() {
       <View style={styles.bottom}><Text style={styles.sampleLabel}>{account.mode==='account'?'Account library · connection required':'Saved in this browser when storage is available'}</Text><AddPreview parentId={bubble.id} /></View>
       <ManagementMenu visible={menuOpen} title={bubble.title} onClose={() => setMenuOpen(false)} onEdit={() => afterMenuCloses(() => setEditing(true))} onDelete={() => afterMenuCloses(() => setConfirmDelete(true))} />
       {editing && <EditContentSheet entry={bubble} onClose={() => setEditing(false)} onSave={(draft) => { updateBubble(bubble.id, draft); setEditing(false); }} />}
-      <ConfirmDialog visible={confirmDelete} title={`Delete ${bubble.title}?`} message="This will delete this Bubble and everything inside it, including nested Bubbles and files. This cannot be undone." confirmLabel="Delete Bubble" onCancel={() => setConfirmDelete(false)} onConfirm={() => { const destination = bubble.parentId ? `/bubble/${bubble.parentId}` as const : '/' as const; setConfirmDelete(false); deleteBubble(bubble.id); router.replace(destination); }} />
+      <ConfirmDialog visible={confirmDelete} title={`Delete ${bubble.title}?`} message={storageError || "This will delete this Bubble and everything inside it, including nested Bubbles and files. This cannot be undone."} confirmLabel="Delete Bubble" onCancel={() => setConfirmDelete(false)} onConfirm={() => { const destination = bubble.parentId ? `/bubble/${bubble.parentId}` as const : '/' as const; try { deleteBubble(bubble.id); setConfirmDelete(false); router.replace(destination); } catch { /* Keep the dialog open; Home reports the storage error. */ } }} />
     </SafeAreaView>
   );
 }

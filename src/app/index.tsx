@@ -4,7 +4,7 @@ import { pinnedFirst } from '../utils/dashboard';
 import { useTheme } from '../theme/Theme';
 import type { ThemeColors } from '../theme/appearance';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomNavigation } from '../components/BottomNavigation';
 import { CollectionGrid } from '../components/CollectionGrid';
@@ -21,7 +21,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { childBubbles, items, bubbles, storageError } = useContent();
   const { profile } = useProfile();
-  const { pinsFor } = usePins();
+  const { pinsFor, storageError: pinError } = usePins();
   const pinKeys = new Set(bubbles.flatMap((bubble) => pinsFor(bubble.id)));
   const pinned = pinnedFirst(items, pinKeys).filter((item) => pinKeys.has(`file:${item.id}`));
   const rootBubbles = childBubbles(null);
@@ -38,7 +38,7 @@ export default function HomeScreen() {
         <Text style={styles.heading} numberOfLines={2}>Welcome back, {profile.displayName.trim() || 'friend'}.</Text>
         <Text style={styles.intro}>Your thoughts and favorite things, all in one place.</Text>
 
-        {storageError ? <Text accessibilityRole="alert" style={[styles.intro, { color: colors.text }]}>{storageError}</Text> : null}
+        {storageError || pinError ? <Text accessibilityRole="alert" style={[styles.intro, { color: colors.text }]}>{storageError || pinError}</Text> : null}
         <Text accessibilityRole="header" style={styles.dashboardTitle}>Pinned</Text>
         {pinned.length ? <CollectionGrid entries={pinned.map((value) => ({ kind: 'file', value }))} scopeId="root" respectEntryScopes /> : <Text style={styles.sectionSubtitle}>Keep favorites close. Open a Bubble and pin a note or list from its options.</Text>}
         <View style={styles.sectionHeading}>
@@ -49,7 +49,7 @@ export default function HomeScreen() {
           <Text style={styles.sectionCount}>{rootBubbles.length}</Text>
         </View>
         {entries.length ? <CollectionGrid entries={entries} scopeId="root" /> : <View style={styles.empty}><Text style={styles.emptyIcon}>✧</Text><Text style={styles.emptyTitle}>Nothing here yet</Text><Text style={styles.emptyText}>Make a Bubble to keep your next thought.</Text></View>}
-        <Text style={styles.demo}>{account.mode==='account'?'Account mode · connection required · local notes stay separate':'Stored in this browser · Search stays on your device.'}</Text>
+        <Text style={styles.demo}>{account.mode==='account'?'Account mode · connection required · local notes stay separate':Platform.OS === 'web' ? 'Stored in this browser · Search stays on your device.' : 'Stored on this iPhone · Search stays on your device.'}</Text>
       </ScrollView>
       <BottomNavigation active="home" />
     </SafeAreaView>

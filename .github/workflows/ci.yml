@@ -1,0 +1,97 @@
+name: CI
+on:
+  pull_request:
+    branches: [integration]
+  push:
+    branches: [integration]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - name: Install pinned package manager
+        run: npm install --global pnpm@10.18.3
+      - name: Locate pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-node22-v10-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: TypeScript
+        run: pnpm typecheck
+      - name: Unit tests
+        run: pnpm test
+      - name: Production web build
+        run: pnpm build:web
+  backend:
+    name: Backend checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          overwrite-settings: false
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Verify Java, Maven and Docker
+        run: |
+          java -version
+          mvn --version
+          docker info --format '{{.ServerVersion}}'
+      # Existing tests start disposable PostgreSQL; no staging secrets or data.
+      - name: Compile, test with PostgreSQL and package
+        working-directory: backend
+        run: mvn --batch-mode --no-transfer-progress clean verify
+
+  browser:
+    name: Private HTTPS browser checks
+    # Ubuntu 22.04 supports sandbox user namespaces without changing AppArmor.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - name: Install pinned package manager
+        run: npm install --global pnpm@10.18.3
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install browser and local test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends apache2-utils libnss3-tools
+          pnpm exec playwright install --with-deps chromium
+      - name: Nine scenarios with sandbox and isolated HTTPS trust
+        run: node scripts/ci/browser-tests.mjs
