@@ -87,14 +87,24 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
       catch (problem) { setError(problem instanceof Error ? problem.message : "Could not save."); saving.current = false; }
     }
   };
+  const resolveDestination = (): string => {
+    if (!destination) throw new Error('Choose a Bubble before saving.');
+    if (pendingBubble && destination === '__pending__') {
+      const created = createBubble({ ...pendingBubble, parentId: null });
+      // If saving the file fails, retry in this already-committed Bubble.
+      setDestination(created.id);
+      setPendingBubble(null);
+      return created.id;
+    }
+    return destination;
+  };
   const saveNote = async () => {
     if (saving.current) return;
     if (!body.trim()) { setError('Write a little text before saving your note.'); return; }
     if (!destination || (destination !== '__pending__' && !bubbleById(destination))) { setError('Choose a Bubble for this note.'); return; }
     saving.current = true;
     try {
-    const destinationId = pendingBubble && destination === '__pending__'
-      ? createBubble({ ...pendingBubble, parentId: null }).id : destination;
+    const destinationId = resolveDestination();
     await createNote({ title: noteTitle, body, bubbleId: destinationId });
     close();
     if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
@@ -106,8 +116,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
     if (!destination || (destination !== '__pending__' && !bubbleById(destination))) { setError('Choose a Bubble for this photo.'); return; }
     saving.current = true;
     try {
-    const destinationId = pendingBubble && destination === '__pending__'
-      ? createBubble({ ...pendingBubble, parentId: null }).id : destination;
+    const destinationId = resolveDestination();
     createPhoto({ title: photoTitle, description: photoDescription, bubbleId: destinationId, image: { uri: photo.uri }, cardImageRatio: photo.ratio });
     close();
     if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
@@ -119,8 +128,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
     if (!destination || (destination !== '__pending__' && !bubbleById(destination))) { setError('Choose a Bubble for this checklist.'); return; }
     saving.current = true;
     try {
-    const destinationId = pendingBubble && destination === '__pending__'
-      ? createBubble({ ...pendingBubble, parentId: null }).id : destination;
+    const destinationId = resolveDestination();
     await createChecklist({ title: checklistTitle, rows: checklistRows, bubbleId: destinationId });
     close();
     if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
