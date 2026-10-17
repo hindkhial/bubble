@@ -70,3 +70,20 @@ Native accounts remain disabled. Local mode does not require a configured API. N
 ## Completion gate
 
 The polish is implemented and automated verification is in progress; it is not complete native validation until the changed head compiles/launches and core keyboard/navigation/restart checks pass in Simulator. Deferred/unexecuted checks above are not waived or reported as passed.
+
+
+## Verified Simulator follow-up — 2026-10-17
+
+This record supersedes pending statuses above for the executed checks only. Application source: 560197b1aada29e0ea7bba1bc0896c282a272b5d. These are owner-operated Xcode/Simulator results, not agent UI automation.
+
+- Passed: fresh native Debug build. Inspected Xcode activity log 5DFE4794-9EFA-4919-899F-1C3E82FAB4A0 (2026-10-17T21:56:24Z, after final application edits) contains Build succeeded and 122 targets.
+- Passed: updated Home opens, iPhone 17 Pro Simulator / iOS 26.5.
+- Passed: note Cancel → Keep editing retains draft, keyboard-visible controls reachable, save works.
+- Passed: search saved note, open/edit/save; checklist edit/add/save/complete; back navigation without reported overlap, stuck navigation or lost text.
+- Passed: note/checklist edits and checked state survive restart. Profile name/bio, synthetic profile photo, selected Appearance mode and accent also survive restart.
+- Passed locally: TypeScript, 72 frontend tests, iOS Hermes/assets export and web regression build. The 15 storage/photo/motion tests are included in 72 and use disposable Node SQLite/adapters, not native bridge execution.
+- Passed on GitHub at this source: frontend checks, 62 PostgreSQL backend tests/package, all nine browser scenarios twice (zero skips/unexpected/flaky), compatible rollback and temporary TLS trust removal/rejection.
+- Failed: whole browser CI job twice, after scenarios passed, at scan-private-staging.mjs. Protected logs withhold details; vulnerability versus scanner/infrastructure cause is unconfirmed. No clean image scan or overall CI pass is claimed. Evidence: https://github.com/hindkhial/bubble/actions/runs/39073153574. Documentation-only follow-up heads need their own checks.
+- Not Tested: native no-internet check (explicitly skipped by owner); standalone cold-start without Metro; VoiceOver/full focus management; Dynamic Type/Reduced Motion; complete visual/safe-area review; every System/accent combination; photo replacement/removal/denial; full native search filter/empty combinations; every native discard/gesture path; physical-device tests.
+
+The agent CLI remains blocked by CoreSimulator/XPC restrictions; owner build/launch evidence resolves the compilation prerequisite without implying CLI access. A debugger probe returned no usable runtime evidence and wrote no databases. Debug tests used localhost Metro; no standalone offline claim is made. Core workflows passed without reported crashes/data loss; broader unexecuted gates remain open. Native accounts remain disabled. No dependencies, backend/schema, signing, trust stores or user data were changed. No merges, TestFlight or deployment occurred. Existing security findings and the image-scan failure remain release blockers. This record is not release approval.
