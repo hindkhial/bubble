@@ -32,11 +32,10 @@ export default function BubbleDetailScreen() {
   };
   const bubble = bubbleById(id);
 
-  if (!hydrated || storageError) return <SafeAreaView style={styles.screen}>
-    {!hydrated ? <ActivityIndicator accessibilityLabel="Loading saved content" /> : <><Text accessibilityRole="alert" style={{ color: colors.text }}>{storageError}</Text><Pressable accessibilityRole="button" onPress={() => router.replace('/')}><Text style={{ color: colors.action }}>Return home</Text></Pressable></>}
-  </SafeAreaView>;
+  if (!hydrated) return <SafeAreaView style={styles.screen}><ActivityIndicator accessibilityLabel="Loading saved content" /></SafeAreaView>;
 
   if (!bubble) {
+    if (storageError) return <SafeAreaView style={styles.screen}><Text accessibilityRole="alert" style={{ color: colors.text }}>{storageError}</Text><Pressable accessibilityRole="button" onPress={() => router.replace('/')}><Text style={{ color: colors.action }}>Return home</Text></Pressable></SafeAreaView>;
     return <Redirect href="/" />;
   }
 

@@ -56,6 +56,21 @@ test('local notes survive offline editing, refresh and a new browser context', a
   await page.route(`${api}/api/v1/**`, route => route.abort());
   await page.context().setOffline(true);
   await edit(page, 'Local original');
+  const savedBeforeFailure = await page.evaluate(() => localStorage.getItem('bubble.items.v1'));
+  await page.evaluate(() => {
+    const originalSet = Storage.prototype.setItem;
+    Object.defineProperty(window, '__restoreBubbleTestStorage', { configurable: true, value: () => { Storage.prototype.setItem = originalSet; } });
+    Storage.prototype.setItem = function (this: Storage, key: string, value: string) {
+      if (key === 'bubble.items.v1') throw new DOMException('Synthetic storage full', 'QuotaExceededError');
+      return originalSet.call(this, key, value);
+    };
+  });
+  await page.getByRole('textbox', { name: 'Note text', exact: true }).fill('Unsaved local draft');
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Note text', exact: true })).toHaveValue('Unsaved local draft');
+  await expect(page.getByRole('alert').last()).toContainText('Synthetic storage full');
+  expect(await page.evaluate(() => localStorage.getItem('bubble.items.v1'))).toBe(savedBeforeFailure);
+  await page.evaluate(() => { Object.getOwnPropertyDescriptor(window, '__restoreBubbleTestStorage')!.value(); Reflect.deleteProperty(window, '__restoreBubbleTestStorage'); });
   await page.getByRole('textbox', { name: 'Note text', exact: true }).fill('Edited without internet');
   await page.getByRole('button', { name: 'Save changes', exact: true }).click();
   await expect(page.getByText('Edited without internet', { exact: true })).toBeVisible();
