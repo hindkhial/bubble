@@ -30,17 +30,21 @@ Existing navigation and visual identity are preserved. Add/edit/profile/Appearan
 
 ## Environment and exact next steps
 
-Audit: macOS 26.7.1; Xcode **26.6 (17F113)** selected at `/Applications/Xcode.app/Contents/Developer`. Compatible with Expo 57 (Xcode 26.4+, iOS 16.4+). System Ruby 2.6.10; `pod` was not found on PATH. No system software, global Ruby or macOS trust/security settings were changed.
+Audit: macOS 26.7.1; Xcode **26.6 (17F113)** selected at `/Applications/Xcode.app/Contents/Developer`. Compatible with Expo 57 (Xcode 26.4+, iOS 16.4+). System Ruby remains 2.6.10. Following owner approval, workspace-only Ruby 3.4.8, Bundler 2.6.9 and CocoaPods 1.17.0 are installed and verified. `.ruby-version`, `Gemfile` and `Gemfile.lock` pin the tooling; machine-local installation files/configuration are ignored. No system software, global Ruby, shell profiles or macOS trust/security settings were changed.
 
 1. In Xcode, finish any first-launch component/license setup yourself and install an iOS Simulator runtime through Settings → Components/Platforms (labels vary). Do not erase any existing Simulator with personal test data. In an unrestricted Terminal run `xcodebuild -version` and `xcrun simctl list devices available`.
-2. After approving tool installation, install a maintained CocoaPods/Ruby environment; do not replace Apple's system Ruby. If Homebrew is already installed, `brew install cocoapods` is one supported route. Verify `pod --version`. If Homebrew is absent, approve/install the chosen tool manager first rather than running an unreviewed bootstrap command. CocoaPods documents a separate maintained Ruby and user-scoped installation alternative: https://guides.cocoapods.org/using/getting-started.html.
+2. Use Ruby 3.4.8 from an approved separate installation, then Bundler 2.6.9 and `bundle install`; verify `bundle check` and `bundle exec pod --version` (1.17.0). Do not replace Apple's system Ruby or install global gems with sudo. On the current Mac only, `source ../work/ios-tools/env.sh` prepares the approved workspace tools; invoke `../work/ios-tools/ruby/bin/ruby ../work/ios-tools/ruby/bin/bundle` in place of `bundle`. This machine-local environment file is not portable or committed. CocoaPods documents using separate maintained Ruby: https://guides.cocoapods.org/using/getting-started.html.
 3. From this branch, use the pinned package manager: `pnpm install --frozen-lockfile`, `pnpm exec expo install --check`, `pnpm typecheck`, `pnpm test`. Keep personal browser profiles and databases untouched.
-4. Run `pnpm prepare:ios`. This uses Expo CNG/prebuild for iOS with `--no-install`; it does not install CocoaPods or register Apple identifiers. Generated ios/ is ignored and must not be treated as the configuration source. Do not use `--clean` against hand-edited native work. Then `cd ios && pod install && cd ..` in the approved native tool environment.
+4. Run `pnpm prepare:ios`. This uses Expo CNG/prebuild for iOS with `--no-install`; it does not install CocoaPods or register Apple identifiers. Generated ios/ is ignored and must not be treated as the configuration source. Do not use `--clean` against hand-edited native work. Then run `bundle exec pod install --project-directory=ios` in the approved native tool environment. CocoaPods now successfully installed 110 pods and generated Bubble.xcworkspace on the current Mac; no regeneration/clean was needed for this follow-up.
 5. Run `pnpm ios` and choose an installed iPhone Simulator. Alternatively open `ios/Bubble.xcworkspace` after pod installation and select an iPhone Simulator. Simulator builds need no Apple distribution signing; never enable automatic Apple registration as part of this step. Keep Metro running for a development-client build. No TestFlight or EAS submission commands are authorized.
 6. Seed synthetic notes/checklists/profile/photo/theme; terminate and relaunch the app (do not uninstall/reset it) and confirm all data survives. Edit/check/pin, relaunch again, then replace/remove the profile photo. Test denied/limited photo access, low-space/save failure, malformed database recovery refusal, airplane mode/local-only, keyboard, safe areas, VoiceOver and Dynamic Type. Record each actual result with source SHA and Simulator model/runtime. A JavaScript export or Node SQLite test is not an app restart test.
 7. Physical iPhone and signing/team access are later approved steps. Pairing/Developer Mode, development signing and private HTTPS connectivity must be reviewed before use. TestFlight distribution is outside this foundation task.
 
-The automated `simctl` probe failed with CoreSimulatorService connection/log-access errors. An unsigned `xcodebuild` Simulator attempt failed during build preparation with restricted DerivedData writes and CoreSimulator errors; it did not compile application sources. CocoaPods/workspace setup is also pending. These are recorded infrastructure/setup blockers, not a successful compile or a diagnosed app-code build error. Run the steps above in an unrestricted local environment before judging native compilation.
+The automated `simctl` probe still fails with CoreSimulatorService connection/log-access errors. The host runtime image registry is empty; a usable runtime has not been verified. Runtime download is owner-approved, but Simulator/cache filesystem access was not granted by automatic approval review. Install a compatible runtime through Xcode Settings → Components and confirm `xcrun simctl list devices available` in the owner’s Terminal. Do not erase existing devices or change security settings.
+
+After successful pod installation, two unsigned Debug Simulator workspace build attempts exited 66 before application compilation. Relative and absolute workspace paths both produced “is not a workspace file”, alongside denied temporary-result writes, unavailable Simulator services and file-type-detection warnings. The generated workspace XML references both existing projects; Xcodeproj successfully parses the workspace, app project (1 target) and Pods project (121 targets). That structural check does not prove Xcode can build it. Open ios/Bubble.xcworkspace in unrestricted Xcode and investigate any remaining recognition error there; its root cause is not yet established. No application compile error or successful native build is claimed.
+
+React Native initially failed saving a checksum-verified archive to its fixed user cache. Its supported `RCT_SKIP_CACHES=1` option allowed project-local downloads without modifying third-party source or user caches. All six React Native/Hermes Debug/Release archives were separately verified against their published Maven SHA-1 values over verified HTTPS; local SHA-256 values were recorded in the execution output. CocoaPods script phases were inspected: normal generated configuration/header, framework selection, dSYM and codegen operations; no project-specific credential injection was added. Standard installations with writable caches do not need this option.
 
 ## Verification stages
 
@@ -50,10 +54,30 @@ The automated `simctl` probe failed with CoreSimulatorService connection/log-acc
 | Expo public config and SDK dependency compatibility | Passed locally |
 | Expo iOS project generation with approved local identity | Passed locally, no pod installation/signing |
 | iOS JavaScript/Hermes/assets export | Passed locally; not native compilation |
-| Native Simulator compilation | Blocked/failed during environment build preparation |
+| Ruby/Bundler/CocoaPods and native dependency installation | Passed: Ruby 3.4.8, Bundler 2.6.9, CocoaPods 1.17.0; 110 pods, workspace generated |
+| Native Simulator compilation | Failed before compilation: workspace recognition and restricted Simulator/temp services; exit 66 |
 | Simulator app launch and real native restart persistence | Not Tested |
 | Physical iPhone installation, photos, VoiceOver and Dynamic Type | Not Tested |
 | Native account cookie/session/TLS behavior | Not Tested; account mode remains disabled |
 | TestFlight/distribution | Not attempted or approved |
 
 Existing High node-forge/braces and Moderate uuid findings remain tracked, without suppression. The SDK patch alignment does not resolve them. Existing required human/security release gates stay open. Browser CI is regression coverage only; it does not approve an iPhone candidate. See MANUAL-QA.md for the full human matrix.
+
+## Simulator execution record (2026-10-17)
+
+Source baseline: 8194f4249d1ab7ae976578d36684b9a5f90363cc; this follow-up changes tool locks/ignore rules/documentation only. No native UI or data-model changes were made.
+
+| Scenario | Result |
+| --- | --- |
+| Install/launch app and open Home | Not Tested — no compiled app |
+| Create/edit notes and pin/search content | Not Tested |
+| Create/complete checklists | Not Tested |
+| Terminate/relaunch and verify native SQLite records | Not Tested |
+| Edit profile; save/replace/remove photo; relaunch | Not Tested |
+| Appearance, accents, System/Light/Dark persistence | Not Tested |
+| Navigation, keyboard overlap and iPhone safe areas | Not Tested |
+| Offline local-only workflow and restart | Not Tested |
+
+Use synthetic data and the same installed app for restart testing; never uninstall/erase it to test persistence. Save a distinctive note and checklist, check one item, set profile/photo/theme, terminate via `xcrun simctl terminate booted com.hindkhial.bubble`, relaunch via `xcrun simctl launch booted com.hindkhial.bubble`, then verify exact saved values and files. A Debug development client also needs Metro (`pnpm start --dev-client`) and a one-time connection to its development server. Keep Metro reachable when testing local-only API independence; use a separately reviewed bundled build for a true cold start with every network connection disabled. Native accounts remain disabled.
+
+Next host step: finish the approved runtime installation in Xcode, confirm Simulator works, open the generated workspace and build Bubble for an installed iPhone Simulator. No TestFlight, signing/team registration, keychain changes or public deployment are authorized. The Simulator milestone remains incomplete until compilation, launch, core workflows and native restart persistence actually pass.

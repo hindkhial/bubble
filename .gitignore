@@ -36,3 +36,7 @@ lifecycle.json
 # Native projects are generated from Expo configuration.
 /ios/
 /android/
+
+# Machine-local Ruby tooling and Bundler configuration.
+/.bundle/
+/vendor/bundle/
