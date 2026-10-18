@@ -69,7 +69,11 @@ for(const service of ['backend','web','db']) {
   }
   const counts={};
   for(const result of report.Results??[]) for(const item of result.Vulnerabilities??[]) counts[item.Severity]=(counts[item.Severity]??0)+1;
-  summary.images.push({service,image,id,runtimeImage,runtimeManifest,scannedConfig,counts});
+  const findings=(report.Results??[]).flatMap(result=>(result.Vulnerabilities??[]).map(item=>({
+    id:item.VulnerabilityID, package:item.PkgName, installed:item.InstalledVersion,
+    fixed:item.FixedVersion??null, severity:item.Severity,
+  })));
+  summary.images.push({service,image,id,runtimeImage,runtimeManifest,scannedConfig,counts,findings});
   rmSync(archive);
 }
 writeFileSync(join(directory,'summary.json'),JSON.stringify(summary,null,2)+'\n',{mode:0o600});

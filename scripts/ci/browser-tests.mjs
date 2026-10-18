@@ -126,7 +126,7 @@ try {
   if (scanResult.status !== 0) {
     if (scanResult.status === 2) {
       const finding = JSON.parse(scanResult.stdout);
-      console.error('Image vulnerability gate: ' + JSON.stringify(finding.images.map(({service, counts}) => ({service, counts}))));
+      console.error('Image vulnerability gate: ' + JSON.stringify(finding.images.map(({service, counts, findings}) => ({service, counts, findings}))));
     } else {
       const known = ['Expected OS/Java package coverage is missing', 'Scanner config digest is absent from the exported archive',
         'Running image is not the scanned archive/config', 'Unsupported image archive descriptor'];
