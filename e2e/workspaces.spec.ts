@@ -74,6 +74,9 @@ test('account Bubbles and photos sync privately while Home remains the default d
   await page.getByRole('textbox',{name:'Photo title',exact:true}).fill('Synthetic cloud photo');
   await page.getByRole('textbox',{name:'Photo description',exact:true}).fill('Photo keyword orchid');
   await page.getByRole('button',{name:'Save photo',exact:true}).click();
+  // Wait for server-confirmed creation before simulating a restart. Reloading
+  // immediately after the click can cancel the upload on a slower CI runner.
+  await expect(page.getByRole('button',{name:'Open Synthetic cloud photo photo',exact:true})).toBeVisible();
   await page.reload();await search(page,'orchid');
   await expect(page.getByRole('button',{name:'Open Synthetic cloud photo photo',exact:true})).toBeVisible();
 });

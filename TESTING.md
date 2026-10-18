@@ -58,11 +58,13 @@ the older owner-verified offline local-mode checks below are a separate behavior
 
 At `9845c4a`, hosted GitHub run 39169748990 passed frontend and backend jobs but
 failed its browser job: nine scenarios passed and the new account-library scenario
-failed. The job emitted no useful source location for that assertion. Failure
-diagnostics now include strict-selector classifications and location fallbacks,
-without exposing raw assertion values or credentials. A follow-up hosted run must
-verify the current head. Keep PR #11 draft until hosted checks and required native
-validation are satisfied; a successful local rerun is not hosted verification.
+failed. Improved safe diagnostics in follow-up run 39170452788 identified the photo
+search assertion after an immediate reload. The test now waits for the server-
+confirmed photo card before refreshing, rather than potentially cancelling the
+in-flight upload. Both runs passed frontend/backend jobs and the existing nine
+browser scenarios. A follow-up hosted run must verify the corrected test. Keep
+PR #11 draft until hosted checks and required native validation are satisfied;
+a successful local rerun is not hosted verification.
 
 **Verified release-readiness baseline (2026-10-16): all three GitHub CI jobs Passed** at `2eeee6c5b8e4a793016fd433ff5e209c4b0d7593`: 53 frontend tests, 62 backend tests, TypeScript, web build, backend packaging and all nine browser scenarios. The hosted recovery drill and temporary-trust removal also Passed. See the final hosted evidence below. Two high dependency advisories and human manual gates still block release. Earlier failure/pending records are historical.
 
