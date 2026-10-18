@@ -63,7 +63,7 @@ test('profile logout and Security password changes preserve saved account conten
   await expect(page.getByRole('alert').last()).toContainText('Check your current password');
   await page.getByLabel('Current password',{exact:true}).fill(password);
   await page.getByRole('button',{name:'Save Changes',exact:true}).click();
-  await expect(page.getByText('Password changed. Log in with your new password.',{exact:true})).toBeVisible();
+  await expect(page.getByText('Password changed. Log in with your new password.',{exact:true}).filter({visible:true})).toBeVisible();
   await page.getByRole('textbox',{name:'Email',exact:true}).fill(email);
   await page.getByLabel('Password',{exact:true}).fill('Synthetic-new-password-2026');
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
@@ -174,6 +174,7 @@ test('registration, invalid credentials, session restoration, expiry and logout'
   await expect(page.getByRole('button', { name: 'Open account and workspace settings' })).toContainText(email);
   await page.goto('/you');
   await page.getByRole('button', { name: 'Log Out', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Open account and workspace settings' })).toContainText('Local only');
   await page.goto('/account');
   await page.getByRole('textbox', { name: 'Email', exact: true }).fill(email);
   await page.getByLabel('Password', { exact: true }).fill('wrong-password');

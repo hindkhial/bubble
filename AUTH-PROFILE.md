@@ -23,7 +23,7 @@ After success, the current server session is invalidated. A non-reversible SHA-2
 
 The client clears private in-memory state and native Keychain session credentials and requires login again. The non-secret logout lock prevents silent native restoration. Account content, local SQLite, profile assets and preferences are not deleted. A lost response is treated as an uncertain write rather than automatically retrying a password change; use a fresh login to reconcile. TLS, CSRF, native session origin checks and private staging protection stay enabled.
 
-No schema migration, dependency update, new storage service, signing or trust change is needed.
+No schema migration, JavaScript/Java dependency update, new storage service, signing or trust change is needed. A fresh runtime scan found web-tester image packages libx11 1.8.13-r0 (CVE-2026-88806 High; CVE-2026-94283/94284/94285 Medium) and libxpm 3.5.19-r0 (CVE-2026-94287 Medium). The Dockerfile now requires the available compatible Alpine patches libx11 1.8.14-r0 and libxpm 3.5.20-r0. Backend and database scans had no findings. Final patched-image rescanning is pending. These packages belong to the private browser-test image, not the iOS JavaScript application. No advisory is ignored or suppressed.
 
 ## Validation record
 
@@ -36,7 +36,8 @@ No schema migration, dependency update, new storage service, signing or trust ch
 | Saved note/profile/preferences unchanged after password change | Passed against disposable PostgreSQL |
 | iOS Hermes JavaScript export | Passed; not native compilation evidence |
 | Production web regression build | Passed |
-| Updated hosted browser/CI checks | Pending; report actual results in the PR |
+| Updated hosted browser/CI checks | Frontend/backend Passed at 91414dd; browser 9/11 Passed, two test sequencing/hidden-screen selector failures corrected; rerun pending |
+| Fresh native compilation | Blocked before compilation: restricted Xcode/CoreSimulator access; existing workspace retained |
 | Updated screens in iOS Simulator | Not Tested: session cannot reach CoreSimulator |
 | Physical iPhone, VoiceOver, Dynamic Type and full focus review | Not Tested |
 
