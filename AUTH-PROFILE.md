@@ -19,7 +19,7 @@ The existing native authentication foundation has owner-confirmed Simulator regi
 
 Incorrect current credentials return generic 400 without terminating a valid session. Password-change requests share the existing per-address/global authentication budget and have an additional bounded per-account five-attempt/minute budget. These are process-local limits, appropriate to current single-instance private staging; distributed throttling remains necessary before a multi-instance deployment.
 
-After success, the current server session is invalidated. A non-reversible SHA-256 fingerprint of the encoded credential is bound to each server-side principal before credential erasure. On subsequent authenticated requests, the session filter compares that fingerprint with the current stored credential using a constant-time comparison. All sessions using the previous password are rejected, including on another application instance. An already-authorized request in progress is not retroactively cancelled. This adds one indexed user lookup per authenticated request; no raw credential or encoded hash is retained in session principals after login.
+After success, the current server session is invalidated. A non-reversible SHA-256 fingerprint of the encoded credential is bound to each server-side principal before credential erasure. The session filter runs after standard security-header and CORS processing, so stale-session 401 responses remain non-cacheable and readable by allowed browser clients. A real HTTP regression checks no-store, nosniff and the allowed origin before that old session has been rejected elsewhere. On subsequent authenticated requests, the session filter compares that fingerprint with the current stored credential using a constant-time comparison. All sessions using the previous password are rejected, including on another application instance. An already-authorized request in progress is not retroactively cancelled. This adds one indexed user lookup per authenticated request; no raw credential or encoded hash is retained in session principals after login.
 
 The client clears private in-memory state and native Keychain session credentials and requires login again. The non-secret logout lock prevents silent native restoration. Account content, local SQLite, profile assets and preferences are not deleted. A lost response is treated as an uncertain write rather than automatically retrying a password change; use a fresh login to reconcile. TLS, CSRF, native session origin checks and private staging protection stay enabled.
 
@@ -36,16 +36,18 @@ No schema migration, JavaScript/Java dependency update, new storage service, sig
 | Saved note/profile/preferences unchanged after password change | Passed against disposable PostgreSQL |
 | iOS Hermes JavaScript export | Passed; not native compilation evidence |
 | Production web regression build | Passed |
-| Updated hosted browser/CI checks | Frontend/backend Passed at 99eb309; browser 10/11 Passed, remaining hidden password-field selector corrected; final rerun reported in PR |
+| Local secure browser suite | Passed: all 11 at 517b922, zero skipped/flaky; sandbox/TLS and temporary-trust removal verified, container removed |
+| Updated hosted browser/CI checks | Previous frontend/backend Passed; final-head results are recorded in the PR |
 | Fresh native compilation | Blocked before compilation: restricted Xcode/CoreSimulator access; existing workspace retained |
-| Updated screens in iOS Simulator | Not Tested: session cannot reach CoreSimulator |
+| Updated screens in iOS Simulator | Passed by owner in Bubble Auth Test, iPhone 17 Pro / iOS 26.5: two-bubble branding, no authentication Appearance, standalone You Log Out, Security Change Password and no Log Out |
+| Native password-change flow | Passed by owner with synthetic account: mismatch and wrong-current validation, successful change to Welcome, new-password login and retained saved test content |
 | Physical iPhone, VoiceOver, Dynamic Type and full focus review | Not Tested |
 
 The first local eleven-scenario run passed nine and exposed two test issues; the hosted rerun passed ten, with one more hidden-field selector needing the same visible-screen scope. One local rerun stopped making progress and was terminated without claiming success; its temporary CA was removed and fresh Chromium distrust was reconfirmed before container deletion. No timeout, retry, TLS or sandbox protection was relaxed.
 
 ## Simulator follow-up
 
-Use only the existing separate Bubble Auth Test Simulator and synthetic credentials. Do not uninstall Bubble or reset its storage.
+The owner executed the branding/navigation checks and password validation/change/new-login/content-retention checks above successfully. Remaining responsive, keyboard, VoiceOver, Dynamic Type and physical-device checks are not implied by those results. Use only the existing separate Bubble Auth Test Simulator and synthetic credentials. Do not uninstall Bubble or reset its storage.
 
 1. Reload the current localhost development server. Check Welcome, Login and Signup: two-bubble logo, no Appearance action, working navigation. Check smaller iPhone sizes and dark mode.
 2. Log in. On You, check Appearance and profile/avatar still work and Log Out is below Settings. Open Security: existing review controls and Change Password remain; no Log Out.

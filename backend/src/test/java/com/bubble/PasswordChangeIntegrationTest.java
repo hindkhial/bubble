@@ -42,9 +42,14 @@ class PasswordChangeIntegrationTest {
         var response = change(first, AuthTestClient.PASSWORD, NEXT, first.csrf(), "");
         assertEquals(204, response.statusCode()); assertEquals("", response.body());
         assertEquals(401, first.get("/api/v1/users/me").statusCode());
+        var rejected = HttpClient.newHttpClient().send(HttpRequest.newBuilder(URI.create(base + "/api/v1/users/me"))
+                .header("Cookie", "BUBBLE_SESSION=" + secondCookie).header("Origin", "http://localhost:8081")
+                .GET().build(), HttpResponse.BodyHandlers.ofString());
+        assertEquals(401, rejected.statusCode());
+        assertTrue(rejected.headers().firstValue("cache-control").orElseThrow().contains("no-store"));
+        assertEquals("nosniff", rejected.headers().firstValue("x-content-type-options").orElseThrow());
+        assertEquals("http://localhost:8081", rejected.headers().firstValue("access-control-allow-origin").orElseThrow());
         assertEquals(401, second.get("/api/v1/users/me").statusCode());
-        assertEquals(401, HttpClient.newHttpClient().send(HttpRequest.newBuilder(URI.create(base + "/api/v1/users/me"))
-                .header("Cookie", "BUBBLE_SESSION=" + secondCookie).GET().build(), HttpResponse.BodyHandlers.ofString()).statusCode());
         assertEquals(200, other.get("/api/v1/users/me").statusCode());
         assertEquals(401, first.login(email).statusCode());
         assertEquals(200, first.post("/api/v1/auth/login", Map.of("email", email, "password", NEXT)).statusCode());
