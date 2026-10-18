@@ -9,7 +9,8 @@ supersede the current outstanding browser checks.
 
 Local results:
 
-- Passed: 85 frontend tests and TypeScript checks.
+- Passed: 87 frontend tests and TypeScript checks, including a regression check
+  for whitespace text children that React Native rejects in its Add sheet.
 - Passed: all 67 Java 21/PostgreSQL tests, Maven packaging, Flyway V1–V3, private
   image ownership checks, image validation, atomic destinations and preservation
   of contents when deleting an account Bubble.
@@ -26,33 +27,42 @@ Local results:
   the pinned Trivy scanner, with no reported vulnerabilities. Running image and
   tag identities were rechecked against the scan summary. This is an image result,
   not closure of the previously documented development dependency advisories.
-- Browser run: **8 Passed, 2 Failed, 0 Skipped** across the nine existing scenarios
-  plus one new account-library scenario. The new scenario stopped at its login
-  expectation; the local offline scenario exceeded its 45-second deadline. Their
-  root causes remain unresolved and neither is counted as Passed. The first run
-  also identified an expired-session/no-results regression, which was fixed; that
-  session scenario passed in the subsequent run. One ambiguous new-test selector
-  was corrected.
+- Final clean local browser rerun: **10 Passed, 0 Failed, 0 Skipped, 0 Flaky** across
+  the nine existing scenarios plus one new account-library scenario. This includes
+  synthetic Bubble/Photo upload, refresh, image loading, standalone Home notes and
+  photo-description search. Earlier runs recorded two failures (login expectation
+  and a 45-second local scenario deadline); those historical failures are not erased
+  by the clean rerun. The first run also identified an expired-session/no-results
+  regression, which was fixed. An ambiguous new-test selector was corrected.
 - Passed in the disposable browser: full CA fingerprint validation, TLS rejection
   before trust, acceptance using isolated temporary trust with Chromium sandbox
   enabled, and renewed rejection after trust removal. No macOS trust store was
   changed. Non-root execution, dropped capabilities, no privileged mode or new
   published ports were retained.
 
-Docker Desktop became unavailable after the browser run, preventing the remaining
-rerun and final disposable-container removal. Its certificate trust had already
-been removed and distrust reconfirmed. Remove only `bubble-browser-library` once
-Docker is running; preserve all staging containers, database volumes and the
-original Simulator. Do not reset Docker to resolve this interruption.
+Docker Desktop temporarily became unavailable. After recovery the clean browser
+rerun completed, certificate distrust was reconfirmed and `bubble-browser-library`
+was removed. Staging containers/volumes and the original Simulator were preserved.
+Normal TLS verification and Chromium's sandbox remained enabled throughout.
 
-Not Tested: new account Bubble/Photo workflows in Simulator, cross-device sync on
+Owner additionally confirmed all four Add options and standalone note creation on
+Home in Simulator. A native Add-sheet text warning was fixed by removing stray JSX
+spaces; it is covered by automated regression tests. Saving while already on Home
+also avoids replacing the current Home route unnecessarily.
+
+Not Tested: new account Bubble/Photo creation and photos in Simulator, cross-device sync on
 physical iPhones, native transfer confirmation/recovery, native offline auth
 failure/deep-link behavior, and remaining VoiceOver, focus, zoom, Dynamic Type and
 physical-device release gates. Account mode still requires online verification;
 the older owner-verified offline local-mode checks below are a separate behavior.
 
-Hosted GitHub Actions for this candidate have not yet been verified. Keep its PR
-draft until browser failures and remaining required native validation are resolved.
+At `9845c4a`, hosted GitHub run 39169748990 passed frontend and backend jobs but
+failed its browser job: nine scenarios passed and the new account-library scenario
+failed. The job emitted no useful source location for that assertion. Failure
+diagnostics now include strict-selector classifications and location fallbacks,
+without exposing raw assertion values or credentials. A follow-up hosted run must
+verify the current head. Keep PR #11 draft until hosted checks and required native
+validation are satisfied; a successful local rerun is not hosted verification.
 
 **Verified release-readiness baseline (2026-10-16): all three GitHub CI jobs Passed** at `2eeee6c5b8e4a793016fd433ff5e209c4b0d7593`: 53 frontend tests, 62 backend tests, TypeScript, web build, backend packaging and all nine browser scenarios. The hosted recovery drill and temporary-trust removal also Passed. See the final hosted evidence below. Two high dependency advisories and human manual gates still block release. Earlier failure/pending records are historical.
 

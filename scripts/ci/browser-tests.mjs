@@ -88,11 +88,13 @@ try {
     for (const spec of suite.specs ?? []) {
       console.log(`${spec.ok ? 'Passed' : 'Failed'}: ${spec.title}`);
       for (const test of spec.tests ?? []) for (const result of test.results ?? []) for (const error of result.errors ?? []) {
-        const classification = error.message?.match(/Executable doesn't exist|ERR_CERT_AUTHORITY_INVALID|No usable sandbox|Target page, context or browser has been closed|Timeout [0-9]+ms exceeded/);
+        const classification = error.message?.match(/Executable doesn't exist|ERR_CERT_AUTHORITY_INVALID|No usable sandbox|Target page, context or browser has been closed|strict mode violation|Test timeout of [0-9]+ms exceeded|Timeout [0-9]+ms exceeded/);
         if (classification) console.log('Failure category: ' + classification[0]);
         // Source coordinates are useful for diagnosis without printing credentials/assertion values.
         const source = error.stack?.match(/workspaces\.spec\.ts:(\d+):(\d+)/);
         if (source) console.log(`Failure source: workspaces.spec.ts:${source[1]}:${source[2]}`);
+        else if(error.location?.file?.endsWith('workspaces.spec.ts')&&Number.isInteger(error.location.line))
+          console.log(`Failure source: workspaces.spec.ts:${error.location.line}`);
       }
     }
     visit(suite.suites);

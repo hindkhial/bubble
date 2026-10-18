@@ -7,7 +7,7 @@ import { bubbleShade, bubblePalette } from '../theme/appearance';
 import { useTheme } from '../theme/Theme';
 import type { ThemeColors } from '../theme/appearance';
 import { useRef, useState } from 'react';
-import { useNavigation, useRouter } from 'expo-router';
+import { useNavigation, usePathname, useRouter } from 'expo-router';
 import { hasCreationDraft } from '../utils/creationDraft';
 import { bubbleCreationError } from '../utils/bubbleCover';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -30,6 +30,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
   const { colors, mode, accent } = useTheme();
   const styles = createFormStyles(colors);
   const router = useRouter();
+  const pathname = usePathname();
   const navigation = useNavigation();
   const { bubbles, bubbleById, createBubble, createNote, createPhoto, createChecklist } = useContent();
   const [visible, setVisible] = useState(false);
@@ -139,7 +140,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
     const destinationId = await resolveDestination();
     await createNote({ title: noteTitle, body, bubbleId: destinationId });
     close();
-    if(destinationId===HOME)router.replace('/');
+    if(destinationId===HOME){if(pathname!=='/')router.replace('/');}
     else if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
     } catch(problem) {setError(problem instanceof Error?problem.message:'Could not save.');saving.current=false;}
   };
@@ -152,7 +153,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
     const destinationId = await resolveDestination();
     await createPhoto({ title: photoTitle, description: photoDescription, bubbleId: destinationId, image: { uri: photo.uri }, cardImageRatio: photo.ratio });
     close();
-    if(destinationId===HOME)router.replace('/');
+    if(destinationId===HOME){if(pathname!=='/')router.replace('/');}
     else if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
     } catch (problem) { setError(problem instanceof Error ? problem.message : 'Could not save.'); saving.current = false; }
   };
@@ -165,7 +166,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
     const destinationId = await resolveDestination();
     await createChecklist({ title: checklistTitle, rows: checklistRows, bubbleId: destinationId });
     close();
-    if(destinationId===HOME)router.replace('/');
+    if(destinationId===HOME){if(pathname!=='/')router.replace('/');}
     else if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
     } catch(problem) {setError(problem instanceof Error?problem.message:'Could not save.');saving.current=false;}
   };
@@ -207,7 +208,8 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
             {step === 'note' && <>
               <Text style={styles.title}>New note</Text>
               <Text style={styles.label}>Save to</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Choose Home or a destination Bubble" onPress={() => {setDestinationReturn('note');setError('');setStep('destination');}} style={styles.destination}><Text style={styles.destinationText}>{destination==='__pending__'?pendingBubble?.title:destination&&destination!==HOME?bubbleById(destination)?.title??'Home':'Home · outside Bubbles'}</Text><Text style={styles.chevron}>›</Text></Pressable>              <Text style={styles.label}>Title (optional)</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Choose Home or a destination Bubble" onPress={() => {setDestinationReturn('note');setError('');setStep('destination');}} style={styles.destination}><Text style={styles.destinationText}>{destination==='__pending__'?pendingBubble?.title:destination&&destination!==HOME?bubbleById(destination)?.title??'Home':'Home · outside Bubbles'}</Text><Text style={styles.chevron}>›</Text></Pressable>
+              <Text style={styles.label}>Title (optional)</Text>
               <TextInput accessibilityLabel="Note title" style={styles.input} placeholder="Untitled note" placeholderTextColor={colors.muted} value={noteTitle} onChangeText={setNoteTitle} maxLength={100} />
               <Text style={styles.label}>Your note *</Text>
               <TextInput accessibilityLabel="Note text" style={[styles.input, styles.noteBody]} placeholder="Start writing..." placeholderTextColor={colors.muted} multiline textAlignVertical="top" value={body} onChangeText={(value) => { setBody(value); setError(''); }} />
@@ -217,7 +219,8 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
             {step === 'photo' && <>
               <Text style={styles.title}>New photo</Text>
               <Text style={styles.label}>Save to</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Choose Home or a destination Bubble" onPress={() => {setDestinationReturn('photo');setError('');setStep('destination');}} style={styles.destination}><Text style={styles.destinationText}>{destination==='__pending__'?pendingBubble?.title:destination&&destination!==HOME?bubbleById(destination)?.title??'Home':'Home · outside Bubbles'}</Text><Text style={styles.chevron}>›</Text></Pressable>              <Text style={styles.label}>Photo *</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Choose Home or a destination Bubble" onPress={() => {setDestinationReturn('photo');setError('');setStep('destination');}} style={styles.destination}><Text style={styles.destinationText}>{destination==='__pending__'?pendingBubble?.title:destination&&destination!==HOME?bubbleById(destination)?.title??'Home':'Home · outside Bubbles'}</Text><Text style={styles.chevron}>›</Text></Pressable>
+              <Text style={styles.label}>Photo *</Text>
               {photo && <Image source={{ uri: photo.uri }} style={[styles.imagePreview,{height:undefined,aspectRatio:1/photo.ratio}]} resizeMode="contain" accessibilityLabel="Selected photo" />}
               <Pressable accessibilityRole="button" onPress={() => pickImage('photo')} style={styles.pick}><Text style={styles.pickText}>{photo ? 'Change photo' : 'Choose photo'}</Text></Pressable>
               <Text style={styles.label}>Title (optional)</Text>
@@ -230,7 +233,8 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
             {step === 'checklist' && <>
               <Text style={styles.title}>New checklist</Text>
               <Text style={styles.label}>Save to</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Choose Home or a destination Bubble" onPress={() => {setDestinationReturn('checklist');setError('');setStep('destination');}} style={styles.destination}><Text style={styles.destinationText}>{destination==='__pending__'?pendingBubble?.title:destination&&destination!==HOME?bubbleById(destination)?.title??'Home':'Home · outside Bubbles'}</Text><Text style={styles.chevron}>›</Text></Pressable>              <Pressable accessibilityRole="button" onPress={() => setShowChecklistTitle((value) => !value)} style={styles.titleToggle}><Text style={styles.pickText}>{showChecklistTitle ? 'Hide title' : 'Add title'}</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Choose Home or a destination Bubble" onPress={() => {setDestinationReturn('checklist');setError('');setStep('destination');}} style={styles.destination}><Text style={styles.destinationText}>{destination==='__pending__'?pendingBubble?.title:destination&&destination!==HOME?bubbleById(destination)?.title??'Home':'Home · outside Bubbles'}</Text><Text style={styles.chevron}>›</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={() => setShowChecklistTitle((value) => !value)} style={styles.titleToggle}><Text style={styles.pickText}>{showChecklistTitle ? 'Hide title' : 'Add title'}</Text></Pressable>
               {showChecklistTitle ? <TextInput accessibilityLabel="Checklist title" style={styles.input} placeholder="Give your list a title" placeholderTextColor={colors.muted} value={checklistTitle} onChangeText={setChecklistTitle} maxLength={100} /> : null}
               <Text style={styles.intro}>What would you like to get done?</Text>
               <ChecklistEditorRows creating rows={checklistRows} onChange={(rows) => { setChecklistRows(rows); setError(''); }} />
