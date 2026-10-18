@@ -51,6 +51,7 @@ export default function FileDetailScreen() {
           <Text style={styles.toolbarTitle} numberOfLines={1}>{item.type === 'NOTE' ? 'Note' : isChecklist ? 'Checklist' : 'Photo'}</Text>
           {manageable && <Pressable accessibilityRole="button" accessibilityLabel={`Manage ${item.title} ${kind}`} onPress={() => setMenuOpen(true)} style={styles.manageButton}><Text style={styles.manageText}>···</Text></Pressable>}
         </View>
+        {storageError ? <Text accessibilityRole="alert" style={{ color: colors.destructive, marginBottom: 12 }}>{storageError}</Text> : null}
         <View style={styles.path}>
           <Pressable accessibilityRole="button" style={{ minHeight: 48, justifyContent: 'center' }} onPress={() => router.replace('/')}><Text style={styles.pathLink}>Home</Text></Pressable>
           {bubble?<><Text style={styles.chevron}>›</Text>
@@ -70,7 +71,7 @@ export default function FileDetailScreen() {
         <Text style={styles.meta}>{item.meta}</Text>
         {isChecklist ? <View style={styles.bodyCard}>
           <Text style={styles.progress}>{progress.done} of {progress.total} done</Text>
-          {rows.map((row) => <Pressable key={row.id} accessibilityRole="checkbox" accessibilityLabel={row.text} accessibilityState={{ checked: row.done }} aria-checked={row.done} onPress={() => void Promise.resolve(toggleChecklistRow(item.id, row.id)).catch(()=>{})} style={styles.checklistRow}>
+          {rows.map((row) => <Pressable key={row.id} accessibilityRole="checkbox" accessibilityLabel={row.text} accessibilityState={{ checked: row.done }} aria-checked={row.done} onPress={async () => { try { await toggleChecklistRow(item.id, row.id); } catch { /* The provider surfaces the error; keep the last saved state. */ } }} style={styles.checklistRow}>
             <View style={[styles.checkbox, row.done && styles.checkboxDone]}><Text style={styles.checkmark}>{row.done ? '✓' : ''}</Text></View>
             <Text style={[styles.rowText, row.done && styles.rowDone]}>{row.text}</Text>
           </Pressable>)}

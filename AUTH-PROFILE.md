@@ -29,7 +29,7 @@ No schema migration, JavaScript/Java dependency update, new storage service, sig
 
 | Check | Result |
 | --- | --- |
-| Frontend unit/render tests | Passed: 94 tests |
+| Frontend unit/render tests | Passed: 95 tests |
 | TypeScript | Passed |
 | PostgreSQL-backed backend tests and Maven package | Passed: 71 tests |
 | Password success/current-password/policy/CSRF/authentication/owner isolation/session revocation | Passed against disposable PostgreSQL |
@@ -61,6 +61,7 @@ No public deployment, release tag, TestFlight submission or automatic merge is a
 ## Changed files
 
 - `AUTH-PROFILE.md`
+- `RELEASE-OPERATIONS.md`
 - `TESTING.md`
 - `backend/src/main/java/com/bubble/config/SecurityConfig.java`
 - `backend/src/main/java/com/bubble/controller/UserController.java`
@@ -79,6 +80,7 @@ No public deployment, release tag, TestFlight submission or automatic merge is a
 - `src/api/authValidation.ts`
 - `src/app/(app)/account.tsx`
 - `src/app/(app)/change-password.tsx`
+- `src/app/(app)/file/[id].tsx`
 - `src/app/(app)/index.tsx`
 - `src/app/(app)/you.tsx`
 - `src/components/AuthExperience.tsx`
@@ -88,3 +90,16 @@ No public deployment, release tag, TestFlight submission or automatic merge is a
 - `src/state/Account.tsx`
 - `tests/api.test.mjs`
 - `tests/auth-profile-ui.test.mjs`
+- `tests/native-storage.test.mjs`
+
+## Full integration-diff review
+
+Reviewed requested head b97a0b55dd63e011bb385cb2937e3f0fdaffebb3 against integration af922352531da0669d8de60a29b75ec862cd0e17. GitHub's 124 files were the union of 109 inherited files and 28 files changed by this feature, with 13 shared files (109 + 28 - 13 = 124). There were 96 inherited-only files and 15 feature-only files; repeated edits are not duplicate source copies.
+
+The ancestry is linear: #8 release-readiness → #9 ios-native-foundation → #10 ios-simulator-polish → #11 ios-authentication → #12 ios-auth-profile-polish. The device-validation commit 3964361 is already included through #10 and does not need a separate merge. Each PR still targets integration, which explains the accumulated diff. No unrelated new feature, divergent branch, destructive migration or hidden deployment was found. Earlier dated status documents are historical; IOS-ACCOUNTS.md, this record and per-head PR checks describe the current authentication implementation.
+
+Review reproduced one inherited error-handling defect: the local checklist tap evaluated a synchronous SQLite write before Promise.resolve could catch it. The handler now catches both synchronous storage errors and rejected account writes, retaining the last saved state and displaying the provider error on the detail screen. The regression failed before the fix and passes afterward. The recovery runbook also now specifies V1–V3 and all nine tables, matching the existing executable CI drill. No schema or backend code changes were needed.
+
+After these review corrections the focused delta includes 31 files; the full integration comparison still contains 124 because the three additional paths were already inherited. The complete updated file list is in the Changed files section. Frontend tests now total 95; TypeScript passes. Backend behavior is unchanged, so its prior 71-test evidence remains applicable and the full hosted workflow must also pass on the correction head. Final results and review readiness are recorded on PR #12.
+
+Recommend individually approved merge commits in order #8 → #9 → #10 → #11 → #12, rerunning checks/reviewing each reduced diff after integration advances. Do not merge #12 alone to bypass approval of inherited work. Squashing earlier entries breaks the ancestry relationship and requires separately reviewed restacking/revalidation. Existing High dependency findings and native/manual release gates are not accepted by code-review readiness; #8's draft/approval restrictions remain in force. No merge, branch deletion, deployment or release is performed by this review.
