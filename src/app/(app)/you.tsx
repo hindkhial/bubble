@@ -1,3 +1,4 @@
+import { LogoutButton } from "../../components/LogoutButton";
 import { MotionAwareModal as Modal } from '../../components/MotionAwareModal';
 import { useRouter } from 'expo-router';
 import { useAccount } from '../../state/Account';
@@ -55,6 +56,7 @@ export default function YouScreen() {
           <Text style={styles.settingButtonText}>{setting}</Text>
         </Pressable>)}
       </View>
+      {account.mode==="account"&&account.user?<LogoutButton/>:null}
       <View style={styles.about}>
         <Text accessibilityRole="header" style={styles.settingTitle}>About Bubble</Text>
         <Text style={styles.sectionText}>Bubble is a little space for the things you want to keep close. Gather your notes, lists, photos, and everyday thoughts into Bubbles, and return to them whenever you need a quiet moment.</Text>

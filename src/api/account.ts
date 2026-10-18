@@ -22,6 +22,13 @@ export class AccountRepository {
   register(email: string, password: string, displayName: string) { return this.api.request<Account>('POST','/auth/register',{email,password,displayName}); }
   async login(email: string, password: string) { try {const result = await this.api.request<Account>('POST','/auth/login',{email,password}); this.api.resetCsrf(); return result;}catch(error){if(error instanceof ApiError && error.status===401&&!error.privateGate)throw new ApiError('Email or password is incorrect.',401);throw error;} }
   async logout() { await this.api.request('POST','/auth/logout'); this.api.resetCsrf(); }
+  async changePassword(currentPassword: string, newPassword: string) {
+    try { await this.api.request('PATCH','/users/me/password',{currentPassword,newPassword}); this.api.resetCsrf(); }
+    catch(error) {
+      if(error instanceof ApiError && error.status===400) throw new ApiError('Check your current password and choose a different new password that meets the password rules.',400);
+      throw error;
+    }
+  }
   me() { return this.api.request<Account>('GET','/users/me'); }
   async pages(path: string, size = 100, signal?: AbortSignal): Promise<ServerItem[]> {
     const result: ServerItem[] = [];

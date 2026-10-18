@@ -1,3 +1,9 @@
+# Authentication and profile UI follow-up — 2026-10-18
+
+See [AUTH-PROFILE.md](AUTH-PROFILE.md) for scope, password-session security, exact baseline and executable Simulator checks. Local validation: 94 frontend unit/render tests, TypeScript, 71 PostgreSQL-backed backend tests and packaging, iOS Hermes export and production web build Passed. New native-screen interaction and physical-device checks are Not Tested because CoreSimulator control remains restricted. An export is not a native build. Hosted CI and the eleven-scenario browser suite must be verified on this feature branch; results will be recorded in its PR. Existing dependency findings and manual release gates remain open. No user data or schema migration is changed.
+
+The previous head 0086062 executed all ten browser scenarios successfully on GitHub; its job failed afterward on the stale expected-count assertion (10 versus 9). This branch updates the count for the eleven scenarios, including the new password-change regression, and retains zero-skipped/zero-flaky/zero-unexpected requirements.
+
 # Bubble testing and stability
 
 ## Native accounts and account library — 2026-10-18

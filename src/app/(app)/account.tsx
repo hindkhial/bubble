@@ -23,9 +23,9 @@ function BrowserAccountScreen() {
     <Text style={styles.intro}>Local mode needs no account. Account mode uses the server and needs a connection. Signing in never uploads your local notes.</Text>
     <Pressable accessibilityRole="button" disabled={pending||account.busy} onPress={()=>{account.local();router.replace('/');}} style={styles.cancel}><Text style={styles.cancelText}>Use local mode</Text></Pressable>
     {account.user && account.mode==='account' ? <>
-      <Text style={styles.label}>Signed in as {account.user.email}</Text><Text style={styles.intro}>Switching to local mode does not sign out. Use Sign out on a shared device.</Text>
+      <Text style={styles.label}>Signed in as {account.user.email}</Text><Text style={styles.intro}>Switching to local mode does not sign out. Use Log Out on You on a shared device.</Text>
       <Pressable accessibilityRole="button" disabled={pending||account.busy} onPress={()=>void run(async()=>{await account.refresh();})} style={styles.cancel}><Text style={styles.cancelText}>Refresh account</Text></Pressable>
-      <Pressable accessibilityRole="button" disabled={pending||account.busy} onPress={()=>void run(async()=>{await account.logout();setMessage('Signed out. Local mode is active.');})} style={styles.cancel}><Text style={styles.cancelText}>Sign out</Text></Pressable>
+      <Pressable accessibilityRole="button" disabled={pending||account.busy} onPress={()=>router.push("./change-password")} style={styles.cancel}><Text style={styles.cancelText}>Change Password</Text></Pressable>
       <Text style={styles.label}>Copy local content to this account</Text><Text style={styles.intro}>Review and select notes or lists yourself. Copies get new server IDs. Originals, Bubbles, photos, profile and local appearance stay in this browser. This is a one-time copy, not synchronization.</Text>
       <Pressable accessibilityRole="button" disabled={pending||account.busy} onPress={review} style={styles.cancel}><Text style={styles.cancelText}>Review local notes and lists</Text></Pressable>
       {localItems?.map(item=><Pressable key={item.id} accessibilityRole="checkbox" accessibilityLabel={`Copy ${item.title}`} aria-checked={selected.includes(item.id)} disabled={pending} onPress={()=>setSelected(current=>current.includes(item.id)?current.filter(id=>id!==item.id):[...current,item.id])} style={styles.destinationChoice}><Text style={styles.destinationText}>{selected.includes(item.id)?'✓ ':''}{item.title} · {item.type==='CHECKLIST'?'List':'Note'}</Text></Pressable>)}
@@ -42,6 +42,7 @@ function BrowserAccountScreen() {
       <Pressable accessibilityRole="button" disabled={pending||account.loading||Platform.OS!=='web'} onPress={()=>void login()} style={styles.save}><Text style={styles.saveText}>{pending?'Please wait…':registering?'Create account and sign in':'Sign in'}</Text></Pressable>
       <Pressable accessibilityRole="button" disabled={pending} onPress={()=>{setRegistering(!registering);setMessage('');setPassword('');}} style={styles.cancel}><Text style={styles.cancelText}>{registering?'I already have an account':'Create an account'}</Text></Pressable>
     </>}
+    {account.authNotice?<Text accessibilityLiveRegion="polite" style={styles.intro}>{account.authNotice}</Text>:null}
     {message?<Text accessibilityRole="alert" style={styles.intro}>{message}</Text>:null}
     {account.error?<Text accessibilityRole="alert" style={styles.intro}>{account.error}</Text>:null}
     {account.loading?<Text accessibilityLiveRegion="polite" style={styles.intro}>Loading your account…</Text>:null}

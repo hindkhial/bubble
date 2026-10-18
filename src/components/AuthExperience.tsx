@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, type Href } from 'expo-router';
 import { useAccount, configuredApi } from '../state/Account';
 import { useTheme } from '../theme/Theme';
-import { AppearanceSheet } from './AppearanceSheet';
+import { BubbleLogo } from './BubbleLogo';
 import { createFormStyles } from './AddPreview';
 import { ApiError } from '../api/client';
 import { normalizedEmail, validateAuthentication } from '../api/authValidation';
@@ -15,7 +15,7 @@ export function AuthExperience({kind}:{kind:'welcome'|'login'|'signup'}) {
  const signup=kind==='signup';const [email,setEmail]=useState('');const [name,setName]=useState('');
  const [password,setPassword]=useState('');const [confirmation,setConfirmation]=useState('');const [shown,setShown]=useState(false);
  const [pending,setPending]=useState(false);const submitted=useRef(false);const [error,setError]=useState('');
- const [appearance,setAppearance]=useState(false);const [beta,setBeta]=useState(false);const [tester,setTester]=useState('');const [testerPassword,setTesterPassword]=useState('');
+ const [beta,setBeta]=useState(false);const [tester,setTester]=useState('');const [testerPassword,setTesterPassword]=useState('');
  const go=(path:string)=>router.replace(path as Href);
  const submit=async()=>{
    if(submitted.current||account.busy||account.loading)return;
@@ -45,7 +45,7 @@ export function AuthExperience({kind}:{kind:'welcome'|'login'|'signup'}) {
  const button=(label:string,onPress:()=>void,primary=false)=><Pressable accessibilityRole="button" accessibilityState={{disabled:blocked,busy:pending||account.loading}} disabled={blocked} onPress={onPress} style={[primary?styles.save:styles.cancel,{minHeight:48,justifyContent:'center'}]}><Text style={primary?styles.saveText:styles.cancelText}>{label}</Text></Pressable>;
  return <SafeAreaView style={{flex:1,backgroundColor:colors.background}}><KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==='ios'?'padding':undefined}>
   <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={{padding:24,paddingBottom:40,width:'100%',maxWidth:520,alignSelf:'center',flexGrow:1,justifyContent:kind==='welcome'?'center':'flex-start'}}>
-   <View accessible accessibilityLabel="Bubble" style={{alignSelf:'center',width:88,height:88,borderRadius:44,backgroundColor:colors.lavenderSoft,alignItems:'center',justifyContent:'center',marginBottom:24}}><Text style={{fontSize:44,color:colors.text}}>◌</Text></View>
+   <View style={{alignSelf:"center",marginBottom:24}}><BubbleLogo size={88}/></View>
    {account.loading?<ActivityIndicator accessibilityLabel="Verifying your session" color={colors.action}/>:null}
    <Text accessibilityRole="header" style={styles.title}>{kind==='welcome'?'Welcome to Bubble':signup?'Make yourself at home':'Welcome back'}</Text>
    <Text style={styles.intro}>{kind==='welcome'?'A quiet space for your notes, lists and everyday thoughts. Sign in to open your personal space.':signup?'Create your account to begin. Existing content on this iPhone stays private until you choose to copy it.':'Log in to your personal space. Your existing device content stays separate.'}</Text>
@@ -62,9 +62,9 @@ export function AuthExperience({kind}:{kind:'welcome'|'login'|'signup'}) {
     {button(signup?'Already have an account? Log In':'New here? Create Account',()=>go(signup?'/login':'/signup'))}
     {button('Back to welcome',()=>go('/welcome'))}
    </>}
+   {account.authNotice?<Text accessibilityLiveRegion="polite" style={[styles.intro,{color:colors.action}]}>{account.authNotice}</Text>:null}
    {error||account.error?<Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={[styles.intro,{color:colors.destructive}]}>{error||account.error}</Text>:null}
-   {button('Appearance',()=>setAppearance(true))}
    <Text style={styles.intro}>An internet connection is required to verify your account when opening Bubble. Existing device content is never uploaded automatically.</Text>
   </ScrollView>
- </KeyboardAvoidingView>{appearance?<AppearanceSheet onClose={()=>setAppearance(false)}/>:null}</SafeAreaView>;
+ </KeyboardAvoidingView></SafeAreaView>;
 }

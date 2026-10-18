@@ -1,3 +1,4 @@
+import { BubbleLogo } from "../../components/BubbleLogo";
 import { DeviceContentNotice } from '../../components/DeviceContentNotice';
 import { useAccount } from '../../state/Account';
 import { usePins } from '../../state/Pins';
@@ -31,7 +32,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.topline}>
-          <View style={styles.logo}><View style={styles.logoDotLeft} /><View style={styles.logoDotRight} /></View>
+          <View style={styles.logo}><BubbleLogo /></View>
           <Text style={styles.brand}>bubble</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Open your profile" onPress={() => router.push('/you')} style={styles.avatarButton}><ProfileAvatar profile={profile} size={42} /></Pressable>
         </View>
@@ -64,8 +65,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: { paddingHorizontal: spacing.page, paddingBottom: 28 },
   topline: { height: 52, flexDirection: 'row', alignItems: 'center', marginBottom: 13 },
   logo: { width: 33, height: 32, marginRight: 7 },
-  logoDotLeft: { position: 'absolute', left: 0, top: 3, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.lavenderDeep },
-  logoDotRight: { position: 'absolute', left: 12, top: 8, width: 21, height: 21, borderRadius: 11, backgroundColor: colors.lavender },
   brand: { color: colors.text, fontWeight: '800', fontSize: 23, letterSpacing: -1 },
   avatarButton: { marginLeft: 'auto', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   heading: { color: colors.text, fontSize: 27, lineHeight: 33, fontWeight: '700', letterSpacing: -0.5 },

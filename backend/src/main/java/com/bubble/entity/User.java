@@ -39,6 +39,10 @@ public class User extends BaseEntity {
         }
         passwordHash = encoded;
     }
+    public void replacePasswordHash(String encoded) {
+        if (encoded == null || !encoded.startsWith("{bcrypt}$2")) throw new IllegalArgumentException("An encoded password is required.");
+        passwordHash = encoded;
+    }
     public Profile getProfile() { return profile; }
     public List<Note> getNotes() { return Collections.unmodifiableList(notes); }
     public List<Checklist> getChecklists() { return Collections.unmodifiableList(checklists); }

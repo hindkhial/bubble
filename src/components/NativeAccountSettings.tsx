@@ -20,7 +20,6 @@ export function NativeAccountSettings(){
    setItems(values.filter(x=>x.type!=='PHOTO'));setSelected([]);setConfirmed(false);setOwns(false);setMessage('');
   }catch(error){setMessage(error instanceof Error?error.message:'Could not read device content. It remains unchanged.');}
  };
- const logout=async()=>{if(running.current)return;running.current=true;setPending(true);try{await account.logout();}catch(error){setMessage(error instanceof Error?error.message:'Could not finish signing out.');}finally{running.current=false;setPending(false);}};
  const copy=async()=>{
   if(running.current||!owns||!confirmed||!account.user||!selected.length)return;
   running.current=true;setPending(true);setMessage('');
@@ -32,7 +31,7 @@ export function NativeAccountSettings(){
   finally{running.current=false;setPending(false);}
  };
  return <SafeAreaView style={{flex:1,backgroundColor:colors.background}}><ScrollView contentContainerStyle={{padding:24,width:'100%',maxWidth:560,alignSelf:'center'}}>
-  <Text accessibilityRole="header" style={styles.title}>Your account</Text><Text style={styles.intro}>{account.user?.email}</Text>
+  <Text accessibilityRole="header" style={styles.title}>Security</Text><Text style={styles.intro}>{account.user?.email}</Text>
   <Text style={styles.intro}>Your account Bubbles, notes, lists and photos are saved on the server. This version verifies your session online when opening or returning to Bubble. Account content is not cached in device SQLite.</Text>
   <Pressable accessibilityRole="button" disabled={pending} onPress={review} style={styles.cancel}><Text style={styles.cancelText}>Review existing device content</Text></Pressable>
   {items?<><Text accessibilityRole="header" style={styles.label}>Existing content found</Text><Text style={styles.intro}>{items.filter(x=>x.type==='NOTE').length} notes · {items.filter(x=>x.type==='CHECKLIST').length} checklists. Nothing has been assigned to this account or uploaded automatically.</Text>
@@ -45,7 +44,7 @@ export function NativeAccountSettings(){
    <Text style={styles.intro}>Copies are marked complete only after being read back from your account. Known server IDs can be verified again after an interruption. An uncertain copy without a server ID is blocked from automatic retry to prevent duplicates; inspect your account before reconciliation. No local cleanup is performed.</Text>
   </>:null}
   {message||account.error?<Text accessibilityRole="alert" style={styles.intro}>{message||account.error}</Text>:null}
-  <Pressable accessibilityRole="button" disabled={pending||account.busy} onPress={()=>void logout()} style={styles.cancel}><Text style={styles.cancelText}>Log Out</Text></Pressable>
+  <Pressable accessibilityRole="button" disabled={pending||account.busy} onPress={()=>router.push("./change-password")} style={[styles.cancel,{minHeight:48}]}><Text style={styles.cancelText}>Change Password</Text></Pressable>
   <Pressable accessibilityRole="button" disabled={pending} onPress={()=>router.replace('/')} style={styles.cancel}><Text style={styles.cancelText}>Back to Home</Text></Pressable>
  </ScrollView></SafeAreaView>;
 }
