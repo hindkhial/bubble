@@ -10,7 +10,7 @@ RUN node scripts/validate-staging-url.mjs "$EXPO_PUBLIC_API_URL"
 RUN EXPO_PUBLIC_API_URL="$EXPO_PUBLIC_API_URL" EXPO_NO_TELEMETRY=1 CI=1 pnpm build:web
 
 FROM nginx:stable-alpine@sha256:970364228b1e4f932abc22d321932816782cca8a20b85a77552a7cfe9acfb3b5
-RUN apk add --no-cache 'zlib>=1.3.2-r1'
+RUN apk add --no-cache 'zlib>=1.3.2-r1' 'libexpat>=2.9.0-r0'
 COPY deploy/staging/nginx.conf /etc/nginx/nginx.conf
 COPY --from=build /build/dist /usr/share/nginx/html
 USER 101:101
