@@ -65,7 +65,7 @@ test('profile logout and Security password changes preserve saved account conten
   await page.getByRole('button',{name:'Save Changes',exact:true}).click();
   await expect(page.getByText('Password changed. Log in with your new password.',{exact:true}).filter({visible:true})).toBeVisible();
   await page.getByRole('textbox',{name:'Email',exact:true}).fill(email);
-  await page.getByLabel('Password',{exact:true}).fill('Synthetic-new-password-2026');
+  await page.getByLabel('Password',{exact:true}).filter({visible:true}).fill('Synthetic-new-password-2026');
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
   await expect(page.getByRole('button',{name:'Open account and workspace settings'})).toContainText(email);
   await page.goto('/');

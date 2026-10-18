@@ -23,7 +23,7 @@ After success, the current server session is invalidated. A non-reversible SHA-2
 
 The client clears private in-memory state and native Keychain session credentials and requires login again. The non-secret logout lock prevents silent native restoration. Account content, local SQLite, profile assets and preferences are not deleted. A lost response is treated as an uncertain write rather than automatically retrying a password change; use a fresh login to reconcile. TLS, CSRF, native session origin checks and private staging protection stay enabled.
 
-No schema migration, JavaScript/Java dependency update, new storage service, signing or trust change is needed. A fresh runtime scan found web-tester image packages libx11 1.8.13-r0 (CVE-2026-88806 High; CVE-2026-94283/94284/94285 Medium) and libxpm 3.5.19-r0 (CVE-2026-94287 Medium). The Dockerfile now requires the available compatible Alpine patches libx11 1.8.14-r0 and libxpm 3.5.20-r0. Backend and database scans had no findings. Final patched-image rescanning is pending. These packages belong to the private browser-test image, not the iOS JavaScript application. No advisory is ignored or suppressed.
+No schema migration, JavaScript/Java dependency update, new storage service, signing or trust change is needed. A fresh runtime scan found web-tester image packages libx11 1.8.13-r0 (CVE-2026-88806 High; CVE-2026-94283/94284/94285 Medium) and libxpm 3.5.19-r0 (CVE-2026-94287 Medium). The Dockerfile now requires the available compatible Alpine patches libx11 1.8.14-r0 and libxpm 3.5.20-r0. Backend and database scans had no findings. Final patched-image rescanning Passed with zero findings across frontend/backend/PostgreSQL, with scan/archive/runtime image identities checked. These packages belong to the private browser-test image, not the iOS JavaScript application. No advisory is ignored or suppressed.
 
 ## Validation record
 
@@ -36,10 +36,12 @@ No schema migration, JavaScript/Java dependency update, new storage service, sig
 | Saved note/profile/preferences unchanged after password change | Passed against disposable PostgreSQL |
 | iOS Hermes JavaScript export | Passed; not native compilation evidence |
 | Production web regression build | Passed |
-| Updated hosted browser/CI checks | Frontend/backend Passed at 91414dd; browser 9/11 Passed, two test sequencing/hidden-screen selector failures corrected; rerun pending |
+| Updated hosted browser/CI checks | Frontend/backend Passed at 99eb309; browser 10/11 Passed, remaining hidden password-field selector corrected; final rerun reported in PR |
 | Fresh native compilation | Blocked before compilation: restricted Xcode/CoreSimulator access; existing workspace retained |
 | Updated screens in iOS Simulator | Not Tested: session cannot reach CoreSimulator |
 | Physical iPhone, VoiceOver, Dynamic Type and full focus review | Not Tested |
+
+The first local eleven-scenario run passed nine and exposed two test issues; the hosted rerun passed ten, with one more hidden-field selector needing the same visible-screen scope. One local rerun stopped making progress and was terminated without claiming success; its temporary CA was removed and fresh Chromium distrust was reconfirmed before container deletion. No timeout, retry, TLS or sandbox protection was relaxed.
 
 ## Simulator follow-up
 
@@ -53,3 +55,34 @@ Use only the existing separate Bubble Auth Test Simulator and synthetic credenti
 6. Leave unexecuted VoiceOver, focus management, Dynamic Type, reduced-motion and physical-device checks marked Not Tested. Existing dependency/security release gates remain open.
 
 No public deployment, release tag, TestFlight submission or automatic merge is authorized.
+
+## Changed files
+
+- `AUTH-PROFILE.md`
+- `TESTING.md`
+- `backend/src/main/java/com/bubble/config/SecurityConfig.java`
+- `backend/src/main/java/com/bubble/controller/UserController.java`
+- `backend/src/main/java/com/bubble/dto/ChangePasswordRequest.java`
+- `backend/src/main/java/com/bubble/entity/User.java`
+- `backend/src/main/java/com/bubble/repository/UserRepository.java`
+- `backend/src/main/java/com/bubble/security/AccountPrincipal.java`
+- `backend/src/main/java/com/bubble/security/AuthRateLimitFilter.java`
+- `backend/src/main/java/com/bubble/security/PasswordSessionFilter.java`
+- `backend/src/main/java/com/bubble/service/AccountService.java`
+- `backend/src/test/java/com/bubble/PasswordChangeIntegrationTest.java`
+- `deploy/staging/frontend.Dockerfile`
+- `e2e/workspaces.spec.ts`
+- `scripts/ci/browser-tests.mjs`
+- `src/api/account.ts`
+- `src/api/authValidation.ts`
+- `src/app/(app)/account.tsx`
+- `src/app/(app)/change-password.tsx`
+- `src/app/(app)/index.tsx`
+- `src/app/(app)/you.tsx`
+- `src/components/AuthExperience.tsx`
+- `src/components/BubbleLogo.tsx`
+- `src/components/LogoutButton.tsx`
+- `src/components/NativeAccountSettings.tsx`
+- `src/state/Account.tsx`
+- `tests/api.test.mjs`
+- `tests/auth-profile-ui.test.mjs`
