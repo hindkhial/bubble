@@ -97,7 +97,8 @@ Actual user-reported checks in the isolated iPhone test Simulator:
 | Two synthetic accounts cannot see each other's note | Passed |
 | Original test account's note survives switching accounts | Passed |
 | All four Add options and standalone note saved on Home in Simulator | Passed |
-| New Bubble/Photo creation, tall images and selected Bubble destinations in Simulator | Not Tested |
+| Required-cover validation and Bubble creation with cover in Simulator | Passed |
+| Standalone Photo creation, tall images and selected Bubble destinations in Simulator | Not Tested |
 | Profile/photo customization after new account flow and restart | Not Tested |
 | Offline authentication failure and protected deep links | Not Tested |
 | Native consent flow, interrupted transfer and reconciliation | Not Tested |

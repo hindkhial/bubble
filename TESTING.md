@@ -45,12 +45,13 @@ rerun completed, certificate distrust was reconfirmed and `bubble-browser-librar
 was removed. Staging containers/volumes and the original Simulator were preserved.
 Normal TLS verification and Chromium's sandbox remained enabled throughout.
 
-Owner additionally confirmed all four Add options and standalone note creation on
-Home in Simulator. A native Add-sheet text warning was fixed by removing stray JSX
+Owner additionally confirmed all four Add options, standalone note creation on
+Home, required-cover validation and Bubble creation with a cover in Simulator.
+A native Add-sheet text warning was fixed by removing stray JSX
 spaces; it is covered by automated regression tests. Saving while already on Home
 also avoids replacing the current Home route unnecessarily.
 
-Not Tested: new account Bubble/Photo creation and photos in Simulator, cross-device sync on
+Not Tested: standalone Photo creation and detailed image layouts in Simulator, cross-device sync on
 physical iPhones, native transfer confirmation/recovery, native offline auth
 failure/deep-link behavior, and remaining VoiceOver, focus, zoom, Dynamic Type and
 physical-device release gates. Account mode still requires online verification;
