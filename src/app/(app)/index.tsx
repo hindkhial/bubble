@@ -1,18 +1,19 @@
-import { useAccount } from '../state/Account';
-import { usePins } from '../state/Pins';
-import { pinnedFirst } from '../utils/dashboard';
-import { useTheme } from '../theme/Theme';
-import type { ThemeColors } from '../theme/appearance';
+import { DeviceContentNotice } from '../../components/DeviceContentNotice';
+import { useAccount } from '../../state/Account';
+import { usePins } from '../../state/Pins';
+import { searchEverything } from '../../utils/dashboard';
+import { useTheme } from '../../theme/Theme';
+import type { ThemeColors } from '../../theme/appearance';
 import { useRouter } from 'expo-router';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BottomNavigation } from '../components/BottomNavigation';
-import { CollectionGrid } from '../components/CollectionGrid';
-import { ProfileAvatar } from '../components/ProfileAvatar';
-import { useContent } from '../state/Content';
-import { useProfile } from '../state/Profile';
-import type { CollectionEntry } from '../data/sample';
-import { spacing } from '../theme/tokens';
+import { BottomNavigation } from '../../components/BottomNavigation';
+import { CollectionGrid } from '../../components/CollectionGrid';
+import { ProfileAvatar } from '../../components/ProfileAvatar';
+import { useContent } from '../../state/Content';
+import { useProfile } from '../../state/Profile';
+import type { CollectionEntry } from '../../data/sample';
+import { spacing } from '../../theme/tokens';
 
 export default function HomeScreen() {
   const account=useAccount();
@@ -22,10 +23,10 @@ export default function HomeScreen() {
   const { childBubbles, items, bubbles, storageError } = useContent();
   const { profile } = useProfile();
   const { pinsFor, storageError: pinError } = usePins();
-  const pinKeys = new Set(bubbles.flatMap((bubble) => pinsFor(bubble.id)));
-  const pinned = pinnedFirst(items, pinKeys).filter((item) => pinKeys.has(`file:${item.id}`));
+  const pinKeys = new Set([...pinsFor('root'),...bubbles.flatMap((bubble) => pinsFor(bubble.id))]);
+  const pinned = searchEverything(bubbles,items,'','All',pinKeys).filter(entry=>pinKeys.has(`${entry.kind}:${entry.value.id}`));
   const rootBubbles = childBubbles(null);
-  const entries: CollectionEntry[] = rootBubbles.map((value) => ({ kind: 'bubble', value }));
+  const entries: CollectionEntry[] = [...rootBubbles.map((value):CollectionEntry => ({kind:'bubble',value})),...items.filter(item=>item.bubbleId==='root'||item.bubbleId==='account-library').map((value):CollectionEntry=>({kind:'file',value}))];
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -39,16 +40,17 @@ export default function HomeScreen() {
         <Text style={styles.intro}>Your thoughts and favorite things, all in one place.</Text>
 
         {storageError || pinError ? <Text accessibilityRole="alert" style={[styles.intro, { color: colors.text }]}>{storageError || pinError}</Text> : null}
+        <DeviceContentNotice/>
         <Text accessibilityRole="header" style={styles.dashboardTitle}>Pinned</Text>
-        {pinned.length ? <CollectionGrid entries={pinned.map((value) => ({ kind: 'file', value }))} scopeId="root" respectEntryScopes /> : <Text style={styles.sectionSubtitle}>Keep favorites close. Open a Bubble and pin a note or list from its options.</Text>}
+        {pinned.length ? <CollectionGrid entries={pinned} scopeId="root" respectEntryScopes /> : <Text style={styles.sectionSubtitle}>Keep favorites close. Pin something from its options.</Text>}
         <View style={styles.sectionHeading}>
           <View>
-            <Text style={styles.sectionTitle}>{account.mode==='account'?'Your account':'Your Bubbles'}</Text>
-            <Text style={styles.sectionSubtitle}>{account.mode==='account'?'Your server-backed notes and lists.':'Little collections for everything.'}</Text>
+            <Text style={styles.sectionTitle}>Your space</Text>
+            <Text style={styles.sectionSubtitle}>Bubbles and the things you keep on Home.</Text>
           </View>
-          <Text style={styles.sectionCount}>{rootBubbles.length}</Text>
+          <Text style={styles.sectionCount}>{entries.length}</Text>
         </View>
-        {entries.length ? <CollectionGrid entries={entries} scopeId="root" /> : <View style={styles.empty}><Text style={styles.emptyIcon}>✧</Text><Text style={styles.emptyTitle}>Nothing here yet</Text><Text style={styles.emptyText}>Make a Bubble to keep your next thought.</Text></View>}
+        {entries.length ? <CollectionGrid entries={entries} scopeId="root" /> : <View style={styles.empty}><Text style={styles.emptyIcon}>✧</Text><Text style={styles.emptyTitle}>Nothing here yet</Text><Text style={styles.emptyText}>Add a thought, photo, or Bubble to get started.</Text></View>}
         <Text style={styles.demo}>{account.mode==='account'?'Account mode · connection required · local notes stay separate':Platform.OS === 'web' ? 'Stored in this browser · Search stays on your device.' : 'Stored on this iPhone · Search stays on your device.'}</Text>
       </ScrollView>
       <BottomNavigation active="home" />

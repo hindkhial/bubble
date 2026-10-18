@@ -1,7 +1,8 @@
 export class ApiError extends Error {
   status: number;
   uncertain: boolean;
-  constructor(message: string, status = 0, uncertain = false) { super(message); this.status = status; this.uncertain = uncertain; }
+  privateGate: boolean;
+  constructor(message: string, status = 0, uncertain = false, privateGate = false) { super(message); this.status = status; this.uncertain = uncertain;this.privateGate=privateGate; }
 }
 export function apiBase(value: string): string {
   const url = new URL(value);
@@ -22,7 +23,7 @@ export class ApiClient {
     return this.tokenRequest;
   }
   async request<T>(method: string, path: string, input?: unknown, signal?: AbortSignal): Promise<T> {
-    if(this.configurationError)throw new ApiError('Account API URL is invalid. Local mode remains available.');
+    if(this.configurationError)throw new ApiError('Account service address is invalid. Your device content is unchanged.');
     if (!path.startsWith('/') || path.startsWith('//')) throw new Error('Invalid API path.');
     const mutation = method !== 'GET';
     if (signal?.aborted) throw new DOMException('Request cancelled.', 'AbortError');
@@ -50,9 +51,10 @@ export class ApiClient {
       // A proxy/server failure can arrive after the database has committed.
       // Keep the draft and require reconciliation instead of allowing a duplicate retry.
       const uncertain = mutation && response.status >= 500;
-      throw new ApiError(uncertain
+      const privateGate=response.status===401&&!!response.headers.get('WWW-Authenticate')?.toLowerCase().startsWith('basic');
+      throw new ApiError(privateGate?'Private beta access is required. Check your invitation credentials.':uncertain
         ? 'The account service failed to confirm this change. It may have been saved. Refresh before trying again; your draft is still here.'
-        : messages[response.status] ?? 'The account service could not complete this request.', response.status, uncertain);
+        : messages[response.status] ?? 'The account service could not complete this request.', response.status, uncertain,privateGate);
     }
     if (response.status === 204) {finish();return undefined as T;}
     try { return await response.json() as T; }

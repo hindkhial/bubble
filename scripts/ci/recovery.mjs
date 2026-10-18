@@ -12,14 +12,14 @@ export function verifyRecovery({folder, environment, run, compose}) {
   fixture('seed');
   fixture('session');
   const history = sql('bubble_staging', 'SELECT version || chr(58) || success FROM flyway_schema_history ORDER BY installed_rank;');
-  assert.equal(history, '1:true\n2:true');
+  assert.equal(history, '1:true\n2:true\n3:true');
   const dump = join(folder, 'recovery.dump');
   run('sh', ['deploy/staging/backup.sh', dump]);
   const archive = readFileSync(dump);
   run('sh', ['deploy/staging/compose.sh', 'exec', '-T', 'db', 'pg_restore', '--list'], environment, {input: archive});
   compose(['exec', '-T', 'db', 'createdb', '-U', 'postgres', '--owner=bubble_app', 'bubble_ci_recovery']);
   run('sh', ['deploy/staging/compose.sh', 'exec', '-T', 'db', 'pg_restore', '-U', 'postgres', '--role=bubble_app', '--no-owner', '--no-acl', '--exit-on-error', '--single-transaction', '--dbname=bubble_ci_recovery'], environment, {input: archive});
-  for (const table of ['users', 'profiles', 'notes', 'checklists', 'checklist_items', 'user_preferences', 'flyway_schema_history']) {
+  for (const table of ['users', 'profiles', 'notes', 'checklists', 'checklist_items', 'user_preferences', 'library_entries', 'library_placements', 'flyway_schema_history']) {
     const query = `SELECT md5(coalesce(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text)::text, '[]')) FROM ${table} t;`;
     assert.equal(sql('bubble_ci_recovery', query), sql('bubble_staging', query), 'Restored table differs: ' + table);
   }

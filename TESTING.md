@@ -1,5 +1,59 @@
 # Bubble testing and stability
 
+## Native accounts and account library — 2026-10-18
+
+This candidate is **not release-approved**. See [IOS-ACCOUNTS.md](IOS-ACCOUNTS.md)
+for the authentication design, account photo limits, legacy data recovery and the
+separate owner-executed Simulator results. Historic all-green runs below do not
+supersede the current outstanding browser checks.
+
+Local results:
+
+- Passed: 85 frontend tests and TypeScript checks.
+- Passed: all 67 Java 21/PostgreSQL tests, Maven packaging, Flyway V1–V3, private
+  image ownership checks, image validation, atomic destinations and preservation
+  of contents when deleting an account Bubble.
+- Passed: iOS Hermes export and frontend/backend production container builds.
+  JavaScript exports do not stand in for native compilation or a physical test.
+  The existing native session module was built successfully in Xcode and the
+  owner confirmed native registration/login/logout/restoration; no new native
+  dependency or Swift changes were required for the account library extension.
+- Passed: protected pre-update database backup, restoration into a new temporary
+  database, and exact row comparisons confirming all pre-existing user/profile/
+  note/checklist/item/preference records were unchanged after V3. The temporary
+  comparison database was removed; the original volume and backup remain.
+- Passed: current running frontend, backend and PostgreSQL images scanned with
+  the pinned Trivy scanner, with no reported vulnerabilities. Running image and
+  tag identities were rechecked against the scan summary. This is an image result,
+  not closure of the previously documented development dependency advisories.
+- Browser run: **8 Passed, 2 Failed, 0 Skipped** across the nine existing scenarios
+  plus one new account-library scenario. The new scenario stopped at its login
+  expectation; the local offline scenario exceeded its 45-second deadline. Their
+  root causes remain unresolved and neither is counted as Passed. The first run
+  also identified an expired-session/no-results regression, which was fixed; that
+  session scenario passed in the subsequent run. One ambiguous new-test selector
+  was corrected.
+- Passed in the disposable browser: full CA fingerprint validation, TLS rejection
+  before trust, acceptance using isolated temporary trust with Chromium sandbox
+  enabled, and renewed rejection after trust removal. No macOS trust store was
+  changed. Non-root execution, dropped capabilities, no privileged mode or new
+  published ports were retained.
+
+Docker Desktop became unavailable after the browser run, preventing the remaining
+rerun and final disposable-container removal. Its certificate trust had already
+been removed and distrust reconfirmed. Remove only `bubble-browser-library` once
+Docker is running; preserve all staging containers, database volumes and the
+original Simulator. Do not reset Docker to resolve this interruption.
+
+Not Tested: new account Bubble/Photo workflows in Simulator, cross-device sync on
+physical iPhones, native transfer confirmation/recovery, native offline auth
+failure/deep-link behavior, and remaining VoiceOver, focus, zoom, Dynamic Type and
+physical-device release gates. Account mode still requires online verification;
+the older owner-verified offline local-mode checks below are a separate behavior.
+
+Hosted GitHub Actions for this candidate have not yet been verified. Keep its PR
+draft until browser failures and remaining required native validation are resolved.
+
 **Verified release-readiness baseline (2026-10-16): all three GitHub CI jobs Passed** at `2eeee6c5b8e4a793016fd433ff5e209c4b0d7593`: 53 frontend tests, 62 backend tests, TypeScript, web build, backend packaging and all nine browser scenarios. The hosted recovery drill and temporary-trust removal also Passed. See the final hosted evidence below. Two high dependency advisories and human manual gates still block release. Earlier failure/pending records are historical.
 
 ## Application setup

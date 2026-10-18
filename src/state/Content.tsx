@@ -1,5 +1,5 @@
 import { useAccount } from './Account';
-import { ACCOUNT_LIBRARY } from '../api/account';
+import { HOME, libraryBubble, libraryPhoto } from '../api/library';
 import { useLocalState } from '../storage/useLocalState';
 import { createContext, useContext, useMemo, useRef, useState } from 'react';
 import type { PropsWithChildren } from 'react';
@@ -23,15 +23,15 @@ type ContentContextValue = {
   childBubbles: (parentId: string | null) => Bubble[];
   bubbleCountLabel: (id: string) => string;
   collectionContents: (id: string) => CollectionEntry[];
-  createBubble: (input: NewBubble) => Bubble;
+  createBubble: (input: NewBubble) => Bubble | Promise<Bubble>;
   createNote: (input: NewNote) => SampleItem | Promise<SampleItem>;
-  createPhoto: (input: NewPhoto) => SampleItem;
+  createPhoto: (input: NewPhoto) => SampleItem | Promise<SampleItem>;
   createChecklist: (input: NewChecklist) => SampleItem | Promise<SampleItem>;
-  updateBubble: (id: string, changes: BubbleChanges) => void;
+  updateBubble: (id: string, changes: BubbleChanges) => void | Promise<unknown>;
   updateNote: (id: string, changes: NoteChanges) => void | Promise<unknown>;
   updateChecklist: (id: string, changes: ChecklistChanges) => void | Promise<unknown>;
   toggleChecklistRow: (itemId: string, rowId: string) => void | Promise<unknown>;
-  deleteBubble: (id: string) => void;
+  deleteBubble: (id: string) => void | Promise<unknown>;
   deleteNote: (id: string) => void | Promise<unknown>;
   deleteChecklist: (id: string) => void | Promise<unknown>;
 };
@@ -44,16 +44,25 @@ export function ContentProvider({children}: PropsWithChildren) {
 }
 function RemoteContent({children}: PropsWithChildren) {
   const account=useAccount();
-  const bubble: Bubble = {id:ACCOUNT_LIBRARY,title:'Account library',description:'Notes and checklists saved to your account. Bubbles and photos stay local.',parentId:null,order:0,cardImageRatio:1};
-  const unsupported = (): never => {throw new Error('Bubbles and photos are available in local mode only.');};
+  const bubbles=account.library.filter(entry=>entry.kind==='BUBBLE').map(libraryBubble);
+  const imageData=(source:ImageSourcePropType|undefined)=>{
+    const uri=source&&typeof source==='object'&&!Array.isArray(source)&&'uri' in source?source.uri:undefined;
+    if(!uri||!/^data:image\/(jpeg|png);base64,/.test(uri))throw new Error('Choose a JPEG or PNG photo again before saving.');
+    const image=uri.slice(uri.indexOf(',')+1);
+    if(image.length>699052)throw new Error('Choose a smaller photo (up to 512 KB) for account storage.');
+    return image;
+  };
   const value: ContentContextValue = {
     hydrated: !account.loading, storageError: account.error || (account.mode === 'account' && !account.user ? 'Sign in from You → Account, or use local mode.' : null),
-    bubbles: [bubble], items: account.items, bubbleById: id=>id===ACCOUNT_LIBRARY?bubble:undefined,
-    itemById: id=>account.items.find(item=>item.id===id),childBubbles: parent=>parent===null?[bubble]:[],
-    bubbleCountLabel: ()=>`${account.items.length} files`,collectionContents: ()=>[...account.items].sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id)).map(value=>({kind:'file',value})),
-    createBubble:unsupported,createPhoto:unsupported,updateBubble:unsupported,deleteBubble:unsupported,
+    bubbles, items: account.items, bubbleById:id=>bubbles.find(bubble=>bubble.id===id),
+    itemById:id=>account.items.find(item=>item.id===id),childBubbles:parent=>bubbles.filter(bubble=>bubble.parentId===parent),
+    bubbleCountLabel:id=>`${bubbles.filter(bubble=>bubble.parentId===id).length} Bubbles · ${account.items.filter(item=>item.bubbleId===id).length} files`,
+    collectionContents:id=>[...bubbles.filter(bubble=>bubble.parentId===id).map((value):CollectionEntry=>({kind:'bubble',value})),...account.items.filter(item=>item.bubbleId===id).map((value):CollectionEntry=>({kind:'file',value}))].sort((a,b)=>a.value.order-b.value.order||a.value.id.localeCompare(b.value.id)),
+    createBubble:async input=>libraryBubble(await account.createLibrary({kind:'BUBBLE',title:input.title,description:input.description,parentId:input.parentId,color:input.color,image:imageData(input.cover)})),
+    createPhoto:async input=>libraryPhoto(await account.createLibrary({kind:'PHOTO',title:input.title.trim()||'Untitled photo',description:input.description,parentId:input.bubbleId===HOME?null:input.bubbleId,color:'#E8DEF3',image:imageData(input.image)})),
+    updateBubble:(id,input)=>account.updateLibrary(id,input),deleteBubble:id=>account.deleteLibrary(id),
     createNote:input=>account.saveNote(input),createChecklist:input=>account.saveChecklist(input),
-    updateNote:(id,input)=>account.saveNote(input,id),updateChecklist:(id,input)=>account.saveChecklist(input,id),
+    updateNote:(id,input)=>{const entry=account.library.find(value=>value.id===id&&value.kind==='PHOTO');return entry?account.updateLibrary(id,{title:input.title,description:input.body,color:entry.color}):account.saveNote(input,id);},updateChecklist:(id,input)=>account.saveChecklist(input,id),
     toggleChecklistRow:async(id,rowId)=>{const item=account.items.find(item=>item.id===id);const row=item?.rows?.find(row=>row.id===rowId);if(!item||!row)return;
       await account.saveChecklist({title:item.title,rows:(item.rows??[]).map(value=>value.id===rowId?{...value,done:!value.done}:value)},id);},
     deleteNote:async id=>{const item=account.items.find(item=>item.id===id);if(item)await account.remove(item);},
@@ -131,7 +140,7 @@ function LocalContent({ children }: PropsWithChildren) {
       updateBubble: (id, changes) => setBubbles((current) => current.map((bubble) =>
         bubble.id === id ? { ...bubble, title: changes.title.trim(), description: changes.description.trim(), color: changes.color } : bubble)),
       updateNote: (id, changes) => setItems((current) => current.map((item) => {
-        if (item.id !== id || item.type !== 'NOTE') return item;
+        if (item.id !== id || (item.type !== 'NOTE'&&item.type !== 'PHOTO')) return item;
         const body = changes.body.trim();
         return { ...item, updatedAt: Date.now(), title: changes.title.trim() || 'Untitled note', body, preview: body.replace(/\s+/g, ' ').slice(0, 160) };
       })),
@@ -158,7 +167,7 @@ function LocalContent({ children }: PropsWithChildren) {
         setBubbles((current) => current.filter((bubble) => !descendants.has(bubble.id)));
         setItems((current) => current.filter((item) => !descendants.has(item.bubbleId)));
       },
-      deleteNote: (id) => setItems((current) => current.filter((item) => item.id !== id || item.type !== 'NOTE')),
+      deleteNote: (id) => setItems((current) => current.filter((item) => item.id !== id || (item.type !== 'NOTE'&&item.type !== 'PHOTO'))),
       deleteChecklist: (id) => setItems((current) => current.filter((item) => item.id !== id || item.type !== 'CHECKLIST')),
     };
   }, [bubbles, items, bubblesError, itemsError, bubblesLoaded, itemsLoaded]);

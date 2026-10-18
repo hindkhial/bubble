@@ -1,15 +1,16 @@
-import { useTheme } from '../../theme/Theme';
-import type { ThemeColors } from '../../theme/appearance';
+import { useTheme } from '../../../theme/Theme';
+import { CoverPhoto } from '../../../components/CoverPhoto';
+import type { ThemeColors } from '../../../theme/appearance';
 import { useState } from 'react';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { EditContentSheet } from '../../components/EditContentSheet';
-import { ManagementMenu } from '../../components/ManagementMenu';
-import { checklistProgress } from '../../data/sample';
-import { useContent } from '../../state/Content';
-import { spacing } from '../../theme/tokens';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
+import { EditContentSheet } from '../../../components/EditContentSheet';
+import { ManagementMenu } from '../../../components/ManagementMenu';
+import { checklistProgress } from '../../../data/sample';
+import { useContent } from '../../../state/Content';
+import { spacing } from '../../../theme/tokens';
 
 export default function FileDetailScreen() {
   const { colors } = useTheme();
@@ -31,12 +32,14 @@ export default function FileDetailScreen() {
 
   if (!hydrated) return <SafeAreaView style={styles.screen}><ActivityIndicator accessibilityLabel="Loading saved content" /></SafeAreaView>;
 
-  if (!item || !bubble) {
+  if (!item || (item.bubbleId!=='root'&&item.bubbleId!=='account-library'&&!bubble)) {
     if (storageError) return <SafeAreaView style={styles.screen}><Text accessibilityRole="alert" style={{ color: colors.text }}>{storageError}</Text><Pressable accessibilityRole="button" style={{ minHeight: 48, justifyContent: 'center' }} onPress={() => router.replace('/')}><Text style={{ color: colors.action }}>Return home</Text></Pressable></SafeAreaView>;
     return <Redirect href="/" />;
   }
   const isChecklist = item.type === 'CHECKLIST';
-  const manageable = item.type === 'NOTE' || isChecklist;
+  const manageable = item.type === 'NOTE' || isChecklist || item.type==='PHOTO';
+  const kind=item.type.toLowerCase();
+  const destination=bubble?`/bubble/${bubble.id}` as const:'/' as const;
   const rows = item.rows ?? [];
   const progress = checklistProgress(rows);
 
@@ -44,21 +47,21 @@ export default function FileDetailScreen() {
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.toolbar}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace(`/bubble/${bubble.id}`)} style={styles.backButton}><Text style={styles.backArrow}>‹</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace(destination)} style={styles.backButton}><Text style={styles.backArrow}>‹</Text></Pressable>
           <Text style={styles.toolbarTitle} numberOfLines={1}>{item.type === 'NOTE' ? 'Note' : isChecklist ? 'Checklist' : 'Photo'}</Text>
-          {manageable && <Pressable accessibilityRole="button" accessibilityLabel={`Manage ${item.title} ${isChecklist ? 'checklist' : 'note'}`} onPress={() => setMenuOpen(true)} style={styles.manageButton}><Text style={styles.manageText}>···</Text></Pressable>}
+          {manageable && <Pressable accessibilityRole="button" accessibilityLabel={`Manage ${item.title} ${kind}`} onPress={() => setMenuOpen(true)} style={styles.manageButton}><Text style={styles.manageText}>···</Text></Pressable>}
         </View>
         <View style={styles.path}>
           <Pressable accessibilityRole="button" style={{ minHeight: 48, justifyContent: 'center' }} onPress={() => router.replace('/')}><Text style={styles.pathLink}>Home</Text></Pressable>
-          <Text style={styles.chevron}>›</Text>
-          <Pressable accessibilityRole="button" onPress={() => router.push(`/bubble/${bubble.id}`)}><Text style={styles.pathLink} numberOfLines={1}>{bubble.title}</Text></Pressable>
+          {bubble?<><Text style={styles.chevron}>›</Text>
+          <Pressable accessibilityRole="button" onPress={() => router.push(destination)}><Text style={styles.pathLink} numberOfLines={1}>{bubble.title}</Text></Pressable></>:null}
           <Text style={styles.chevron}>›</Text>
           <Text style={styles.pathCurrent} numberOfLines={1}>{item.title}</Text>
         </View>
 
         {item.type === 'PHOTO' && item.image ? (
           <View style={[styles.photoFrame, { height: Math.min(width * 0.78, 360) }]}>
-            <Image source={item.image} resizeMode="contain" style={styles.photo} accessibilityLabel={item.title} />
+            <CoverPhoto source={item.image} style={styles.photo} />
           </View>
         ) : null}
 
@@ -75,7 +78,7 @@ export default function FileDetailScreen() {
       </ScrollView>
       {manageable && <ManagementMenu visible={menuOpen} title={item.title} onClose={() => setMenuOpen(false)} onEdit={() => afterMenuCloses(() => setEditing(true))} onDelete={() => afterMenuCloses(() => setConfirmDelete(true))} />}
       {manageable && editing && <EditContentSheet entry={item} onClose={() => setEditing(false)} onSave={async (draft) => { if (isChecklist) await updateChecklist(item.id, draft); else await updateNote(item.id, draft); setEditing(false); }} />}
-      <ConfirmDialog visible={confirmDelete} title={`Delete ${item.title}?`} message={storageError || `This ${isChecklist ? 'checklist' : 'note'} will be removed from its Bubble. This cannot be undone.`} confirmLabel={`Delete ${isChecklist ? 'checklist' : 'note'}`} onCancel={() => setConfirmDelete(false)} onConfirm={async () => { try {if(isChecklist)await deleteChecklist(item.id);else await deleteNote(item.id);setConfirmDelete(false);router.replace(`/bubble/${bubble.id}`);}catch{/* Account banner keeps the failure visible; nothing is optimistically removed. */} }} />
+      <ConfirmDialog visible={confirmDelete} title={`Delete ${item.title}?`} message={storageError || `This ${kind} will be deleted from your saved content. This cannot be undone.`} confirmLabel={`Delete ${kind}`} onCancel={() => setConfirmDelete(false)} onConfirm={async () => { try {if(isChecklist)await deleteChecklist(item.id);else await deleteNote(item.id);setConfirmDelete(false);router.replace(destination);}catch{/* Account banner keeps the failure visible; nothing is optimistically removed. */} }} />
     </SafeAreaView>
   );
 }

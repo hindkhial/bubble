@@ -139,6 +139,31 @@ class AuthenticationIntegrationTest {
         assertTrue(response.headers().firstValue("cache-control").orElseThrow().contains("no-store"));
     }
 
+    @Test void restoredNativeStyleCookieUsesServerProfileOwnerAndStopsAfterLogout() throws Exception {
+        var first = client(); var second = client();
+        String firstEmail = email(); String secondEmail = email();
+        assertEquals(201, first.register(firstEmail).statusCode());
+        assertEquals(201, second.register(secondEmail).statusCode());
+        assertEquals(200, first.login(firstEmail).statusCode());
+        assertEquals(200, second.login(secondEmail).statusCode());
+        var change = first.send(HttpRequest.newBuilder(URI.create(base + "/api/v1/profile"))
+                .header("Content-Type", "application/json").header("X-CSRF-TOKEN", first.csrf())
+                .method("PATCH", HttpRequest.BodyPublishers.ofString("{\"displayName\":\"Synthetic First Owner\"}")));
+        assertEquals(200, change.statusCode());
+        String secondId = AuthTestClient.JSON.readTree(second.get("/api/v1/users/me").body()).get("id").asString();
+        String session = first.session();
+        var restored = HttpClient.newHttpClient();
+        var request = HttpRequest.newBuilder(URI.create(base + "/api/v1/profile?userId=" + secondId))
+                .header("Cookie", "BUBBLE_SESSION=" + session).GET().build();
+        var profile = restored.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, profile.statusCode());
+        assertEquals("Synthetic First Owner", AuthTestClient.JSON.readTree(profile.body()).get("displayName").asString());
+        assertEquals("Bubble Tester", AuthTestClient.JSON.readTree(second.get("/api/v1/profile").body()).get("displayName").asString());
+        assertEquals(204, first.post("/api/v1/auth/logout", Map.of()).statusCode());
+        assertEquals(401, restored.send(request, HttpResponse.BodyHandlers.ofString()).statusCode());
+        assertEquals(200, second.get("/api/v1/profile").statusCode());
+    }
+
     HttpResponse<String> replay(String session) throws Exception {
         return HttpClient.newHttpClient().send(HttpRequest.newBuilder(URI.create(base + "/api/v1/users/me"))
                 .header("Cookie", "BUBBLE_SESSION=" + session).GET().build(), HttpResponse.BodyHandlers.ofString());

@@ -1,6 +1,6 @@
 import { observeReducedMotion } from './motion';
 import { useAccount } from '../state/Account';
-import { AccessibilityInfo, useColorScheme } from 'react-native';
+import { AccessibilityInfo, Platform, useColorScheme } from 'react-native';
 import { useLocalState } from '../storage/useLocalState';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { PropsWithChildren } from 'react';
@@ -12,7 +12,7 @@ function useAppearanceState() {
   const [localMode, setLocalMode, modeError] = useLocalState<AppearanceMode | 'system'>('bubble.mode.v1', () => 'light', (value): value is AppearanceMode | 'system' => value === 'light' || value === 'dark' || value === 'system');
   const [localAccent, setLocalAccent, accentError] = useLocalState<AccentName>('bubble.accent.v1', () => 'Lavender', (value): value is AccentName => ['Lavender', 'Rose', 'Sage', 'Deep lavender', 'Sky blue', 'Dusty pink', 'Denim blue'].includes(String(value)));
   const account=useAccount();const system=useColorScheme();
-  const remote=account.mode==='account';
+  const remote=account.mode==='account' && !!account.user && (Platform.OS!=='ios'||account.nativeVerified);
   const selectedMode = remote ? (account.preferences?.themeMode ?? 'LIGHT').toLowerCase() as 'light'|'dark'|'system' : localMode;
   const mode: AppearanceMode = selectedMode==='system' ? system==='dark'?'dark':'light' : selectedMode;
   const accent = remote ? (account.preferences?.accentColor ?? 'Lavender') as AccentName : localAccent;

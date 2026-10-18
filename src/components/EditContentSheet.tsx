@@ -1,7 +1,7 @@
 import { usePreventRemove } from 'expo-router/react-navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MotionAwareModal as Modal } from './MotionAwareModal';
-import { themedAvatarColor } from '../theme/appearance';
+import { bubbleShade } from '../theme/appearance';
 import { useTheme } from '../theme/Theme';
 import type { ThemeColors } from '../theme/appearance';
 import { useRef, useState } from 'react';
@@ -20,11 +20,12 @@ export function EditContentSheet({ entry, onSave, onClose }: {
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
-  const { colors, mode } = useTheme();
+  const { colors, mode, accent } = useTheme();
   const styles = createFormStyles(colors);
   const navigation = useNavigation();
   const isBubble = 'parentId' in entry;
   const isChecklist = !isBubble && entry.type === 'CHECKLIST';
+  const isPhoto = !isBubble && entry.type === 'PHOTO';
   const initial = {
     title: entry.title,
     description: isBubble ? entry.description : '',
@@ -68,7 +69,7 @@ export function EditContentSheet({ entry, onSave, onClose }: {
     if (saving.current) return;
     if (isBubble && !title.trim()) { setError('Please give your Bubble a title.'); return; }
     if (isChecklist && !rows.some((row) => row.text.trim())) { setError('Add at least one checklist item before saving.'); return; }
-    if (!isBubble && !isChecklist && !body.trim()) { setError('Write a little text before saving your note.'); return; }
+    if (!isBubble && !isChecklist && entry.type==='NOTE' && !body.trim()) { setError('Write a little text before saving your note.'); return; }
     saving.current = true;
     try { await onSave({ title, description, color, body, rows });bypass.current=true; }
     catch(problem){setError(problem instanceof Error?problem.message:'Could not save.');}
@@ -83,21 +84,21 @@ export function EditContentSheet({ entry, onSave, onClose }: {
         <View style={[styles.sheet, { paddingBottom: Math.max(30, insets.bottom) }]} accessibilityViewIsModal={!discardOpen} accessibilityElementsHidden={discardOpen} importantForAccessibility={discardOpen ? 'no-hide-descendants' : 'auto'}>
           <View style={styles.handle} />
           <ScrollView keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <Text style={styles.title}>{isBubble ? 'Edit Bubble' : isChecklist ? 'Edit checklist' : 'Edit note'}</Text>
+            <Text style={styles.title}>{isBubble ? 'Edit Bubble' : isChecklist ? 'Edit checklist' : isPhoto ? 'Edit photo' : 'Edit note'}</Text>
             <Text style={styles.intro}>Your changes will appear right away.</Text>
             <Text style={styles.label}>Title {isBubble ? '*' : '(optional)'}</Text>
-            <TextInput accessibilityLabel={isBubble ? 'Bubble title' : isChecklist ? 'Checklist title' : 'Note title'} style={styles.input} placeholder={isBubble ? 'Give it a name' : isChecklist ? 'Untitled checklist' : 'Untitled note'} placeholderTextColor={colors.muted} value={title} onChangeText={(value) => { setTitle(value); setError(''); }} maxLength={isBubble ? 80 : 100} />
+            <TextInput accessibilityLabel={isBubble ? 'Bubble title' : isChecklist ? 'Checklist title' : isPhoto ? 'Photo title' : 'Note title'} style={styles.input} placeholder={isBubble ? 'Give it a name' : isChecklist ? 'Untitled checklist' : isPhoto ? 'Untitled photo' : 'Untitled note'} placeholderTextColor={colors.muted} value={title} onChangeText={(value) => { setTitle(value); setError(''); }} maxLength={isBubble ? 80 : 100} />
             {isBubble ? <>
               <Text style={styles.label}>Description (optional)</Text>
               <TextInput accessibilityLabel="Bubble description" style={[styles.input, styles.description]} multiline textAlignVertical="top" value={description} onChangeText={setDescription} maxLength={280} />
               <Text style={styles.label}>Color</Text>
-              <View style={styles.swatches}>{bubblePalette.map((option) => <Pressable key={option.name} accessibilityRole="button" accessibilityLabel={`${option.name} color${color === option.value ? ', selected' : ''}`} onPress={() => setColor(option.value)} style={[styles.swatch, { backgroundColor: themedAvatarColor(option.value, mode) }, color === option.value && styles.swatchSelected]}><Text style={styles.swatchCheck}>{color === option.value ? '✓' : ''}</Text></Pressable>)}</View>
+              <View style={styles.swatches}>{bubblePalette.map((option) => <Pressable key={option.name} accessibilityRole="button" accessibilityLabel={`${option.name} color${color === option.value ? ', selected' : ''}`} onPress={() => setColor(option.value)} style={[styles.swatch, { backgroundColor: bubbleShade(option.value, mode, accent) }, color === option.value && styles.swatchSelected]}><Text style={styles.swatchCheck}>{color === option.value ? '✓' : ''}</Text></Pressable>)}</View>
             </> : isChecklist ? <>
               <Text style={styles.label}>Items *</Text>
               <ChecklistEditorRows rows={rows} onChange={(next) => { setRows(next); setError(''); }} />
             </> : <>
-              <Text style={styles.label}>Your note *</Text>
-              <TextInput accessibilityLabel="Note text" style={[styles.input, styles.noteBody]} multiline textAlignVertical="top" value={body} onChangeText={(value) => { setBody(value); setError(''); }} />
+              <Text style={styles.label}>{!isBubble&&entry.type==='PHOTO'?'Description (optional)':'Your note *'}</Text>
+              <TextInput accessibilityLabel={!isBubble&&entry.type==='PHOTO'?'Photo description':'Note text'} style={[styles.input, styles.noteBody]} multiline textAlignVertical="top" value={body} onChangeText={(value) => { setBody(value); setError(''); }} />
             </>}
             {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
             <Pressable accessibilityRole="button" onPress={save} style={styles.save}><Text style={styles.saveText}>Save changes</Text></Pressable>

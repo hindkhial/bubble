@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { profileChanges } from '../api/account';
 import { useAccount } from './Account';
 import { persistProfilePhoto, profilePhotoUri } from '../storage/profilePhoto';
@@ -12,7 +13,19 @@ const ProfileContext = createContext<{ profile: Profile; storageError: string | 
 
 export function ProfileProvider({children}: PropsWithChildren) {
   const account=useAccount();
-  if(account.mode==='account')return <ProfileContext.Provider value={{profile:{displayName:account.profile?.displayName??'Your account',bio:account.profile?.bio??'',avatarColor:colors.lavenderSoft,avatarReference:account.profile?.avatarReference??null},storageError:account.error||null,updateProfile:profile=>{if(!account.profile)return Promise.reject(new Error('Load your account profile first.'));const changes=profileChanges(account.profile,profile);return Object.keys(changes).length?account.patchProfile(changes):Promise.resolve();}}}>{children}</ProfileContext.Provider>;
+  if(account.mode==='account'){
+    const assets=Platform.OS==='ios'?account.profileAssets:{};
+    return <ProfileContext.Provider value={{
+      profile:{displayName:account.profile?.displayName??'Your account',bio:account.profile?.bio??'',avatarColor:assets.avatarColor??colors.lavenderSoft,avatarEmoji:assets.avatarEmoji,imageUri:assets.imageUri,avatarReference:account.profile?.avatarReference??null},
+      storageError:account.error||null,
+      updateProfile:async profile=>{
+        if(!account.profile)throw new Error('Load your account profile first.');
+        const changes=profileChanges(account.profile,profile);
+        if(Object.keys(changes).length)await account.patchProfile(changes);
+        if(Platform.OS==='ios')await account.patchProfileAssets(profile);
+      }
+    }}>{children}</ProfileContext.Provider>;
+  }
   return <LocalProfile>{children}</LocalProfile>;
 }
 function LocalProfile({ children }: PropsWithChildren) {

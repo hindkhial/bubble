@@ -41,3 +41,24 @@ export function getThemeColors(mode: AppearanceMode, accentName: AccentName): Th
 export function themedAvatarColor(value: string, mode: AppearanceMode) {
   return mode === 'dark' ? (value === colors.lavender ? accentPalette[0].dark : accentPalette.find((option) => option.value === value)?.dark) ?? value : value;
 }
+
+export const bubblePalette = [
+  { name: 'Medium', value: colors.lavender },
+  { name: 'Light', value: colors.lavenderSoft },
+  { name: 'Deep', value: colors.lavenderDeep },
+] as const;
+
+// Keep the stored shade keys compatible with existing Bubbles while rendering
+// each shade in the current app accent instead of permanently storing purple.
+export function bubbleShade(value: string, mode: AppearanceMode, accentName: AccentName): string {
+  const accent = accentPalette.find(option => option.name === accentName) ?? accentPalette[0];
+  const base = mode === 'dark' ? accent.dark : accent.value;
+  const index = bubblePalette.findIndex(option => option.value === value);
+  if (index < 0) return themedAvatarColor(value, mode);
+  if (index === 0) return base;
+  const target = index === 1 ? 255 : 0;
+  const amount = mode === 'dark' ? (index === 1 ? 0.06 : 0.15) : (index === 1 ? 0.4 : 0.08);
+  return '#' + base.slice(1).match(/../g)!.map(channel =>
+    Math.round(parseInt(channel, 16) * (1 - amount) + target * amount).toString(16).padStart(2, '0')
+  ).join('');
+}
