@@ -1,30 +1,18 @@
-import { AccountNotice } from '../components/AccountNotice';
 import { AccountProvider, useAccount } from '../state/Account';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { ThemeProvider, useTheme } from '../theme/Theme';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { PinsProvider } from '../state/Pins';
-import { ContentProvider } from '../state/Content';
-import { ProfileProvider } from '../state/Profile';
-
 export default function RootLayout() {
-  return <AccountProvider><Bootstrap /></AccountProvider>;
+  return <SafeAreaProvider><AccountProvider><ThemeProvider><Routes /></ThemeProvider></AccountProvider></SafeAreaProvider>;
 }
-
-function Bootstrap() {
-  const account=useAccount();
-  return !account.ready ? <View style={{flex:1,justifyContent:'center'}}><ActivityIndicator accessibilityLabel="Opening your workspace" /></View> : <ThemeProvider><ThemedLayout /></ThemeProvider>;
-}
-function ThemedLayout() {
-  const { colors, mode, reduceMotion } = useTheme();
-  return (
-    <SafeAreaProvider>
-      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-      <ProfileProvider><ContentProvider><PinsProvider>
-        <View style={{flex:1}}><AccountNotice /><Stack screenOptions={{ headerShown: false, ...(reduceMotion ? { animation: 'none' as const } : {}), contentStyle: { backgroundColor: colors.background } }} /></View>
-      </PinsProvider></ContentProvider></ProfileProvider>
-    </SafeAreaProvider>
-  );
+function Routes() {
+  const account=useAccount();const {colors,mode,reduceMotion}=useTheme();
+  if(!account.ready)return <View style={{flex:1,justifyContent:'center',backgroundColor:colors.background}}><ActivityIndicator accessibilityLabel="Verifying your session" color={colors.action}/></View>;
+  const authenticated=Platform.OS!=='ios'||account.nativeVerified;
+  return <><StatusBar style={mode==='dark'?'light':'dark'}/><Stack screenOptions={{headerShown:false,contentStyle:{backgroundColor:colors.background},...(reduceMotion?{animation:'none' as const}:{})}}>
+    <Stack.Protected guard={!authenticated}><Stack.Screen name="(auth)"/></Stack.Protected>
+    <Stack.Protected guard={authenticated}><Stack.Screen name="(app)"/></Stack.Protected>
+  </Stack></>;
 }

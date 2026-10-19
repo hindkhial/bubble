@@ -1,19 +1,19 @@
-import { MotionAwareModal as Modal } from '../components/MotionAwareModal';
+import { MotionAwareModal as Modal } from '../../components/MotionAwareModal';
 import { useRouter } from 'expo-router';
-import { useAccount } from '../state/Account';
-import { AppearanceSheet } from '../components/AppearanceSheet';
-import { useTheme } from '../theme/Theme';
-import type { ThemeColors } from '../theme/appearance';
+import { useAccount } from '../../state/Account';
+import { AppearanceSheet } from '../../components/AppearanceSheet';
+import { useTheme } from '../../theme/Theme';
+import type { ThemeColors } from '../../theme/appearance';
 import { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BottomNavigation } from '../components/BottomNavigation';
-import { EditProfileSheet } from '../components/EditProfileSheet';
-import { ProfileAvatar } from '../components/ProfileAvatar';
-import { useProfile } from '../state/Profile';
-import { useContent } from '../state/Content';
-import { profileActivity } from '../utils/profile';
-import { spacing } from '../theme/tokens';
+import { BottomNavigation } from '../../components/BottomNavigation';
+import { EditProfileSheet } from '../../components/EditProfileSheet';
+import { ProfileAvatar } from '../../components/ProfileAvatar';
+import { useProfile } from '../../state/Profile';
+import { useContent } from '../../state/Content';
+import { profileActivity } from '../../utils/profile';
+import { spacing } from '../../theme/tokens';
 
 export default function YouScreen() {
   const account=useAccount();const router=useRouter();
@@ -42,12 +42,12 @@ export default function YouScreen() {
       <View style={styles.activity}>
         {[
           { value: activity.notes, label: 'Total notes' },
-          { value: account.mode==='account'?items.filter(item=>item.type==='CHECKLIST').length:activity.bubbles, label: account.mode==='account'?'Total lists':'Total Bubbles' },
+          { value: activity.bubbles, label:'Total Bubbles' },
         ].map((stat) => <View key={stat.label} accessible accessibilityLabel={`${stat.label}: ${stat.value}`} style={styles.stat}>
           <Text style={styles.statValue}>{stat.value}</Text><Text style={styles.statLabel}>{stat.label}</Text>
         </View>)}
       </View>
-      <Text style={styles.activityHelp}>{account.mode==='account'?'Account notes include your notes and lists. Bubbles and photos remain local.':'Every note, list, task, and photo counts as a note. Bubbles include your nested spaces.'}</Text>
+      <Text style={styles.activityHelp}>Every note, list, task, and photo counts as a note. Bubbles include your nested spaces.</Text>
       {!items.length ? <Text style={styles.activityHelp}>A fresh start. Add your first note or list from the Add tab.</Text> : null}
       <Text accessibilityRole="header" style={styles.sectionTitle}>Settings</Text>
       <View style={styles.settings}>

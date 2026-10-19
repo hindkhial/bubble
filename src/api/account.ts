@@ -20,7 +20,7 @@ export class AccountRepository {
   api: ApiClient;
   constructor(api: ApiClient) { this.api = api; }
   register(email: string, password: string, displayName: string) { return this.api.request<Account>('POST','/auth/register',{email,password,displayName}); }
-  async login(email: string, password: string) { try {const result = await this.api.request<Account>('POST','/auth/login',{email,password}); this.api.resetCsrf(); return result;}catch(error){if(error instanceof ApiError && error.status===401)throw new ApiError('Email or password is incorrect.',401);throw error;} }
+  async login(email: string, password: string) { try {const result = await this.api.request<Account>('POST','/auth/login',{email,password}); this.api.resetCsrf(); return result;}catch(error){if(error instanceof ApiError && error.status===401&&!error.privateGate)throw new ApiError('Email or password is incorrect.',401);throw error;} }
   async logout() { await this.api.request('POST','/auth/logout'); this.api.resetCsrf(); }
   me() { return this.api.request<Account>('GET','/users/me'); }
   async pages(path: string, size = 100, signal?: AbortSignal): Promise<ServerItem[]> {

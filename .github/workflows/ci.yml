@@ -93,5 +93,5 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends apache2-utils libnss3-tools
           pnpm exec playwright install --with-deps chromium
-      - name: Nine scenarios with sandbox and isolated HTTPS trust
+      - name: Browser scenarios with sandbox and isolated HTTPS trust
         run: node scripts/ci/browser-tests.mjs

@@ -2,10 +2,32 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ApiClient, ApiError, apiBase } from '../src/api/client.ts';
 import { AccountRepository, toItem, profileChanges } from '../src/api/account.ts';
-import { copyLocalItems, importLedgerKey } from '../src/api/importLocal.ts';
+import { copyLocalItems, importLedgerKey, verifyAccountCopy } from '../src/api/importLocal.ts';
 const response=(body,status=200)=>new Response(status===204?null:JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});
 const serverItem={id:'11111111-1111-4111-8111-111111111111',title:'Test',content:'Body',pinned:true,createdAt:'2026-01-01T00:00:00Z',updatedAt:'2026-01-02T00:00:00Z'};
 const memory=()=>{const data=new Map();return {getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value),data};};
+test('native copy retries verify known server IDs without uploading duplicate content',async()=>{
+ const storage=memory();storage.setItem('bubble.items.v1','originals');let writes=0,checks=0;
+ const repo={api:{base:'https://localhost'},saveNote:async()=>{writes++;return {id:serverItem.id};}};
+ const selected=[{id:'local',title:'Test',type:'NOTE',body:'Body'}];
+ const verify=async()=>{if(++checks===1)throw new ApiError('Read failed',401);};
+ await assert.rejects(()=>copyLocalItems(repo,storage,'owner',selected,verify));
+ assert.equal(JSON.parse(storage.getItem(importLedgerKey(repo.api.base,'owner'))).local.state,'pending');
+ assert.equal(await copyLocalItems(repo,storage,'owner',selected,verify),0);
+ assert.equal(writes,1);assert.equal(checks,2);assert.equal(storage.getItem('bubble.items.v1'),'originals');
+});
+test('native copy verification rejects mismatched content and incomplete checklist rows',async()=>{
+ const repo={api:{request:async()=>({...serverItem,content:'different'})}};
+ await assert.rejects(()=>verifyAccountCopy(repo,serverItem.id,{type:'NOTE',title:'Test',body:'Body'}),/did not match/);
+ await assert.rejects(()=>verifyAccountCopy(repo,serverItem.id,{type:'CHECKLIST',title:'Test',body:'',rows:[{text:'Tea',done:true}]}),/did not match/);
+ await assert.rejects(()=>verifyAccountCopy(repo,'invalid',{type:'NOTE',title:'Test',body:'Body'}),/invalid copy ID/);
+});
+test('private tester gate errors are distinct from an invalid application password',async()=>{
+ const gated=new AccountRepository(new ApiClient('https://localhost',async()=>new Response('',{status:401,headers:{'WWW-Authenticate':'Basic realm="Private beta"'}})));
+ await assert.rejects(()=>gated.login('synthetic@example.test','synthetic-test-password'),error=>error instanceof ApiError&&error.privateGate&&/invitation/.test(error.message));
+ const denied=new AccountRepository(new ApiClient('https://localhost',async url=>url.endsWith('/csrf')?response({token:'synthetic-csrf'}):response({},401)));
+ await assert.rejects(()=>denied.login('synthetic@example.test','wrong-synthetic-password'),error=>error instanceof ApiError&&!error.privateGate&&error.message==='Email or password is incorrect.');
+});
 test('safe cancellation works without AbortSignal.any and releases caller listeners',async()=>{
  const any=AbortSignal.any;AbortSignal.any=undefined;
  try {
@@ -79,7 +101,7 @@ test('photos are never sent through the content copy path',async()=>{const stora
 
 test('browser fetch is invoked with a valid global receiver',async()=>{const api=new ApiClient('http://localhost',function(){assert.equal(this,globalThis);return Promise.resolve(response({}));});await api.request('GET','/users/me');});
 
-test('invalid API configuration does not break construction or local-only use',async()=>{let calls=0;const api=new ApiClient('invalid URL',async()=>{calls++;return response({});});await assert.rejects(()=>api.request('GET','/users/me'),/Local mode remains available/);assert.equal(calls,0);});
+test('invalid API configuration does not break construction or local-only use',async()=>{let calls=0;const api=new ApiClient('invalid URL',async()=>{calls++;return response({});});await assert.rejects(()=>api.request('GET','/users/me'),/device content is unchanged/);assert.equal(calls,0);});
 test('duplicate local IDs stop copying before any server write',async()=>{let writes=0;const repo={api:{base:'http://localhost'},saveNote:async()=>{writes++;return{id:'new'};}};const value={id:'same',type:'NOTE',title:'one',body:'body'};await assert.rejects(()=>copyLocalItems(repo,memory(),'owner',[value,{...value,title:'two'}]),/duplicate IDs/);assert.equal(writes,0);});
 
 test('malformed local checklist data is blocked before upload',async()=>{let writes=0;const repo={api:{base:'http://localhost'},saveChecklist:async()=>{writes++;return{id:'new'};}};await assert.rejects(()=>copyLocalItems(repo,memory(),'owner',[{id:'local',type:'CHECKLIST',title:'Invalid',body:'',rows:'corrupt'}]),/validated/);assert.equal(writes,0);});

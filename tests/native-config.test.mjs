@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { nativeApiBase } from '../src/api/native.ts';
 test('native API has no HTTP fallback, refuses insecure/credential URLs and accepts explicit HTTPS',()=>{
  assert.equal(nativeApiBase(), '');assert.equal(nativeApiBase('https://private.example.test/'),'https://private.example.test');
- for(const url of ['http://localhost:8080','https://user:secret@example.test','https://example.test?token=secret','file:///private'])assert.throws(()=>nativeApiBase(url));
+ for(const url of ['http://localhost:8080','https://user:secret@example.test','https://example.test?token=secret','https://example.test/backend','file:///private'])assert.throws(()=>nativeApiBase(url));
 });
 test('local development identity and Expo native configuration preserve TLS and photo scope',()=>{
  const c=JSON.parse(readFileSync(new URL('../app.json',import.meta.url))).expo;

@@ -1,5 +1,72 @@
 # Bubble testing and stability
 
+## Native accounts and account library — 2026-10-18
+
+This candidate is **not release-approved**. See [IOS-ACCOUNTS.md](IOS-ACCOUNTS.md)
+for the authentication design, account photo limits, legacy data recovery and the
+separate owner-executed Simulator results. Historic all-green runs below do not
+supersede the current outstanding browser checks.
+
+Local results:
+
+- Passed: 87 frontend tests and TypeScript checks, including a regression check
+  for whitespace text children that React Native rejects in its Add sheet.
+- Passed: all 67 Java 21/PostgreSQL tests, Maven packaging, Flyway V1–V3, private
+  image ownership checks, image validation, atomic destinations and preservation
+  of contents when deleting an account Bubble.
+- Passed: iOS Hermes export and frontend/backend production container builds.
+  JavaScript exports do not stand in for native compilation or a physical test.
+  The existing native session module was built successfully in Xcode and the
+  owner confirmed native registration/login/logout/restoration; no new native
+  dependency or Swift changes were required for the account library extension.
+- Passed: protected pre-update database backup, restoration into a new temporary
+  database, and exact row comparisons confirming all pre-existing user/profile/
+  note/checklist/item/preference records were unchanged after V3. The temporary
+  comparison database was removed; the original volume and backup remain.
+- Passed: current running frontend, backend and PostgreSQL images scanned with
+  the pinned Trivy scanner, with no reported vulnerabilities. Running image and
+  tag identities were rechecked against the scan summary. This is an image result,
+  not closure of the previously documented development dependency advisories.
+- Final clean local browser rerun: **10 Passed, 0 Failed, 0 Skipped, 0 Flaky** across
+  the nine existing scenarios plus one new account-library scenario. This includes
+  synthetic Bubble/Photo upload, refresh, image loading, standalone Home notes and
+  photo-description search. Earlier runs recorded two failures (login expectation
+  and a 45-second local scenario deadline); those historical failures are not erased
+  by the clean rerun. The first run also identified an expired-session/no-results
+  regression, which was fixed. An ambiguous new-test selector was corrected.
+- Passed in the disposable browser: full CA fingerprint validation, TLS rejection
+  before trust, acceptance using isolated temporary trust with Chromium sandbox
+  enabled, and renewed rejection after trust removal. No macOS trust store was
+  changed. Non-root execution, dropped capabilities, no privileged mode or new
+  published ports were retained.
+
+Docker Desktop temporarily became unavailable. After recovery the clean browser
+rerun completed, certificate distrust was reconfirmed and `bubble-browser-library`
+was removed. Staging containers/volumes and the original Simulator were preserved.
+Normal TLS verification and Chromium's sandbox remained enabled throughout.
+
+Owner additionally confirmed all four Add options, standalone note creation on
+Home, required-cover validation and Bubble creation with a cover in Simulator.
+A native Add-sheet text warning was fixed by removing stray JSX
+spaces; it is covered by automated regression tests. Saving while already on Home
+also avoids replacing the current Home route unnecessarily.
+
+Not Tested: standalone Photo creation and detailed image layouts in Simulator, cross-device sync on
+physical iPhones, native transfer confirmation/recovery, native offline auth
+failure/deep-link behavior, and remaining VoiceOver, focus, zoom, Dynamic Type and
+physical-device release gates. Account mode still requires online verification;
+the older owner-verified offline local-mode checks below are a separate behavior.
+
+At `9845c4a`, hosted GitHub run 39169748990 passed frontend and backend jobs but
+failed its browser job: nine scenarios passed and the new account-library scenario
+failed. Improved safe diagnostics in follow-up run 39170452788 identified the photo
+search assertion after an immediate reload. The test now waits for the server-
+confirmed photo card before refreshing, rather than potentially cancelling the
+in-flight upload. Both runs passed frontend/backend jobs and the existing nine
+browser scenarios. A follow-up hosted run must verify the corrected test. Keep
+PR #11 draft until hosted checks and required native validation are satisfied;
+a successful local rerun is not hosted verification.
+
 **Verified release-readiness baseline (2026-10-16): all three GitHub CI jobs Passed** at `2eeee6c5b8e4a793016fd433ff5e209c4b0d7593`: 53 frontend tests, 62 backend tests, TypeScript, web build, backend packaging and all nine browser scenarios. The hosted recovery drill and temporary-trust removal also Passed. See the final hosted evidence below. Two high dependency advisories and human manual gates still block release. Earlier failure/pending records are historical.
 
 ## Application setup

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+const { Buffer } = require('node:buffer');
 import { stagingCredentials } from '../scripts/staging-auth.mjs';
 const randomUUID = () => crypto.randomUUID();
 
@@ -32,11 +33,7 @@ async function search(page: Page, query: string) {
 async function createNote(page: Page, title = 'Browser note') {
   await page.getByRole('button', { name: 'Add content', exact: true }).click();
   await page.getByRole('button', { name: /Note.*Write a thought/ }).click();
-  const destination = page.getByRole('button', { name: 'Choose destination Bubble' });
-  if ((await destination.textContent())?.includes('Choose a Bubble')) {
-    await destination.click();
-    await page.getByRole('button', { name: /Test space/ }).click();
-  }
+  await expect(page.getByRole('button', { name: 'Choose Home or a destination Bubble' })).toContainText('Home');
   await page.getByRole('textbox', { name: 'Note title', exact: true }).fill(title);
   await page.getByRole('textbox', { name: 'Note text', exact: true }).fill('A searchable browser thought');
   await page.getByRole('button', { name: 'Save note', exact: true }).click();
@@ -46,6 +43,43 @@ async function edit(page: Page, title: string, kind = 'note') {
   await page.getByRole('button', { name: `Manage ${title} ${kind}`, exact: true }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
 }
+
+test('account Bubbles and photos sync privately while Home remains the default destination', async ({page})=>{
+  await register(page);
+  await page.goto('/');
+  await page.getByRole('button',{name:'Add content',exact:true}).click();
+  await page.getByRole('button',{name:/Bubble.*A collection/}).click();
+  await page.getByRole('textbox',{name:'Bubble title',exact:true}).fill('Synthetic cover Bubble');
+  await page.getByRole('button',{name:'Create Bubble',exact:true}).click();
+  await expect(page.getByRole('alert').last()).toContainText('Choose a cover photo');
+  const chooser=page.waitForEvent('filechooser');
+  await page.getByRole('button',{name:'Choose cover photo',exact:true}).click();
+  // Public synthetic one-pixel PNG, never a personal photo.
+  await (await chooser).setFiles({name:'synthetic.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','base64')});
+  await page.getByRole('button',{name:'Create Bubble',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Open Synthetic cover Bubble Bubble',exact:true})).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('button',{name:'Open Synthetic cover Bubble Bubble',exact:true})).toBeVisible();
+  await createNote(page,'Standalone account thought');
+  await expect(page.getByRole('button',{name:'Open Standalone account thought note',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Open Standalone account thought note',exact:true}).click();
+  await expect(page).toHaveURL(/\/file\//);
+  await expect(page.getByText('A searchable browser thought',{exact:true}).last()).toBeVisible();
+  await page.goto('/');
+  await page.getByRole('button',{name:'Add content',exact:true}).click();
+  await page.getByRole('button',{name:/Photo.*Keep an image/}).click();
+  await expect(page.getByRole('button',{name:'Choose Home or a destination Bubble'})).toContainText('Home');
+  const photo=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Choose photo',exact:true}).click();
+  await (await photo).setFiles({name:'synthetic.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','base64')});
+  await page.getByRole('textbox',{name:'Photo title',exact:true}).fill('Synthetic cloud photo');
+  await page.getByRole('textbox',{name:'Photo description',exact:true}).fill('Photo keyword orchid');
+  await page.getByRole('button',{name:'Save photo',exact:true}).click();
+  // Wait for server-confirmed creation before simulating a restart. Reloading
+  // immediately after the click can cancel the upload on a slower CI runner.
+  await expect(page.getByRole('button',{name:'Open Synthetic cloud photo photo',exact:true})).toBeVisible();
+  await page.reload();await search(page,'orchid');
+  await expect(page.getByRole('button',{name:'Open Synthetic cloud photo photo',exact:true})).toBeVisible();
+});
 
 test('local notes survive offline editing, refresh and a new browser context', async ({ page, browser, baseURL }) => {
   const accountCalls: string[] = [];

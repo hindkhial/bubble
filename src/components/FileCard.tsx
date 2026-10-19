@@ -6,6 +6,7 @@ import { checklistProgress } from '../data/sample';
 import type { SampleItem } from '../data/sample';
 import { spacing } from '../theme/tokens';
 import { CoverPhoto } from './CoverPhoto';
+import { coverHeight } from '../utils/bubbleCover';
 import { PinnedMarker } from './PinnedMarker';
 
 export function FileCard({ item, pinned, onOpenActions }: { item: SampleItem; pinned: boolean; onOpenActions: () => void }) {
@@ -14,7 +15,7 @@ export function FileCard({ item, pinned, onOpenActions }: { item: SampleItem; pi
   const router = useRouter();
   const { width } = useWindowDimensions();
   const columnWidth = (width - spacing.page * 2 - 12) / 2;
-  const photoHeight = Math.max(115, Math.min(260, columnWidth * (item.cardImageRatio ?? 1)));
+  const photoRatio = 1 / coverHeight(1, item.cardImageRatio);
   const isNote = item.type === 'NOTE';
   const isChecklist = item.type === 'CHECKLIST';
   const checklistRows = item.rows ?? [];
@@ -31,7 +32,7 @@ export function FileCard({ item, pinned, onOpenActions }: { item: SampleItem; pi
       delayLongPress={450}
       style={({ pressed }) => [pressed && styles.pressed]}
     >
-      {!isNote && item.image ? <CoverPhoto source={item.image} style={[styles.photo, { height: photoHeight }]} /> : null}
+      {!isNote && item.image ? <CoverPhoto source={item.image} style={[styles.photo, { aspectRatio:photoRatio }]} /> : null}
       <View style={styles.body}>
         <View style={styles.header}>
           <Text style={styles.type}>{isNote ? '✎  NOTE' : isChecklist ? '☑  CHECKLIST' : '▧  PHOTO'}</Text>

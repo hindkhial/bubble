@@ -92,8 +92,9 @@ export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profil
         <ScrollView keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={styles.title}>Edit profile</Text>
           <Text style={styles.intro}>Make this space feel like yours.</Text>
+          {Platform.OS==='ios'&&account.mode==='account'?<Text style={styles.intro}>Your name and bio are saved to your account. Your photo, emoji and avatar color stay private to this account on this iPhone.</Text>:null}
           <View style={local.preview}><ProfileAvatar profile={{ displayName: name, avatarColor, bio, imageUri, avatarEmoji }} size={72} /></View>
-          {account.mode==='local' ? <><Pressable accessibilityRole="button" disabled={picking} accessibilityState={{ disabled: picking }} onPress={pickImage} style={styles.cancel}><Text style={styles.cancelText}>{picking ? 'Opening photos…' : imageUri ? 'Change photo' : 'Choose photo'}</Text></Pressable>
+          {(account.mode==='local'||Platform.OS==='ios') ? <><Pressable accessibilityRole="button" disabled={picking} accessibilityState={{ disabled: picking }} onPress={pickImage} style={styles.cancel}><Text style={styles.cancelText}>{picking ? 'Opening photos…' : imageUri ? 'Change photo' : 'Choose photo'}</Text></Pressable>
           {imageUri ? <Pressable accessibilityRole="button" onPress={() => setImageUri(undefined)} style={styles.cancel}><Text style={styles.cancelText}>Remove photo</Text></Pressable> : null}
           </> : <><Text style={styles.label}>Avatar reference</Text><Text style={styles.intro}>Existing avatar IDs only. Photos and uploads remain local; account images are not served yet.</Text><TextInput accessibilityLabel="Avatar reference" value={avatarReference} onChangeText={setAvatarReference} maxLength={43} placeholder="avatar:UUID (or leave empty)" style={styles.input} /></>}
           <Text style={styles.label}>Display name *</Text>
@@ -101,7 +102,7 @@ export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profil
           <Text style={styles.label}>Short bio</Text>
           <TextInput accessibilityLabel="Short bio" multiline textAlignVertical="top" style={[styles.input, local.bio]} value={bio} onChangeText={(value) => { setBio(value); setError(''); }} maxLength={BIO_LIMIT} placeholder="A little about you" placeholderTextColor={colors.muted} />
           <Text style={local.counter}>{bio.length}/{BIO_LIMIT}</Text>
-          {account.mode==='local' ? <><Text style={styles.label}>Avatar emoji</Text>
+          {(account.mode==='local'||Platform.OS==='ios') ? <><Text style={styles.label}>Avatar emoji</Text>
           <Text style={styles.intro}>Choose a face or enter your favorite emoji. Your photo takes priority; remove it to show your emoji.</Text>
           <View style={local.emojis}>{['🐱', '🐻', '🐰', '🦊', '🐼', '🐸', '🌷', '✨'].map((emoji) => <Pressable key={emoji} accessibilityRole="button" accessibilityLabel={`Use ${emoji} avatar`} accessibilityState={{ selected: avatarEmoji === emoji }} {...(Platform.OS === 'web' ? { 'aria-pressed': avatarEmoji === emoji } : {})} onPress={() => setAvatarEmoji(emoji)} style={[local.emoji, avatarEmoji === emoji && local.emojiSelected]}><Text style={local.emojiText}>{emoji}</Text></Pressable>)}</View>
           <TextInput accessibilityLabel="Custom avatar emoji" value={avatarEmoji} onChangeText={setAvatarEmoji} maxLength={16} placeholder="Enter an emoji" placeholderTextColor={colors.muted} style={styles.input} />

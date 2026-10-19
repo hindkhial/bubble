@@ -16,7 +16,10 @@ const PinsContext = createContext<PinsContextValue | null>(null);
 
 export function PinsProvider({children}: PropsWithChildren) {
   const account=useAccount();
-  if(account.mode === 'account')return <PinsContext.Provider value={{storageError: account.error || null,pinsFor:()=>account.pins.map(id=>`file:${id}`),togglePin:async(_scope,key)=>{const item=account.items.find(item=>`file:${item.id}`===key);if(!item)return false;await account.pin(item);return true;}}}>{children}</PinsContext.Provider>;
+  if(account.mode === 'account')return <PinsContext.Provider value={{storageError: account.error || null,pinsFor:scope=>[...account.items.filter(item=>item.bubbleId===scope&&account.pins.includes(item.id)).map(item=>`file:${item.id}`),...account.library.filter(entry=>entry.kind==='BUBBLE'&&(entry.parentId??'root')===scope&&account.pins.includes(entry.id)).map(entry=>`bubble:${entry.id}`)],togglePin:async(_scope,key)=>{
+    const entry=account.library.find(entry=>entry.kind==='BUBBLE'&&`bubble:${entry.id}`===key);if(entry){await account.pinBubble(entry.id);return true;}
+    const item=account.items.find(item=>`file:${item.id}`===key);if(!item)return false;await account.pin(item);return true;
+  }}}>{children}</PinsContext.Provider>;
   return <LocalPins>{children}</LocalPins>;
 }
 function LocalPins({ children }: PropsWithChildren) {

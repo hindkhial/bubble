@@ -1,6 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { accentPalette, getThemeColors, themedAvatarColor } from '../src/theme/appearance.ts';
+import { accentPalette, getThemeColors, themedAvatarColor, bubblePalette, bubbleShade } from '../src/theme/appearance.ts';
+
+test('Bubble shade choices follow every accent in both modes without changing stored keys', () => {
+  for (const accent of accentPalette) for (const mode of ['light', 'dark']) {
+    const shades = bubblePalette.map(option => bubbleShade(option.value, mode, accent.name));
+    assert.equal(new Set(shades).size, 3);
+    assert.equal(shades[0], mode === 'dark' ? accent.dark : accent.value);
+    for (const shade of shades) assert.ok(contrast(getThemeColors(mode, accent.name).text, shade) >= 4.5);
+  }
+  assert.notEqual(bubbleShade(bubblePalette[0].value, 'light', 'Sky blue'), bubbleShade(bubblePalette[0].value, 'light', 'Rose'));
+});
 
 function luminance(hex) {
   const channels = hex.slice(1).match(/../g).map((v) => parseInt(v, 16) / 255).map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);

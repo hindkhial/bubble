@@ -27,7 +27,7 @@ class PreferencesMigrationIntegrationTest {
                     }
                 }
                 var migration=Flyway.configure().dataSource(source).schemas(schema).defaultSchema(schema).load();
-                assertEquals(1,migration.migrate().migrationsExecuted);
+                assertEquals(2,migration.migrate().migrationsExecuted);
                 assertEquals(0,migration.migrate().migrationsExecuted);
                 try(var connection=source.getConnection()) {
                     connection.setSchema(schema);

@@ -1,13 +1,15 @@
+import { NativeAccountSettings } from '../../components/NativeAccountSettings';
 import { useState } from 'react';
 import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useAccount } from '../state/Account';
-import { useTheme } from '../theme/Theme';
-import { createFormStyles } from '../components/AddPreview';
-import { browserStorage, readStored } from '../storage/browser';
-import type { SampleItem } from '../data/sample';
-export default function AccountScreen() {
+import { useAccount } from '../../state/Account';
+import { useTheme } from '../../theme/Theme';
+import { createFormStyles } from '../../components/AddPreview';
+import { browserStorage, readStored } from '../../storage/browser';
+import type { SampleItem } from '../../data/sample';
+export default function AccountScreen() {return Platform.OS==='ios'?<NativeAccountSettings/>:<BrowserAccountScreen/>;}
+function BrowserAccountScreen() {
   const account=useAccount();const {colors}=useTheme();const styles=createFormStyles(colors);const router=useRouter();
   const [registering,setRegistering]=useState(false);const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [name,setName]=useState('');
   const [pending,setPending]=useState(false);const [message,setMessage]=useState('');

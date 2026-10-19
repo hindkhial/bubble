@@ -2,13 +2,14 @@ import { usePreventRemove } from 'expo-router/react-navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MotionAwareModal as Modal } from './MotionAwareModal';
 import { useAccount } from '../state/Account';
-import { ACCOUNT_LIBRARY } from '../api/account';
-import { themedAvatarColor } from '../theme/appearance';
+import { HOME } from '../api/library';
+import { bubbleShade, bubblePalette } from '../theme/appearance';
 import { useTheme } from '../theme/Theme';
 import type { ThemeColors } from '../theme/appearance';
 import { useRef, useState } from 'react';
-import { useNavigation, useRouter } from 'expo-router';
+import { useNavigation, usePathname, useRouter } from 'expo-router';
 import { hasCreationDraft } from '../utils/creationDraft';
+import { bubbleCreationError } from '../utils/bubbleCover';
 import { ConfirmDialog } from './ConfirmDialog';
 import * as ImagePicker from 'expo-image-picker';
 import { Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -20,19 +21,16 @@ import { ChecklistEditorRows } from './ChecklistEditorRows';
 
 type Step = 'menu' | 'bubble' | 'note' | 'photo' | 'checklist' | 'destination';
 type PickedPhoto = { uri: string; ratio: number };
-export const bubblePalette = [
-  { name: 'Lilac', value: baseColors.lavender },
-  { name: 'Soft lavender', value: baseColors.lavenderSoft },
-  { name: 'Deep lavender', value: baseColors.lavenderDeep },
-];
+export { bubblePalette } from "../theme/appearance";
 const palette = bubblePalette;
 
 export function AddPreview({ parentId = null, quickAction }: { parentId?: string | null; quickAction?: 'note' | 'checklist' }) {
   const account=useAccount();
   const insets = useSafeAreaInsets();
-  const { colors, mode } = useTheme();
+  const { colors, mode, accent } = useTheme();
   const styles = createFormStyles(colors);
   const router = useRouter();
+  const pathname = usePathname();
   const navigation = useNavigation();
   const { bubbles, bubbleById, createBubble, createNote, createPhoto, createChecklist } = useContent();
   const [visible, setVisible] = useState(false);
@@ -49,7 +47,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
   const [showChecklistTitle, setShowChecklistTitle] = useState(false);
   const [checklistTitle, setChecklistTitle] = useState('');
   const [checklistRows, setChecklistRows] = useState<ChecklistRow[]>(() => [newChecklistRow()]);
-  const [destination, setDestination] = useState<string | null>(parentId);
+  const [destination, setDestination] = useState<string | null>(HOME);
   const [error, setError] = useState('');
   const [returnToFile, setReturnToFile] = useState<'note' | 'photo' | 'checklist' | null>(null);
   const [destinationReturn, setDestinationReturn] = useState<'note' | 'photo' | 'checklist'>('note');
@@ -74,7 +72,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
   const reset = () => {
     setStep('menu'); setTitle(''); setDescription(''); setColor(baseColors.lavender); setCoverPhoto(null);
     setNoteTitle(''); setBody(''); setPhoto(null); setPhotoTitle(''); setPhotoDescription(''); setChecklistTitle(''); setShowChecklistTitle(false); setChecklistRows([newChecklistRow()]);
-    setDestination(parentId); setError(''); setReturnToFile(null); setDestinationReturn('note'); setPendingBubble(null);
+    setDestination(HOME); setError(''); setReturnToFile(null); setDestinationReturn('note'); setPendingBubble(null);
   };
   const close = () => { bypass.current = true; setDiscardOpen(false); setVisible(false); reset(); };
   const attemptClose = () => {
@@ -89,13 +87,16 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
     close();
     if (action) navigation.dispatch(action);
   };
-  const open = () => { bypass.current = false; blockedAction.current = null; setDiscardOpen(false); if(account.mode==='account'&&!account.user){router.push('/account');return;}reset();if(account.mode==='account')setDestination(ACCOUNT_LIBRARY); saving.current = false; setStep(quickAction ?? 'menu'); setVisible(true); };
+  const open = () => { bypass.current = false; blockedAction.current = null; setDiscardOpen(false); if(account.mode==='account'&&!account.user){router.push('/account');return;}reset(); saving.current = false; setStep(quickAction ?? 'menu'); setVisible(true); };
   const pickImage = async (target: 'cover' | 'photo') => {
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85, base64: Platform.OS === 'web' });
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: account.mode==='account'?0.35:0.85, base64: Platform.OS === 'web' || account.mode === 'account' });
       if (result.canceled || !result.assets?.[0]) return;
       const asset = result.assets[0];
-      const picked = { uri: Platform.OS === 'web' && asset.base64 ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}` : asset.uri, ratio: asset.width && asset.height ? asset.height / asset.width : 1 };
+      // Expo's iOS picker exports base64 as JPEG even for HEIC/PNG originals.
+      const mime=Platform.OS==='ios'?'image/jpeg':asset.mimeType||'image/jpeg';
+      if(account.mode==='account'&&(!asset.base64||asset.base64.length>699052)){setError('Choose a smaller photo (up to 512 KB after compression). Your draft is unchanged.');return;}
+      const picked = { uri: (Platform.OS === 'web'||account.mode==='account') && asset.base64 ? `data:${mime};base64,${asset.base64}` : asset.uri, ratio: asset.width && asset.height ? asset.height / asset.width : 1 };
       if (target === 'cover') setCoverPhoto(picked);
       else setPhoto(picked);
       setError('');
@@ -103,9 +104,10 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
       setError('Could not open your photos. Please try again.');
     }
   };
-  const saveBubble = () => {
+  const saveBubble = async () => {
     if (saving.current) return;
-    if (!title.trim()) { setError('Please give your Bubble a title.'); return; }
+    const validationError = bubbleCreationError(title, coverPhoto?.uri);
+    if (validationError) { setError(validationError); return; }
     saving.current = true;
     const cover = coverPhoto ? { uri: coverPhoto.uri } : undefined;
     const cardImageRatio = coverPhoto?.ratio;
@@ -114,14 +116,14 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
       setDestination('__pending__'); setTitle(''); setDescription(''); setError('');
       setStep(returnToFile); setReturnToFile(null); saving.current = false;
     } else {
-      try { createBubble({ title, description, color, parentId, cover, cardImageRatio }); close(); }
+      try { await createBubble({ title, description, color, parentId, cover, cardImageRatio }); close(); }
       catch (problem) { setError(problem instanceof Error ? problem.message : "Could not save."); saving.current = false; }
     }
   };
-  const resolveDestination = (): string => {
-    if (!destination) throw new Error('Choose a Bubble before saving.');
+  const resolveDestination = async (): Promise<string> => {
+    if (!destination || destination===HOME) return HOME;
     if (pendingBubble && destination === '__pending__') {
-      const created = createBubble({ ...pendingBubble, parentId: null });
+      const created = await createBubble({ ...pendingBubble, parentId: null });
       // If saving the file fails, retry in this already-committed Bubble.
       setDestination(created.id);
       setPendingBubble(null);
@@ -132,37 +134,40 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
   const saveNote = async () => {
     if (saving.current) return;
     if (!body.trim()) { setError('Write a little text before saving your note.'); return; }
-    if (!destination || (destination !== '__pending__' && !bubbleById(destination))) { setError('Choose a Bubble for this note.'); return; }
+    if (destination && destination!==HOME && destination !== '__pending__' && !bubbleById(destination)) { setError('Choose a Bubble for this note.'); return; }
     saving.current = true;
     try {
-    const destinationId = resolveDestination();
+    const destinationId = await resolveDestination();
     await createNote({ title: noteTitle, body, bubbleId: destinationId });
     close();
-    if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
+    if(destinationId===HOME){if(pathname!=='/')router.replace('/');}
+    else if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
     } catch(problem) {setError(problem instanceof Error?problem.message:'Could not save.');saving.current=false;}
   };
-  const savePhoto = () => {
+  const savePhoto = async () => {
     if (saving.current) return;
     if (!photo) { setError('Choose a photo before saving.'); return; }
-    if (!destination || (destination !== '__pending__' && !bubbleById(destination))) { setError('Choose a Bubble for this photo.'); return; }
+    if (destination && destination!==HOME && destination !== '__pending__' && !bubbleById(destination)) { setError('Choose a Bubble for this photo.'); return; }
     saving.current = true;
     try {
-    const destinationId = resolveDestination();
-    createPhoto({ title: photoTitle, description: photoDescription, bubbleId: destinationId, image: { uri: photo.uri }, cardImageRatio: photo.ratio });
+    const destinationId = await resolveDestination();
+    await createPhoto({ title: photoTitle, description: photoDescription, bubbleId: destinationId, image: { uri: photo.uri }, cardImageRatio: photo.ratio });
     close();
-    if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
+    if(destinationId===HOME){if(pathname!=='/')router.replace('/');}
+    else if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
     } catch (problem) { setError(problem instanceof Error ? problem.message : 'Could not save.'); saving.current = false; }
   };
   const saveChecklist = async () => {
     if (saving.current) return;
     if (!checklistRows.some((row) => row.text.trim())) { setError('Add at least one checklist item before saving.'); return; }
-    if (!destination || (destination !== '__pending__' && !bubbleById(destination))) { setError('Choose a Bubble for this checklist.'); return; }
+    if (destination && destination!==HOME && destination !== '__pending__' && !bubbleById(destination)) { setError('Choose a Bubble for this checklist.'); return; }
     saving.current = true;
     try {
-    const destinationId = resolveDestination();
+    const destinationId = await resolveDestination();
     await createChecklist({ title: checklistTitle, rows: checklistRows, bubbleId: destinationId });
     close();
-    if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
+    if(destinationId===HOME){if(pathname!=='/')router.replace('/');}
+    else if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
     } catch(problem) {setError(problem instanceof Error?problem.message:'Could not save.');saving.current=false;}
   };
 
@@ -177,9 +182,9 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
             {step === 'menu' && <>
               <Text style={styles.title}>Add something</Text>
               <Text style={styles.intro}>Choose what you want to keep.</Text>
-              {account.mode==='local' ? <Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('bubble'); }} style={styles.choice}><Text style={styles.choiceIcon}>◌</Text><View><Text style={styles.choiceTitle}>Bubble</Text><Text style={styles.choiceHelp}>A collection for things that belong together</Text></View><Text style={styles.chevron}>›</Text></Pressable> : null}
+              {<Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('bubble'); }} style={styles.choice}><Text style={styles.choiceIcon}>◌</Text><View><Text style={styles.choiceTitle}>Bubble</Text><Text style={styles.choiceHelp}>A collection for things that belong together</Text></View><Text style={styles.chevron}>›</Text></Pressable>}
               <Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('note'); }} style={styles.choice}><Text style={styles.choiceIcon}>✎</Text><View><Text style={styles.choiceTitle}>Note</Text><Text style={styles.choiceHelp}>Write a thought, list, or link</Text></View><Text style={styles.chevron}>›</Text></Pressable>
-              {account.mode==='local' ? <Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('photo'); }} style={styles.choice}><Text style={styles.choiceIcon}>▧</Text><View><Text style={styles.choiceTitle}>Photo</Text><Text style={styles.choiceHelp}>Keep an image with its details</Text></View><Text style={styles.chevron}>›</Text></Pressable> : null}
+              {<Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('photo'); }} style={styles.choice}><Text style={styles.choiceIcon}>▧</Text><View><Text style={styles.choiceTitle}>Photo</Text><Text style={styles.choiceHelp}>Keep an image with its details</Text></View><Text style={styles.chevron}>›</Text></Pressable>}
               <Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('checklist'); }} style={styles.choice}><Text style={styles.choiceIcon}>☑</Text><View><Text style={styles.choiceTitle}>Checklist</Text><Text style={styles.choiceHelp}>A list to work through, together in one Bubble</Text></View><Text style={styles.chevron}>›</Text></Pressable>
             </>}
             {step === 'bubble' && <>
@@ -189,20 +194,21 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
               <TextInput accessibilityLabel="Bubble title" style={styles.input} placeholder="Give it a name" placeholderTextColor={colors.muted} value={title} onChangeText={(value) => { setTitle(value); setError(''); }} maxLength={80} />
               <Text style={styles.label}>Description (optional)</Text>
               <TextInput accessibilityLabel="Bubble description" style={[styles.input, styles.description]} placeholder="What's this Bubble for?" placeholderTextColor={colors.muted} multiline textAlignVertical="top" value={description} onChangeText={setDescription} maxLength={280} />
-              <Text style={styles.label}>Cover photo (optional)</Text>
-              {coverPhoto && <Image source={{ uri: coverPhoto.uri }} style={styles.imagePreview} resizeMode="cover" accessibilityLabel="Selected Bubble cover" />}
+              <Text style={styles.label}>Cover photo *</Text>
+              {account.mode==='account'?<Text style={styles.help}>JPEG or PNG, up to 512 KB after compression. Saved privately to your account.</Text>:null}
+              {coverPhoto && <Image source={{ uri: coverPhoto.uri }} style={[styles.imagePreview,{height:undefined,aspectRatio:1/coverPhoto.ratio}]} resizeMode="contain" accessibilityLabel="Selected Bubble cover" />}
               <Pressable accessibilityRole="button" onPress={() => pickImage('cover')} style={styles.pick}><Text style={styles.pickText}>{coverPhoto ? 'Change cover photo' : 'Choose cover photo'}</Text></Pressable>
               {coverPhoto && <Pressable accessibilityRole="button" onPress={() => setCoverPhoto(null)} style={styles.remove}><Text style={styles.removeText}>Remove photo</Text></Pressable>}
               <Text style={styles.label}>Color</Text>
-              <View style={styles.swatches}>{palette.map((option) => <Pressable key={option.name} accessibilityRole="button" accessibilityLabel={`${option.name} color${color === option.value ? ', selected' : ''}`} onPress={() => setColor(option.value)} style={[styles.swatch, { backgroundColor: themedAvatarColor(option.value, mode) }, color === option.value && styles.swatchSelected]}><Text style={styles.swatchCheck}>{color === option.value ? '✓' : ''}</Text></Pressable>)}</View>
-              <Text style={styles.help}>The lavender cover is used when no photo is chosen.</Text>
+              <View style={styles.swatches}>{palette.map((option) => <Pressable key={option.name} accessibilityRole="button" accessibilityLabel={`${option.name} color${color === option.value ? ', selected' : ''}`} onPress={() => setColor(option.value)} style={[styles.swatch, { backgroundColor: bubbleShade(option.value, mode, accent) }, color === option.value && styles.swatchSelected]}><Text style={styles.swatchCheck}>{color === option.value ? '✓' : ''}</Text></Pressable>)}</View>
+              <Text style={styles.help}>Choose a cover photo to create your Bubble. Its proportions determine the card height.</Text>
               {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
               <Pressable accessibilityRole="button" onPress={saveBubble} style={styles.save}><Text style={styles.saveText}>Create Bubble</Text></Pressable>
             </>}
             {step === 'note' && <>
               <Text style={styles.title}>New note</Text>
               <Text style={styles.label}>Save to</Text>
-              {bubbles.length ? <Pressable accessibilityRole="button" accessibilityLabel="Choose destination Bubble" onPress={() => { setDestinationReturn('note'); setError(''); setStep('destination'); }} style={styles.destination}><Text style={styles.destinationText}>{destination === '__pending__' ? pendingBubble?.title : destination ? bubbleById(destination)?.title ?? 'Choose a Bubble' : 'Choose a Bubble'}</Text><Text style={styles.chevron}>›</Text></Pressable> : pendingBubble ? <View style={styles.destination}><Text style={styles.destinationText}>{pendingBubble.title} (new Bubble)</Text></View> : <Pressable accessibilityRole="button" onPress={() => { setReturnToFile('note'); setStep('bubble'); setError(''); }} style={styles.destination}><Text style={styles.destinationText}>Create a Bubble first</Text><Text style={styles.chevron}>›</Text></Pressable>}
+              <Pressable accessibilityRole="button" accessibilityLabel="Choose Home or a destination Bubble" onPress={() => {setDestinationReturn('note');setError('');setStep('destination');}} style={styles.destination}><Text style={styles.destinationText}>{destination==='__pending__'?pendingBubble?.title:destination&&destination!==HOME?bubbleById(destination)?.title??'Home':'Home · outside Bubbles'}</Text><Text style={styles.chevron}>›</Text></Pressable>
               <Text style={styles.label}>Title (optional)</Text>
               <TextInput accessibilityLabel="Note title" style={styles.input} placeholder="Untitled note" placeholderTextColor={colors.muted} value={noteTitle} onChangeText={setNoteTitle} maxLength={100} />
               <Text style={styles.label}>Your note *</Text>
@@ -213,9 +219,9 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
             {step === 'photo' && <>
               <Text style={styles.title}>New photo</Text>
               <Text style={styles.label}>Save to</Text>
-              {bubbles.length ? <Pressable accessibilityRole="button" accessibilityLabel="Choose destination Bubble" onPress={() => { setDestinationReturn('photo'); setError(''); setStep('destination'); }} style={styles.destination}><Text style={styles.destinationText}>{destination === '__pending__' ? pendingBubble?.title : destination ? bubbleById(destination)?.title ?? 'Choose a Bubble' : 'Choose a Bubble'}</Text><Text style={styles.chevron}>›</Text></Pressable> : pendingBubble ? <View style={styles.destination}><Text style={styles.destinationText}>{pendingBubble.title} (new Bubble)</Text></View> : <Pressable accessibilityRole="button" onPress={() => { setReturnToFile('photo'); setStep('bubble'); setError(''); }} style={styles.destination}><Text style={styles.destinationText}>Create a Bubble first</Text><Text style={styles.chevron}>›</Text></Pressable>}
+              <Pressable accessibilityRole="button" accessibilityLabel="Choose Home or a destination Bubble" onPress={() => {setDestinationReturn('photo');setError('');setStep('destination');}} style={styles.destination}><Text style={styles.destinationText}>{destination==='__pending__'?pendingBubble?.title:destination&&destination!==HOME?bubbleById(destination)?.title??'Home':'Home · outside Bubbles'}</Text><Text style={styles.chevron}>›</Text></Pressable>
               <Text style={styles.label}>Photo *</Text>
-              {photo && <Image source={{ uri: photo.uri }} style={styles.imagePreview} resizeMode="cover" accessibilityLabel="Selected photo" />}
+              {photo && <Image source={{ uri: photo.uri }} style={[styles.imagePreview,{height:undefined,aspectRatio:1/photo.ratio}]} resizeMode="contain" accessibilityLabel="Selected photo" />}
               <Pressable accessibilityRole="button" onPress={() => pickImage('photo')} style={styles.pick}><Text style={styles.pickText}>{photo ? 'Change photo' : 'Choose photo'}</Text></Pressable>
               <Text style={styles.label}>Title (optional)</Text>
               <TextInput accessibilityLabel="Photo title" style={styles.input} placeholder="Untitled photo" placeholderTextColor={colors.muted} value={photoTitle} onChangeText={setPhotoTitle} maxLength={100} />
@@ -227,7 +233,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
             {step === 'checklist' && <>
               <Text style={styles.title}>New checklist</Text>
               <Text style={styles.label}>Save to</Text>
-              {bubbles.length ? <Pressable accessibilityRole="button" accessibilityLabel="Choose destination Bubble" onPress={() => { setDestinationReturn('checklist'); setError(''); setStep('destination'); }} style={styles.destination}><Text style={styles.destinationText}>{destination === '__pending__' ? pendingBubble?.title : destination ? bubbleById(destination)?.title ?? 'Choose a Bubble' : 'Choose a Bubble'}</Text><Text style={styles.chevron}>›</Text></Pressable> : pendingBubble ? <View style={styles.destination}><Text style={styles.destinationText}>{pendingBubble.title} (new Bubble)</Text></View> : <Pressable accessibilityRole="button" onPress={() => { setReturnToFile('checklist'); setStep('bubble'); setError(''); }} style={styles.destination}><Text style={styles.destinationText}>Create a Bubble first</Text><Text style={styles.chevron}>›</Text></Pressable>}
+              <Pressable accessibilityRole="button" accessibilityLabel="Choose Home or a destination Bubble" onPress={() => {setDestinationReturn('checklist');setError('');setStep('destination');}} style={styles.destination}><Text style={styles.destinationText}>{destination==='__pending__'?pendingBubble?.title:destination&&destination!==HOME?bubbleById(destination)?.title??'Home':'Home · outside Bubbles'}</Text><Text style={styles.chevron}>›</Text></Pressable>
               <Pressable accessibilityRole="button" onPress={() => setShowChecklistTitle((value) => !value)} style={styles.titleToggle}><Text style={styles.pickText}>{showChecklistTitle ? 'Hide title' : 'Add title'}</Text></Pressable>
               {showChecklistTitle ? <TextInput accessibilityLabel="Checklist title" style={styles.input} placeholder="Give your list a title" placeholderTextColor={colors.muted} value={checklistTitle} onChangeText={setChecklistTitle} maxLength={100} /> : null}
               <Text style={styles.intro}>What would you like to get done?</Text>
@@ -236,9 +242,9 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
               <Pressable accessibilityRole="button" onPress={saveChecklist} style={styles.save}><Text style={styles.saveText}>Save checklist</Text></Pressable>
             </>}
             {step === 'destination' && <>
-              <Text style={styles.title}>Choose a Bubble</Text>
-              <Text style={styles.intro}>Your {destinationReturn} will appear in this collection.</Text>
-              {bubbles.map((bubble) => <Pressable key={bubble.id} accessibilityRole="button" onPress={() => { setDestination(bubble.id); setStep(destinationReturn); setError(''); }} style={styles.destinationChoice}><Text style={styles.destinationText}>{bubble.title}</Text>{destination === bubble.id && <Text style={styles.selected}>✓</Text>}</Pressable>)}
+              <Text style={styles.title}>Save to</Text>
+              <Text style={styles.intro}>Keep it on Home or choose a Bubble.</Text><Pressable accessibilityRole="button" onPress={()=>{setDestination(HOME);setStep(destinationReturn);}} style={styles.destinationChoice}><Text style={styles.destinationText}>Home · outside Bubbles</Text>{destination===HOME?<Text style={styles.selected}>✓</Text>:null}</Pressable>
+              <Pressable accessibilityRole="button" onPress={()=>{setReturnToFile(destinationReturn);setStep('bubble');setError('');}} style={styles.destinationChoice}><Text style={styles.destinationText}>＋ New Bubble</Text></Pressable>{bubbles.map((bubble) => <Pressable key={bubble.id} accessibilityRole="button" onPress={() => { setDestination(bubble.id); setStep(destinationReturn); setError(''); }} style={styles.destinationChoice}><Text style={styles.destinationText}>{bubble.title}</Text>{destination === bubble.id && <Text style={styles.selected}>✓</Text>}</Pressable>)}
             </>}
             <Pressable accessibilityRole="button" onPress={attemptClose} style={styles.cancel}><Text style={styles.cancelText}>Cancel</Text></Pressable>
           </ScrollView>
