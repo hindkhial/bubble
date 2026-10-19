@@ -17,7 +17,19 @@ mkdirSync(directory,{mode:0o700});
 mkdirSync(join(directory,'tmp'),{mode:0o700});
 const run=(command,args)=>{
   const result=spawnSync(command,args,{cwd:repo,encoding:'utf8',maxBuffer:8*1024*1024});
-  if(result.status!==0) throw new Error('Image scanning did not complete: '+command+' '+args[0]+'. No clean result is claimed.');
+  if(result.status!==0) {
+    // Emit classifications only: never echo compose output, environment or raw stderr.
+    const categories = [
+      ['disk-space', /no space left on device/i],
+      ['permission', /permission denied|operation not permitted/i],
+      ['registry-rate-limit', /toomanyrequests|429|rate limit/i],
+      ['network', /timeout|connection refused|network is unreachable|no such host/i],
+      ['certificate', /certificate|x509/i],
+      ['database-download', /failed to download|database error/i],
+    ].filter(([, pattern]) => pattern.test(result.stderr ?? '')).map(([name]) => name);
+    console.error('SCAN_DIAGNOSTIC ' + JSON.stringify({command, operation: args[0], exit: result.status, signal: result.signal, categories}));
+    throw new Error('Image scanning did not complete: '+command+' '+args[0]+'. No clean result is claimed.');
+  }
   return result.stdout;
 };
 const config=JSON.parse(run('sh',['deploy/staging/compose.sh','config','--format','json']));
@@ -57,7 +69,11 @@ for(const service of ['backend','web','db']) {
   }
   const counts={};
   for(const result of report.Results??[]) for(const item of result.Vulnerabilities??[]) counts[item.Severity]=(counts[item.Severity]??0)+1;
-  summary.images.push({service,image,id,runtimeImage,runtimeManifest,scannedConfig,counts});
+  const findings=(report.Results??[]).flatMap(result=>(result.Vulnerabilities??[]).map(item=>({
+    id:item.VulnerabilityID, package:item.PkgName, installed:item.InstalledVersion,
+    fixed:item.FixedVersion??null, severity:item.Severity,
+  })));
+  summary.images.push({service,image,id,runtimeImage,runtimeManifest,scannedConfig,counts,findings});
   rmSync(archive);
 }
 writeFileSync(join(directory,'summary.json'),JSON.stringify(summary,null,2)+'\n',{mode:0o600});
