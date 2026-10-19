@@ -284,3 +284,46 @@ Three real unsigned Debug Simulator workspace build attempts, including a retry 
 Install/launch/Home, note editing, checklist completion, native SQLite restart preservation, profile/photo persistence, appearance, navigation/keyboard/safe areas and offline workflows are all **Not Tested**. No critical native defect can be ruled out from this blocked build. See IOS-NATIVE.md for the exact execution matrix and owner Terminal/Xcode continuation steps. Existing unresolved dependency findings and manual accessibility/physical-device release gates stay open. No merge, distribution or deployment was performed.
 
 Tooling commit **d7183b60990f50701d09c5f58956b8ee0181c471**: [GitHub run 39001317314](https://github.com/hindkhial/bubble/actions/runs/39001317314) completed successfully in all three jobs: 68 frontend tests/types/web build, 62 PostgreSQL backend tests/package with zero failures/errors/skips, nine browser scenarios with zero skipped/unexpected/flaky. Temporary browser TLS trust/sandbox controls passed. This documentation-only runtime follow-up must not be presented as a new native test pass; its own head checks are separate.
+
+## Simulator prerequisites and physical-device preparation — 2026-10-17
+
+Baseline 6118f0eccd315fb2377ec58c072c51c396efea2f, with documentation-only device-validation follow-up. Simulator native compilation now Passed: three inspected Xcode activity logs contain Build succeeded and 122-target dependency graphs. Owner screenshots show the installed development client; owner confirmed Home loaded. Owner-executed restart persistence Passed for a synthetic note, checklist and completed-item state. This supersedes earlier build-preparation blockers, not the remaining unexecuted UI/photo/profile/theme/accessibility checks. Missing module maps were observed in the original one-target build without Pods; successful workspace builds include those dependencies. IPv4-first localhost Metro resolved the subsequent development-client connection mismatch.
+
+Fresh frontend preflight: 68 tests Passed, zero failures/skips; TypeScript Passed. Backend behavior is unchanged and backend tests were not rerun locally. No new physical-device build was attempted. Device discovery timed out with CoreDeviceService XPC errors, so phone model/iOS/pairing/team/signing/Developer Mode remain unverified. No Apple credentials or signing-profile contents were accessed. No settings were changed, device installed/erased or data reset.
+
+IOS-DEVICE-TESTING.md separates evidence sources, approvals, the embedded-bundle offline test plan and every physical workflow marked Not Tested. Physical installation, phone-reboot preservation and native networking cannot inherit a pass from Simulator/browser results. Native accounts remain disabled; no network/trust/signing expansion or TestFlight/public deployment is authorized. Existing security/human release gates remain open.
+
+## Simulator polish verification
+
+See IOS-SIMULATOR-TESTING.md for the current scope, baseline source/evidence, exact changed-head matrix and owner-operated session. Local TypeScript, 72 frontend tests and both iOS/web exports passed. A focused storage/photo/motion run passed 15 tests, already included in those 72; these use Node SQLite/adapter operations, not native OS/UI execution. New coverage protects incomplete creation drafts; the existing browser scenario additionally verifies keep-editing/discard and unchanged saved content. Hosted execution of that change is pending at this record. No backend behavior changed; no local backend rerun was needed.
+
+A new unsigned Debug Simulator xcodebuild attempt exited66 before compilation, with CoreSimulator XPC/temp/file-type restrictions and workspace recognition errors. Previous native builds/launch and owner-confirmed note/checklist restart persistence passed on the baseline, but updated native compilation/keyboard/navigation/profile/photo/theme/VoiceOver checks remain Not Tested. Owner assistance in Xcode/Simulator was requested. Physical-device testing was explicitly deferred because the phone connection failed; it remains Not Tested. Do not claim this milestone complete from JavaScript exports or browser/unit results. No dependencies, migrations, signing, security protections or personal data were changed.
+
+
+## Verified Simulator follow-up — 2026-10-17
+
+This record supersedes pending statuses above for the executed checks only. Application source: 560197b1aada29e0ea7bba1bc0896c282a272b5d. These are owner-operated Xcode/Simulator results, not agent UI automation.
+
+- Passed: fresh native Debug build. Inspected Xcode activity log 5DFE4794-9EFA-4919-899F-1C3E82FAB4A0 (2026-10-17T21:56:24Z, after final application edits) contains Build succeeded and 122 targets.
+- Passed: updated Home opens, iPhone 17 Pro Simulator / iOS 26.5.
+- Passed: note Cancel → Keep editing retains draft, keyboard-visible controls reachable, save works.
+- Passed: search saved note, open/edit/save; checklist edit/add/save/complete; back navigation without reported overlap, stuck navigation or lost text.
+- Passed: note/checklist edits and checked state survive restart. Profile name/bio, synthetic profile photo, selected Appearance mode and accent also survive restart.
+- Passed locally: TypeScript, 72 frontend tests, iOS Hermes/assets export and web regression build. The 15 storage/photo/motion tests are included in 72 and use disposable Node SQLite/adapters, not native bridge execution.
+- Passed on GitHub at this source: frontend checks, 62 PostgreSQL backend tests/package, all nine browser scenarios twice (zero skips/unexpected/flaky), compatible rollback and temporary TLS trust removal/rejection.
+- Failed: whole browser CI job twice, after scenarios passed, at scan-private-staging.mjs. Protected logs withhold details; vulnerability versus scanner/infrastructure cause is unconfirmed. No clean image scan or overall CI pass is claimed. Evidence: https://github.com/hindkhial/bubble/actions/runs/39073153574. Documentation-only follow-up heads need their own checks.
+- Not Tested: native no-internet check (explicitly skipped by owner); standalone cold-start without Metro; VoiceOver/full focus management; Dynamic Type/Reduced Motion; complete visual/safe-area review; every System/accent combination; photo replacement/removal/denial; full native search filter/empty combinations; every native discard/gesture path; physical-device tests.
+
+The agent CLI remains blocked by CoreSimulator/XPC restrictions; owner build/launch evidence resolves the compilation prerequisite without implying CLI access. A debugger probe returned no usable runtime evidence and wrote no databases. Debug tests used localhost Metro; no standalone offline claim is made. Core workflows passed without reported crashes/data loss; broader unexecuted gates remain open. Native accounts remain disabled. No dependencies, backend/schema, signing, trust stores or user data were changed. No merges, TestFlight or deployment occurred. Existing security findings and the image-scan failure remain release blockers. This record is not release approval.
+
+
+## Offline verification and CI diagnosis — 2026-10-18
+
+Owner-executed iPhone 17 Pro Simulator / iOS 26.5 check Passed: Mac Wi-Fi disabled and Simulator Safari failed to load an external page; Bubble local-only note creation, editing and deletion, checklist completion, full app stop/reopen and saved-state retention all Passed. Owner confirmed networking restored. This verifies no-internet usage with localhost Metro available, not a standalone embedded-bundle cold-start. No app uninstall, data reset or storage migration was used.
+
+At a9b54e5e30f3d1adddacc41b3a379c9e85969fc8, GitHub run 39075069382 Passed frontend checks, 62 PostgreSQL backend tests and all nine browser scenarios (zero skipped/unexpected/flaky). The image scanner completed and exited 2 because backend and web each had one High and one Medium vulnerability; PostgreSQL had none. This identifies a real vulnerability gate failure, not a scanner/registry failure. Findings remain unsuppressed. Follow-up diagnostics retain only public package/advisory fields and classified scanner failures, never raw reports or staging credentials. Final remediation/check results must be recorded separately.
+
+Local rerun: 72 frontend tests Passed, TypeScript Passed, iOS Hermes export Passed. Native application source and storage formats are unchanged from the successfully built/owner-tested Simulator source. No fresh native compilation is inferred from the export. Agent CoreSimulator restrictions and standalone/physical-device/accessibility gates remain unchanged.
+
+
+Image remediation candidate: a fresh local scan of the existing backend image identified libexpat 2.8.5-r0: CVE-2026-77214 (High) and CVE-2026-102633 (Medium), fixed by 2.9.0-r0. Upstream evidence: https://github.com/libexpat/libexpat/blob/master/expat/Changes (2.9.0 security fixes). Backend/web Dockerfiles now require libexpat>=2.9.0-r0 from their existing Alpine repositories; base digests and security gate remain unchanged. Rebuilt candidate scans and hosted results must confirm remediation; the historical local image is not the final CI candidate.

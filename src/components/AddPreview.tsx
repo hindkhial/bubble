@@ -1,3 +1,4 @@
+import { usePreventRemove } from 'expo-router/react-navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MotionAwareModal as Modal } from './MotionAwareModal';
 import { useAccount } from '../state/Account';
@@ -6,9 +7,11 @@ import { themedAvatarColor } from '../theme/appearance';
 import { useTheme } from '../theme/Theme';
 import type { ThemeColors } from '../theme/appearance';
 import { useRef, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
+import { hasCreationDraft } from '../utils/creationDraft';
+import { ConfirmDialog } from './ConfirmDialog';
 import * as ImagePicker from 'expo-image-picker';
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { newChecklistRow } from '../data/sample';
 import type { ChecklistRow } from '../data/sample';
 import { useContent } from '../state/Content';
@@ -30,6 +33,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
   const { colors, mode } = useTheme();
   const styles = createFormStyles(colors);
   const router = useRouter();
+  const navigation = useNavigation();
   const { bubbles, bubbleById, createBubble, createNote, createPhoto, createChecklist } = useContent();
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState<Step>('menu');
@@ -51,14 +55,41 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
   const [destinationReturn, setDestinationReturn] = useState<'note' | 'photo' | 'checklist'>('note');
   const [pendingBubble, setPendingBubble] = useState<{ title: string; description: string; color: string; cover?: { uri: string }; cardImageRatio?: number } | null>(null);
   const saving = useRef(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const blockedAction = useRef<Parameters<typeof navigation.dispatch>[0] | null>(null);
+  const bypass = useRef(false);
+  const dirty = hasCreationDraft({
+    text: [title, description, noteTitle, body, photoTitle, photoDescription, checklistTitle],
+    hasImage: Boolean(photo || coverPhoto), changedColor: color !== baseColors.lavender,
+    rows: checklistRows, hasPendingBubble: Boolean(pendingBubble),
+  });
+  usePreventRemove(visible && dirty, ({ data }) => {
+    if (bypass.current) { navigation.dispatch(data.action); return; }
+    if (saving.current) return;
+    blockedAction.current = data.action;
+    Keyboard.dismiss();
+    setDiscardOpen(true);
+  });
 
   const reset = () => {
     setStep('menu'); setTitle(''); setDescription(''); setColor(baseColors.lavender); setCoverPhoto(null);
     setNoteTitle(''); setBody(''); setPhoto(null); setPhotoTitle(''); setPhotoDescription(''); setChecklistTitle(''); setShowChecklistTitle(false); setChecklistRows([newChecklistRow()]);
     setDestination(parentId); setError(''); setReturnToFile(null); setDestinationReturn('note'); setPendingBubble(null);
   };
-  const close = () => { setVisible(false); reset(); };
-  const open = () => { if(account.mode==='account'&&!account.user){router.push('/account');return;}reset();if(account.mode==='account')setDestination(ACCOUNT_LIBRARY); saving.current = false; setStep(quickAction ?? 'menu'); setVisible(true); };
+  const close = () => { bypass.current = true; setDiscardOpen(false); setVisible(false); reset(); };
+  const attemptClose = () => {
+    if (saving.current) return;
+    if (dirty) { blockedAction.current = null; Keyboard.dismiss(); setDiscardOpen(true); }
+    else close();
+  };
+  const keepEditing = () => { blockedAction.current = null; setDiscardOpen(false); };
+  const discard = () => {
+    const action = blockedAction.current;
+    blockedAction.current = null;
+    close();
+    if (action) navigation.dispatch(action);
+  };
+  const open = () => { bypass.current = false; blockedAction.current = null; setDiscardOpen(false); if(account.mode==='account'&&!account.user){router.push('/account');return;}reset();if(account.mode==='account')setDestination(ACCOUNT_LIBRARY); saving.current = false; setStep(quickAction ?? 'menu'); setVisible(true); };
   const pickImage = async (target: 'cover' | 'photo') => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85, base64: Platform.OS === 'web' });
@@ -137,12 +168,12 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
 
   return <>
     <Pressable accessibilityRole="button" accessibilityLabel={quickAction === 'note' ? 'New note' : quickAction === 'checklist' ? 'New checklist' : 'Add content'} onPress={open} style={styles.button}><Text style={styles.buttonText}>{quickAction === 'note' ? '＋ Note' : quickAction === 'checklist' ? '＋ Checklist' : '＋ Add'}</Text></Pressable>
-    <Modal animationType="slide" transparent visible={visible} onRequestClose={close}>
+    <Modal animationType="slide" transparent visible={visible} onRequestClose={attemptClose}>
       <KeyboardAvoidingView style={styles.scrim} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={close} />
-        <View style={[styles.sheet, { paddingBottom: Math.max(30, insets.bottom) }]} accessibilityViewIsModal>
+        <Pressable style={StyleSheet.absoluteFill} onPress={attemptClose} />
+        <View style={[styles.sheet, { paddingBottom: Math.max(30, insets.bottom) }]} accessibilityViewIsModal={!discardOpen} accessibilityElementsHidden={discardOpen} importantForAccessibility={discardOpen ? 'no-hide-descendants' : 'auto'}>
           <View style={styles.handle} />
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {step === 'menu' && <>
               <Text style={styles.title}>Add something</Text>
               <Text style={styles.intro}>Choose what you want to keep.</Text>
@@ -209,9 +240,10 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
               <Text style={styles.intro}>Your {destinationReturn} will appear in this collection.</Text>
               {bubbles.map((bubble) => <Pressable key={bubble.id} accessibilityRole="button" onPress={() => { setDestination(bubble.id); setStep(destinationReturn); setError(''); }} style={styles.destinationChoice}><Text style={styles.destinationText}>{bubble.title}</Text>{destination === bubble.id && <Text style={styles.selected}>✓</Text>}</Pressable>)}
             </>}
-            <Pressable accessibilityRole="button" onPress={close} style={styles.cancel}><Text style={styles.cancelText}>Cancel</Text></Pressable>
+            <Pressable accessibilityRole="button" onPress={attemptClose} style={styles.cancel}><Text style={styles.cancelText}>Cancel</Text></Pressable>
           </ScrollView>
         </View>
+        <ConfirmDialog visible={discardOpen} title="Discard changes?" message="Your unsaved creation will be lost." confirmLabel="Discard changes" onCancel={keepEditing} onConfirm={discard} destructive={false} embedded />
       </KeyboardAvoidingView>
     </Modal>
   </>;

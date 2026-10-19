@@ -1,6 +1,14 @@
 # iPhone native foundation
 
-Bubble's release target is iPhone → private TestFlight → App Store. Android is deferred; browser support is a development/regression surface, not a public release target. This implementation is **not fully native-validated** until Simulator compilation and launch succeed.
+Current Simulator polish and its separate pending execution matrix are recorded in IOS-SIMULATOR-TESTING.md. Earlier owner-confirmed Simulator passes below remain baseline evidence, not automatic passes for later changes. Physical-device testing is deferred and Not Tested.
+
+## Current Simulator outcome — 2026-10-17
+
+The build-preparation failures recorded below are historical. Owner-operated Xcode subsequently produced successful native Simulator builds: three inspected activity logs report Build succeeded with 122 targets, rather than the original one-target build that omitted Pods. The installed artifact is com.hindkhial.bubble, version 0.1.0/build 1, minimum iOS 16.4, built with iphonesimulator26.5 SDK. Owner screenshots show the development client on iPhone 17 Pro Simulator; the owner then confirmed Home appeared after connecting Metro. An IPv4/IPv6 localhost mismatch was resolved by starting Node with --dns-result-order=ipv4first; the exact 127.0.0.1:8083 bundle request returned HTTP 200.
+
+The owner executed the restart test and confirmed a synthetic note/checklist survived stopping/relaunching, including the checked item. These Simulator compilation, launch and basic restart prerequisites now pass. Editing beyond that exercise, profile/photo/theme persistence, safe areas, keyboard, accessibility and fully disconnected cold startup remain Not Tested. The owner deferred those remaining checks; this does not constitute full native release approval. No physical iPhone test has passed. See IOS-DEVICE-TESTING.md for the separate device gate and execution matrix.
+
+Bubble's release target is iPhone → private TestFlight → App Store. Android is deferred; browser support is a development/regression surface, not a public release target. Full native validation remains incomplete; the current Simulator outcome above supersedes the earlier blocked build records below.
 
 ## Baseline and identity
 
