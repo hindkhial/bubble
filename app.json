@@ -5,9 +5,37 @@
     "scheme": "bubble",
     "version": "0.1.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "backgroundColor": "#FAF7F2",
-    "plugins": ["expo-router", ["expo-image-picker", { "photosPermission": "Choose a photo for a Bubble cover or Photo item.", "cameraPermission": false, "microphonePermission": false }]],
-    "experiments": { "typedRoutes": true }
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose a photo for a Bubble cover or Photo item.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.4"
+          }
+        }
+      ],
+      "expo-dev-client",
+      "expo-sqlite",
+      "expo-system-ui"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "ios": {
+      "bundleIdentifier": "com.hindkhial.bubble",
+      "supportsTablet": false,
+      "buildNumber": "1"
+    }
   }
 }

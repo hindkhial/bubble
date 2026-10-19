@@ -19,3 +19,7 @@ deploy/staging/backups
 **/*.htpasswd
 **/tester-credentials.json
 **/lifecycle.json
+
+# Generated native projects are not browser/backend image inputs.
+ios
+android

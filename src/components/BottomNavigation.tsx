@@ -23,7 +23,7 @@ export function BottomNavigation({ active }: { active: 'home' | 'search' | 'you'
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   bottomBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border, minHeight: 76, paddingHorizontal: 10 },
   tab: { alignItems: 'center', justifyContent: 'center', minWidth: 53, minHeight: 48 },
-  icon: { color: colors.muted, fontSize: 25, height: 28 },
+  icon: { color: colors.muted, fontSize: 25, minHeight: 28 },
   label: { color: colors.muted, fontSize: 11 },
   active: { color: colors.action, fontWeight: '700' },
 });
