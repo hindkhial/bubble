@@ -69,7 +69,8 @@ try {
     BUBBLE_TEST_API_URL: origin, BUBBLE_E2E_URL: origin, BUBBLE_E2E_API_URL: origin, BUBBLE_E2E_REUSE_SERVER: '1', BUBBLE_E2E_DISPOSABLE: '1',
     BUBBLE_TEST_AUTH_FILE: authFile, NODE_EXTRA_CA_CERTS: caFile, BUBBLE_CI_OUTPUT: join(folder, 'results')};
   started = true; // also clean up a partially failed build/start
-  compose(['up', '--build', '--detach', '--wait', '--wait-timeout', '240']);
+  compose(['build', '--no-cache']);
+  compose(['up', '--no-build', '--detach', '--wait', '--wait-timeout', '240']);
   run('node', ['scripts/verify-private-staging.mjs']);
   run('node', ['scripts/staging-smoke.mjs', origin]);
   await checkTLS(false);
