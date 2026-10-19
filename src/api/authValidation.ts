@@ -12,3 +12,11 @@ export function validateAuthentication(fields: AuthFields, registering: boolean)
   }
   return null;
 }
+
+export function validatePasswordChange(current: string, next: string, confirmation: string): string | null {
+  if (!current) return 'Enter your current password.';
+  if ([...next].length < 12 || utf8Length(next) > 72) return 'Use at least 12 characters and at most 72 UTF-8 bytes for your new password.';
+  if (next !== confirmation) return 'The new passwords do not match.';
+  if (current === next) return 'Choose a new password different from your current password.';
+  return null;
+}

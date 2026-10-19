@@ -6,6 +6,21 @@ import { copyLocalItems, importLedgerKey, verifyAccountCopy } from '../src/api/i
 const response=(body,status=200)=>new Response(status===204?null:JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});
 const serverItem={id:'11111111-1111-4111-8111-111111111111',title:'Test',content:'Body',pinned:true,createdAt:'2026-01-01T00:00:00Z',updatedAt:'2026-01-02T00:00:00Z'};
 const memory=()=>{const data=new Map();return {getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value),data};};
+test('password changes use the authenticated CSRF-protected endpoint and reset the session token',async()=>{
+ const calls=[];
+ const repo=new AccountRepository(new ApiClient('https://localhost',async(url,init)=>{
+  calls.push({url,init}); return url.endsWith('/csrf')?response({token:'synthetic-token'}):response(null,204);
+ }));
+ await repo.changePassword('synthetic-current-password','synthetic-next-password');
+ const change=calls.find(call=>call.url.endsWith('/users/me/password'));
+ assert.equal(change.init.method,'PATCH');assert.equal(change.init.headers['X-CSRF-TOKEN'],'synthetic-token');
+ assert.deepEqual(JSON.parse(change.init.body),{currentPassword:'synthetic-current-password',newPassword:'synthetic-next-password'});
+ await repo.logout();assert.equal(calls.filter(call=>call.url.endsWith('/csrf')).length,2);
+});
+test('incorrect current passwords have useful generic feedback without exposing submitted values',async()=>{
+ const repo=new AccountRepository(new ApiClient('https://localhost',async url=>url.endsWith('/csrf')?response({token:'test'}):response({},400)));
+ await assert.rejects(()=>repo.changePassword('private-current','private-next'),error=>error.status===400&&/Check your current password/.test(error.message)&&!error.message.includes('private-'));
+});
 test('native copy retries verify known server IDs without uploading duplicate content',async()=>{
  const storage=memory();storage.setItem('bubble.items.v1','originals');let writes=0,checks=0;
  const repo={api:{base:'https://localhost'},saveNote:async()=>{writes++;return {id:serverItem.id};}};

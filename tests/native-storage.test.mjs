@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import ts from 'typescript';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { sqliteStorage } from '../src/storage/sqlite.ts';
@@ -15,6 +16,32 @@ function database(path) {
     withTransactionSync: task => { db.exec('BEGIN');try { task();db.exec('COMMIT'); } catch(e) {db.exec('ROLLBACK');throw e;} },
   } };
 }
+test('checklist taps contain synchronous storage failures and rejected account writes', async () => {
+  const source = readFileSync(new URL('../src/app/(app)/file/[id].tsx', import.meta.url), 'utf8');
+  const tree = ts.createSourceFile('file.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let expression;
+  function visit(node) {
+    if (ts.isJsxAttributes(node) && node.properties.some(attribute => ts.isJsxAttribute(attribute) && attribute.name.getText(tree) === 'accessibilityRole' && attribute.initializer?.text === 'checkbox')) {
+      const press = node.properties.find(attribute => ts.isJsxAttribute(attribute) && attribute.name.getText(tree) === 'onPress');
+      expression = press.initializer.expression.getText(tree);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(tree);
+  assert.ok(expression, 'Exercise the actual checklist event handler');
+  for (const asynchronous of [false, true]) {
+    const original = '[{"id":"synthetic-row","done":false}]';
+    let raw = original;
+    const cell = stateCell('bubble.items.v1', [], Array.isArray, () => ({ getItem: () => raw, setItem: () => { throw Error('Synthetic storage failure'); } }));
+    cell.hydrate();
+    const handler = new Function('toggleChecklistRow', 'item', 'row', `return (${expression});`)(
+      () => asynchronous ? Promise.reject(Error('Synthetic account failure')) : cell.save([{ id: 'synthetic-row', done: true }]),
+      { id: 'synthetic-item' }, { id: 'synthetic-row' });
+    await assert.doesNotReject(async () => { await handler(); });
+    assert.equal(raw, original);
+    assert.deepEqual(cell.value, [{ id: 'synthetic-row', done: false }]);
+  }
+});
 test('native SQLite records survive close/reopen: notes, checklists, pins, profile and appearance', () => {
   const root=mkdtempSync(join(tmpdir(),'bubble-sqlite-'));const path=join(root,'bubble.db');
   const records={ 'bubble.items.v1':[{id:'note',body:'private note',type:'NOTE'},{id:'list',type:'CHECKLIST',rows:[{text:'task',done:true}]}], 'bubble.bubbles.v1':[{id:'bubble'}], 'bubble.pins.v1':{bubble:['note']},'bubble.profile.v1':{displayName:'Synthetic',bio:'bio',imageUri:'bubble-photo:profile-abc.jpg'},'bubble.mode.v1':'dark','bubble.accent.v1':'Rose'};

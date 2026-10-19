@@ -44,6 +44,34 @@ async function edit(page: Page, title: string, kind = 'note') {
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
 }
 
+test('profile logout and Security password changes preserve saved account content', async ({page}) => {
+  const {email,password} = await register(page);
+  await page.goto('/'); await createNote(page,'Password change retained note');
+  await page.goto('/you');
+  await expect(page.getByRole('button',{name:'Log Out',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Security',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Log Out',exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'Change Password',exact:true}).click();
+  await page.getByLabel('Current password',{exact:true}).fill(password);
+  await page.getByLabel('New password',{exact:true}).fill('Synthetic-new-password-2026');
+  await page.getByLabel('Confirm new password',{exact:true}).fill('different');
+  await page.getByRole('button',{name:'Save Changes',exact:true}).click();
+  await expect(page.getByRole('alert').last()).toContainText('do not match');
+  await page.getByLabel('Confirm new password',{exact:true}).fill('Synthetic-new-password-2026');
+  await page.getByLabel('Current password',{exact:true}).fill('incorrect-synthetic-password');
+  await page.getByRole('button',{name:'Save Changes',exact:true}).click();
+  await expect(page.getByRole('alert').last()).toContainText('Check your current password');
+  await page.getByLabel('Current password',{exact:true}).fill(password);
+  await page.getByRole('button',{name:'Save Changes',exact:true}).click();
+  await expect(page.getByText('Password changed. Log in with your new password.',{exact:true}).filter({visible:true})).toBeVisible();
+  await page.getByRole('textbox',{name:'Email',exact:true}).fill(email);
+  await page.getByLabel('Password',{exact:true}).filter({visible:true}).fill('Synthetic-new-password-2026');
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Open account and workspace settings'})).toContainText(email);
+  await page.goto('/');
+  await expect(page.getByRole('button',{name:'Open Password change retained note note',exact:true})).toBeVisible();
+});
+
 test('account Bubbles and photos sync privately while Home remains the default destination', async ({page})=>{
   await register(page);
   await page.goto('/');
@@ -144,8 +172,10 @@ test('registration, invalid credentials, session restoration, expiry and logout'
   const { email, password } = await register(page);
   await page.reload();
   await expect(page.getByRole('button', { name: 'Open account and workspace settings' })).toContainText(email);
+  await page.goto('/you');
+  await page.getByRole('button', { name: 'Log Out', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Open account and workspace settings' })).toContainText('Local only');
   await page.goto('/account');
-  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await page.getByRole('textbox', { name: 'Email', exact: true }).fill(email);
   await page.getByLabel('Password', { exact: true }).fill('wrong-password');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();

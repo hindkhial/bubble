@@ -31,6 +31,7 @@ function useAccountState() {
   const [loading,setLoading] = useState(false);
   const [busy,setBusy] = useState(false);
   const [error,setError] = useState('');
+  const [authNotice,setAuthNotice] = useState('');
   const [blocked,setBlocked] = useState(false);
   const generation = useRef(0);
   const inFlight = useRef(false);
@@ -93,7 +94,7 @@ function useAccountState() {
     if(Platform.OS==='android')throw new Error('Account mode is not available on Android.');
     if(inFlight.current)throw new Error('Wait for the previous account change to finish before signing in.');
     if(authPending.current)throw new Error('A sign-in request is already running.');
-    authPending.current=true;
+    authPending.current=true;setAuthNotice('');
     try{
       await repository.login(email.trim().toLowerCase(),password);
       if(Platform.OS==='web')remember('account');
@@ -112,6 +113,16 @@ function useAccountState() {
       return;
     }
     try { await repository.logout();local(); } catch(problem) { throw fail(problem); }
+  };
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    await act(() => repository.changePassword(currentPassword,newPassword), () => {});
+    try {
+      if(Platform.OS==='ios') localStorage()?.setItem('bubble.auth.locked.v1','true');
+    } finally {
+      generation.current++;setNativeVerified(false);clear();repository.api.resetCsrf();setBlocked(false);setError('');
+      remember('local');setAuthNotice('Password changed. Log in with your new password.');
+      if(Platform.OS==='ios') await clearNativeSession(configuredApi());
+    }
   };
   const act = async <T,>(operation: () => Promise<T>, apply: (value: T) => void): Promise<T> => {
     if(!user || mode !== 'account')throw new Error('Sign in to use your account.');
@@ -146,7 +157,7 @@ function useAccountState() {
   const patchPreferences = (input: Partial<Preferences>) => act(()=>repository.api.request<Preferences>('PATCH','/preferences',input),setPreferences);
   const patchProfileAssets = (input:{avatarColor:string;avatarEmoji?:string;imageUri?:string}) => act(()=>saveNativeProfileAssets(input.avatarColor,input.avatarEmoji??'',input.imageUri),setProfileAssets);
   const importSelected = (storage: ClientStorage, selected: SampleItem[]) => act(()=>copyLocalItems(repository,storage,user!.id,selected,Platform.OS==='ios'?(id,item)=>verifyAccountCopy(repository,id,item):undefined),()=>{}).finally(()=>{void refresh();});
-  return {library,createLibrary,updateLibrary,deleteLibrary,pinBubble,profileAssets,patchProfileAssets,nativeVerified,resume,reportError:fail,importSelected,mode,ready,user,profile,preferences,items,pins,loading,busy,error,blocked,repository,refresh,local,signIn,register,logout,saveNote,saveChecklist,remove,pin,patchProfile,patchPreferences,setError};
+  return {authNotice,changePassword,library,createLibrary,updateLibrary,deleteLibrary,pinBubble,profileAssets,patchProfileAssets,nativeVerified,resume,reportError:fail,importSelected,mode,ready,user,profile,preferences,items,pins,loading,busy,error,blocked,repository,refresh,local,signIn,register,logout,saveNote,saveChecklist,remove,pin,patchProfile,patchPreferences,setError};
 }
 const AccountContext = createContext<ReturnType<typeof useAccountState> | null>(null);
 export function AccountProvider({children}: PropsWithChildren) { const value=useAccountState();return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>; }

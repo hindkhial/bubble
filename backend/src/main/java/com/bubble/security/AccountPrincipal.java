@@ -14,9 +14,18 @@ public final class AccountPrincipal implements UserDetails, CredentialsContainer
     private final UUID id;
     private final String username;
     private String password;
+    private final byte[] passwordVersion;
 
     public AccountPrincipal(UUID id, String username, String password) {
-        this.id = id; this.username = username; this.password = password;
+        this.id = id; this.username = username; this.password = password; this.passwordVersion = version(password);
+    }
+    private static byte[] version(String encoded) {
+        try { return java.security.MessageDigest.getInstance("SHA-256").digest(
+                (encoded == null ? "" : encoded).getBytes(java.nio.charset.StandardCharsets.UTF_8)); }
+        catch (java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
+    }
+    public boolean matchesPasswordVersion(String encoded) {
+        return passwordVersion != null && java.security.MessageDigest.isEqual(passwordVersion, version(encoded));
     }
     public UUID id() { return id; }
     @Override public String getUsername() { return username; }

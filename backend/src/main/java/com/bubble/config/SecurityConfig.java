@@ -50,8 +50,9 @@ public class SecurityConfig {
 
     @Bean SecurityFilterChain securityFilterChain(HttpSecurity http,
             HttpSessionSecurityContextRepository contexts, HttpSessionCsrfTokenRepository csrf,
-            SessionAuthenticationStrategy sessions, AuthLimitsProperties limits) throws Exception {
-        return http.cors(Customizer.withDefaults())
+            SessionAuthenticationStrategy sessions, AuthLimitsProperties limits, com.bubble.repository.UserRepository users) throws Exception {
+        return http.addFilterAfter(new com.bubble.security.PasswordSessionFilter(users),
+                        org.springframework.web.filter.CorsFilter.class).cors(Customizer.withDefaults())
                 .csrf(config -> config.csrfTokenRepository(csrf))
                 .addFilterAfter(new com.bubble.security.AuthRateLimitFilter(new com.bubble.security.AuthRequestBudget(
                         limits.perAddressPerMinute(), limits.totalPerMinute())), org.springframework.security.web.csrf.CsrfFilter.class)

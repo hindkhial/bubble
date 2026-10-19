@@ -103,7 +103,7 @@ try {
   visit(report.suites);
   console.log(JSON.stringify(report.stats));
   assert.equal(result.status, 0, 'Browser scenarios failed');
-  assert.equal(report.stats.expected, 10);
+  assert.equal(report.stats.expected, 11, 'All browser scenarios, including password changes, must pass');
   assert.equal(report.stats.unexpected, 0);
   assert.equal(report.stats.skipped, 0);
   assert.equal(report.stats.flaky, 0);

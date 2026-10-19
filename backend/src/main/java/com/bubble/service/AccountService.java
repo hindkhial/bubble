@@ -37,6 +37,16 @@ public class AccountService {
         return response(users.findById(id).orElseThrow(() -> new UsernameNotFoundException("Invalid credentials.")));
     }
 
+    @Transactional
+    public boolean changePassword(UUID id, com.bubble.dto.ChangePasswordRequest input) {
+        var user = users.lockById(id).orElseThrow(() -> new UsernameNotFoundException("Invalid credentials."));
+        if (!user.hasPassword() || !encoder.matches(input.currentPassword(), user.getPasswordHash())) return false;
+        if (encoder.matches(input.newPassword(), user.getPasswordHash())) throw new IllegalArgumentException("Choose a different password.");
+        user.replacePasswordHash(encoder.encode(input.newPassword()));
+        users.saveAndFlush(user);
+        return true;
+    }
+
     private AccountResponse response(User user) {
         return new AccountResponse(user.getId(), user.getEmail(), user.getProfile().getDisplayName(), user.getCreatedAt());
     }
