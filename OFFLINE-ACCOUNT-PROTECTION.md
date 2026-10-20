@@ -2,7 +2,8 @@
 
 Review candidate based on PR #13 head `77b14cff21eb4ce4dae55692b807b9023d88e854`.
 The parent PR remains unmerged. No backend, signing, trust, firewall, hosting or
-existing SQLite schema change is part of this feature.
+existing SQLite schema change is part of this feature. Owner-executed physical
+results and remaining gates are recorded in IOS-OFFLINE-VERIFICATION.md.
 
 ## Approved policy and UI
 
@@ -140,7 +141,7 @@ typecheck using the existing Pods/Expo frameworks without signing or installing.
 | Agent full Simulator build | Blocked before compilation by existing CoreSimulator/workspace restrictions; exit 66 |
 | Owner-run Simulator Product → Build | Passed, owner-reported October 20; Build only |
 | New-feature Simulator runtime/Face ID/Keychain | Not Tested |
-| New-feature physical iPhone runtime | Not Tested |
+| New-feature physical iPhone runtime | Core read/unlock/locking/search/draft/publication/logout/online-return checks Passed, owner-executed; see IOS-OFFLINE-VERIFICATION.md for scope and exclusions |
 | Actual seven-day wait, phone reboot, unavailable Keychain and corrupt on-device records | Not Tested on-device; pure policy/crypto boundaries tested |
 | Destructive backup/restore | Not Tested; not performed |
 

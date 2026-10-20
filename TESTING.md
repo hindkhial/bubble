@@ -1,8 +1,29 @@
-## Offline account protection candidate — October 20, 2026
+## Physical offline verification — October 20, 2026
+
+IOS-OFFLINE-VERIFICATION.md records owner-executed iPhone 13 / iOS 26.1 results
+for code head 2d7e3bb7e38a6e447574b813454b23365620f960. The owner downloaded a
+container backup, approved a same-team/same-ID update, locally verified the signed
+Release app and reported successful online content loading, offline cache reading,
+Face ID/passcode, background locking/cancel privacy, local search, completion-state
+retention, protected draft recovery, explicit new-copy publishing without duplicate
+publication, offline logout denial and online return with content intact.
+Stopping the proxy and observing a Safari connection error established that the
+backend endpoint was unavailable during the offline checks. It does not establish
+zero network attempts. Actual seven-day waiting, on-device traffic capture,
+cross-account testing, reboot/rejection/corruption fault injection and full backup
+restoration remain Not Tested. No simulated or automated pass substitutes for them.
+
+Rerun after the physical reports: 116 frontend tests (zero failed/skipped),
+TypeScript and 25 native CryptoKit/policy checks Passed. The existing code-head
+CI run 39377084849 passed frontend, 71 backend tests, all 11 browser scenarios,
+recovery/rollback and runtime image scans. No runtime code changed in this record.
+
+## Offline account protection preparation — October 20, 2026
 
 Branch `offline-account-protection` starts at reviewed PR #13 head 77b14cf.
 OFFLINE-ACCOUNT-PROTECTION.md records scope, security policy, limits and native
-manual checklist. This follow-up does not install an app or mutate live data.
+manual checklist. This preparation record predates the separately approved
+owner-executed update and physical checks above.
 
 - Local frontend: 116 tests Passed, zero failed/skipped; TypeScript Passed.
   New tests execute offline transport locks with request spies, schema/search
@@ -25,10 +46,10 @@ manual checklist. This follow-up does not install an app or mutate live data.
   build still exits 66 before compilation because of existing session restrictions.
 - Owner-run Xcode Simulator Product → Build: Passed (reported October 20).
   Build only; new-feature runtime remains untested.
-- New-feature Simulator and physical-device Face ID/Keychain/cache/draft runtime,
-  unavailable-key runtime, real logout/reboot/expiry and interrupted-publication
-  scenarios remain Not Tested. Previous physical reports are baseline evidence
-  only, not passes for this new feature. Destructive recovery not performed.
+- New-feature Simulator runtime remains Not Tested. Physical results are recorded
+  separately above; unavailable-key/corruption runtime, reboot/expiry and
+  interrupted-publication scenarios remain Not Tested on-device. Destructive
+  recovery not performed.
 - Backend/schema unchanged. New PR CI must provide its own frontend/backend,
   browser, recovery and runtime-scan evidence. Existing dependency advisories
   remain open; no finding was suppressed or assumed fixed by this change.

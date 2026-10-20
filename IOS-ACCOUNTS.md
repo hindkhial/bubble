@@ -3,7 +3,9 @@
 **Candidate offline policy:** see OFFLINE-ACCOUNT-PROTECTION.md for the separate
 encrypted reader and protected drafts. Online sessions retain the controls below;
 offline local unlock never sets the online-verification flag or sends HTTP.
-Native runtime verification of this new feature remains pending.
+Core physical-iPhone checks were owner-executed on October 20, 2026; see
+IOS-OFFLINE-VERIFICATION.md. Seven-day elapsed-time and traffic-capture results
+must not be inferred from successful offline reading.
 
 ## Authentication and privacy
 
