@@ -20,7 +20,7 @@ The two-bubble Welcome logo, mandatory authentication, You Log Out, Security Cha
 
 | Check | Status | Evidence |
 | --- | --- | --- |
-| Frontend tests | Passed | 100 local tests; includes actual announcement hook, flexible form styles, long-dialog structure/actions, scalable navigation labels/actions and Release gate UI |
+| Frontend tests | Passed | 101 local tests; includes actual announcement hook, flexible form styles, long-dialog structure/actions, scalable navigation labels/actions, Appearance states and Release gate UI |
 | TypeScript | Passed | Local `tsc --noEmit` |
 | Native Release compilation | Blocked | Agent attempt exited 66 before compilation; CoreSimulator services unavailable and Xcode rejected the existing workspace in this restricted session |
 | Embedded bundle in a native Release app | Not Tested | No successful native Release artifact produced |

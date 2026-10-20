@@ -18,7 +18,7 @@ export function AppearanceSheet({ onClose }: { onClose: () => void }) {
           <Text style={styles.description}>A little more you, in every Bubble.</Text>
           <Text accessibilityRole="header" style={styles.label}>Mode</Text>
           <View style={styles.modes}>
-            {(['light','dark','system'] as const).map((option) => <Pressable key={option} accessibilityRole="radio" accessibilityLabel={`${option} appearance`} accessibilityState={{ checked: selectedMode === option, disabled: account.busy || account.loading }} aria-checked={selectedMode === option} disabled={account.busy || account.loading} onPress={() => setMode(option)} style={[styles.mode, selectedMode === option && styles.selected]}>
+            {(['light','dark','system'] as const).map((option) => <Pressable key={option} accessibilityRole="radio" accessibilityLabel={`${option[0].toUpperCase()}${option.slice(1)} appearance`} accessibilityState={{ checked: selectedMode === option, disabled: account.busy || account.loading }} aria-checked={selectedMode === option} disabled={account.busy || account.loading} onPress={() => setMode(option)} style={[styles.mode, selectedMode === option && styles.selected]}>
               <Text style={styles.modeText}>{option === 'light' ? 'Light' : option === 'dark' ? 'Dark' : 'System'}{selectedMode === option ? ' ✓' : ''}</Text>
             </Pressable>)}
           </View>

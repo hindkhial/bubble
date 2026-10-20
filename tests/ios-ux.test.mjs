@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
+import { accentPalette, getThemeColors } from '../src/theme/appearance.ts';
 
 function load(file, dependencies) {
   const module = { exports: {} };
@@ -89,4 +90,28 @@ test('actual bottom navigation retains scalable labels, selected states and rout
   assert.deepEqual(tabs.map(node => node.props.accessibilityState.selected), [true, false, false]);
   for (const tab of tabs) { assert.ok(tab.props.style.minHeight >= 44); tab.props.onPress(); }
   assert.deepEqual(routes, ['/search', '/you']);
+});
+
+test('actual Appearance sheet retains named mode controls and announces disabled/selected states', () => {
+  const elements = [];
+  const jsx = (type, props) => { const node = { type, props }; elements.push(node); return node; };
+  const { AppearanceSheet } = load('../src/components/AppearanceSheet.tsx', {
+    'react/jsx-runtime': { jsx, jsxs: jsx },
+    './MotionAwareModal': { MotionAwareModal: 'Modal' },
+    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 59, bottom: 34 }) },
+    '../state/Account': { useAccount: () => ({ busy: true, loading: false, mode: 'account' }) },
+    '../theme/appearance': { accentPalette },
+    '../theme/Theme': { useTheme: () => ({ colors: getThemeColors('dark', 'Sky blue'), mode: 'dark', selectedMode: 'dark', accent: 'Sky blue' }) },
+    'react-native': { Platform: { OS: 'ios' }, View: 'View', Text: 'Text', Pressable: 'Pressable', ScrollView: 'ScrollView', StyleSheet: { create: value => value } },
+  });
+  AppearanceSheet({ onClose: () => {} });
+  const radios = elements.filter(node => node.props.accessibilityRole === 'radio');
+  assert.equal(radios.length, 10);
+  for (const radio of radios) {
+    assert.equal(radio.props.disabled, true);
+    assert.equal(radio.props.accessibilityState.disabled, true);
+  }
+  for (const mode of ['Light', 'Dark', 'System']) assert.ok(radios.some(node => node.props.accessibilityLabel.startsWith(mode)));
+  const checked = radios.filter(node => node.props.accessibilityState.checked).map(node => node.props.accessibilityLabel);
+  assert.deepEqual(checked, ['Dark appearance', 'Sky blue app color']);
 });
