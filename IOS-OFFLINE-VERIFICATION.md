@@ -47,7 +47,7 @@ restoration has not been rehearsed.
 | Latest successful server content appears in cache | Passed | New synthetic published note was available offline |
 | Offline logout prevents later cached access | Passed | After logout and termination, cached access required online verification and no notes were visible |
 | Reconnect and online login after offline logout | Passed | Owner confirmed existing content and synthetic note intact, no protection error |
-| Zero actual HTTP attempts during offline interval | Not Tested | No physical traffic trace; unavailable endpoint alone is insufficient evidence |
+| Zero actual HTTP attempts during offline interval | Inconclusive | Two Instruments captures showed no HTTP tasks but network connections were attributed to Unknown, not reliably to Bubble |
 | Seven actual days elapsed without online verification | Not Tested | Pure native policy boundary checks Passed; physical waiting was not performed |
 | Expiry while offline on a physical device | Not Tested | No time manipulation or reduced-duration production policy |
 | Reboot requires online verification | Not Tested | No phone reboot in this session; native boot-identity policy tested automatically |
@@ -61,6 +61,16 @@ byte-for-byte device-container comparison or forensic inspection of the owner's
 encrypted files was performed. Functional decryption through the native vault
 and actual CryptoKit tests support the encryption assessment; they do not prove
 complete OS/Keychain security under compromise.
+
+At approximately 21:50–21:57 Casablanca time, the owner attempted two physical
+Instruments Network recordings (about 72 and 48 seconds). The owner confirmed
+searching for and opening the synthetic note during the first recording. A
+target-selection screenshot showed the physical iPhone on iOS 26.1 and Attach to
+Bubble (27576). Both result screenshots showed an empty HTTP Traffic timeline,
+but Network Connections bytes were attributed to an Unknown process. The second
+attempt did not resolve attribution. These screenshots neither prove Bubble sent
+those bytes nor prove zero requests. No private trace was obtained or analyzed;
+no online capture, security workaround or additional installation was requested.
 
 ## Automated and review evidence
 
@@ -90,7 +100,7 @@ owner-observed, not a destructive recovery guarantee.
 
 - Keep the physical traffic check open. [Apple Instruments' Network/HTTP Traffic
   tool](https://developer.apple.com/documentation/foundation/analyzing-http-traffic-with-instruments)
-  tool can record decrypted headers/content in plaintext: only use a separately
+  can record decrypted headers/content in plaintext: only use a separately
   consented offline-only recording and keep it private; never upload a trace or
   record account passwords. Do not use Product > Profile if it would rebuild or
   reinstall a different app without approval. Attach to the already approved app.

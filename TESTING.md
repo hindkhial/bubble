@@ -9,9 +9,12 @@ retention, protected draft recovery, explicit new-copy publishing without duplic
 publication, offline logout denial and online return with content intact.
 Stopping the proxy and observing a Safari connection error established that the
 backend endpoint was unavailable during the offline checks. It does not establish
-zero network attempts. Actual seven-day waiting, on-device traffic capture,
-cross-account testing, reboot/rejection/corruption fault injection and full backup
-restoration remain Not Tested. No simulated or automated pass substitutes for them.
+zero network attempts. Two subsequent physical Instruments recordings showed no
+HTTP tasks, but Network Connections remained attributed to Unknown despite a
+verified Bubble target selection. The zero-request capture is Inconclusive,
+not Passed. Actual seven-day waiting, cross-account testing,
+reboot/rejection/corruption fault injection and full backup restoration remain
+Not Tested. No simulated or automated pass substitutes for them.
 
 Rerun after the physical reports: 116 frontend tests (zero failed/skipped),
 TypeScript and 25 native CryptoKit/policy checks Passed. The existing code-head
