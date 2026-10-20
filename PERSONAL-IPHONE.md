@@ -1,5 +1,13 @@
 # Personal iPhone edition
 
+**Offline-protection feature candidate:** OFFLINE-ACCOUNT-PROTECTION.md describes
+the encrypted read-only cache and protected drafts on its separate branch. Its
+owner approved a same-identity update and reported the core offline and draft
+workflows Passed on iPhone 13 / iOS 26.1 on October 20, 2026. See
+IOS-OFFLINE-VERIFICATION.md for the separate physical results and open gates.
+The original installed-build limitations below remain historical baseline evidence;
+the offline candidate does not change the public-distribution roadmap.
+
 Active direction, October 20, 2026: Bubble is for the owner's iPhone 13 using a
 free Xcode Personal Team and `com.hindkhial.bubble`. TestFlight, App Store,
 paid membership, public hosting/web distribution and Android distribution are

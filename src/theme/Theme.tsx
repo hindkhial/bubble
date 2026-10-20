@@ -13,9 +13,10 @@ function useAppearanceState() {
   const [localAccent, setLocalAccent, accentError] = useLocalState<AccentName>('bubble.accent.v1', () => 'Lavender', (value): value is AccentName => ['Lavender', 'Rose', 'Sage', 'Deep lavender', 'Sky blue', 'Dusty pink', 'Denim blue'].includes(String(value)));
   const account=useAccount();const system=useColorScheme();
   const remote=account.mode==='account' && !!account.user && (Platform.OS!=='ios'||account.nativeVerified);
-  const selectedMode = remote ? (account.preferences?.themeMode ?? 'LIGHT').toLowerCase() as 'light'|'dark'|'system' : localMode;
+  const cached=account.offlineSnapshot?.appearance;
+  const selectedMode = remote ? (account.preferences?.themeMode ?? 'LIGHT').toLowerCase() as 'light'|'dark'|'system' : cached ? cached.themeMode.toLowerCase() as 'light'|'dark'|'system' : localMode;
   const mode: AppearanceMode = selectedMode==='system' ? system==='dark'?'dark':'light' : selectedMode;
-  const accent = remote ? (account.preferences?.accentColor ?? 'Lavender') as AccentName : localAccent;
+  const accent = remote ? (account.preferences?.accentColor ?? 'Lavender') as AccentName : cached ? cached.accentColor as AccentName : localAccent;
   const setMode = (next: 'light'|'dark'|'system') => { if(remote)void account.patchPreferences({themeMode:next.toUpperCase() as 'LIGHT'|'DARK'|'SYSTEM'}).catch(()=>{});else setLocalMode(next); };
   const setAccent = (next: AccentName) => {if(remote)void account.patchPreferences({accentColor:next}).catch(()=>{});else setLocalAccent(next);};
   const colors = useMemo(() => getThemeColors(mode, accent), [mode, accent]);

@@ -1,3 +1,62 @@
+## Physical offline verification — October 20, 2026
+
+IOS-OFFLINE-VERIFICATION.md records owner-executed iPhone 13 / iOS 26.1 results
+for code head 2d7e3bb7e38a6e447574b813454b23365620f960. The owner downloaded a
+container backup, approved a same-team/same-ID update, locally verified the signed
+Release app and reported successful online content loading, offline cache reading,
+Face ID/passcode, background locking/cancel privacy, local search, completion-state
+retention, protected draft recovery, explicit new-copy publishing without duplicate
+publication, offline logout denial and online return with content intact.
+Stopping the proxy and observing a Safari connection error established that the
+backend endpoint was unavailable during the offline checks. It does not establish
+zero network attempts. Two subsequent physical Instruments recordings showed no
+HTTP tasks, but Network Connections remained attributed to Unknown despite a
+verified Bubble target selection. The zero-request capture is Inconclusive,
+not Passed. Actual seven-day waiting, cross-account testing,
+reboot/rejection/corruption fault injection and full backup restoration remain
+Not Tested. No simulated or automated pass substitutes for them.
+
+Rerun after the physical reports: 116 frontend tests (zero failed/skipped),
+TypeScript and 25 native CryptoKit/policy checks Passed. The existing code-head
+CI run 39377084849 passed frontend, 71 backend tests, all 11 browser scenarios,
+recovery/rollback and runtime image scans. No runtime code changed in this record.
+
+## Offline account protection preparation — October 20, 2026
+
+Branch `offline-account-protection` starts at reviewed PR #13 head 77b14cf.
+OFFLINE-ACCOUNT-PROTECTION.md records scope, security policy, limits and native
+manual checklist. This preparation record predates the separately approved
+owner-executed update and physical checks above.
+
+- Local frontend: 116 tests Passed, zero failed/skipped; TypeScript Passed.
+  New tests execute offline transport locks with request spies, schema/search
+  behavior, serialized immutable drafts, failed-write recovery and publication
+  state parsing. Offline requests (GET/POST/PATCH/DELETE) never reached the bridge
+  or global fetch in that execution. This is not packet capture on an iPhone.
+- Native: 25 actual CryptoKit/policy checks Passed using synthetic data: encryption
+  roundtrip, new nonce, wrong key/backend/account/record, tampering/truncation,
+  expiry, clock changes, reboot, revoked/future-version grant and network/owner
+  guards. No Mac Keychain was accessed by that executable.
+- Full SessionTransport + vault/cipher/policy Swift typecheck Passed against the
+  actual iOS Simulator SDK and installed Expo frameworks; Swift syntax Passed.
+  Standalone probe initially lacked ExpoModulesJSI; adding its existing framework
+  search path resolved it without changing dependencies or toolchains.
+- Existing workspace CocoaPods `--deployment` source refresh Passed; app project
+  and Podfile.lock hashes unchanged. Only the required Face ID usage description
+  was added to the ignored local Info.plist, matching tracked app.json. No signing
+  settings, installed app, provisioning, trust or firewall changes.
+- iOS Hermes/assets export Passed; not native compilation. Full agent Simulator
+  build still exits 66 before compilation because of existing session restrictions.
+- Owner-run Xcode Simulator Product → Build: Passed (reported October 20).
+  Build only; new-feature runtime remains untested.
+- New-feature Simulator runtime remains Not Tested. Physical results are recorded
+  separately above; unavailable-key/corruption runtime, reboot/expiry and
+  interrupted-publication scenarios remain Not Tested on-device. Destructive
+  recovery not performed.
+- Backend/schema unchanged. New PR CI must provide its own frontend/backend,
+  browser, recovery and runtime-scan evidence. Existing dependency advisories
+  remain open; no finding was suppressed or assumed fixed by this change.
+
 ## Personal iPhone verification — October 20, 2026
 
 Active scope: PERSONAL-IPHONE.md. Public distribution is deferred. Fetched
