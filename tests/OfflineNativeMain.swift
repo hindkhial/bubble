@@ -20,6 +20,7 @@ import CryptoKit
     check(!OfflinePolicy.permits(issued, issued, version: 2), "future format locked")
     check(!OfflinePolicy.allowsNetwork(false, expectedOwner: nil, actualOwner: "a"), "offline forbids every request")
     check(!OfflinePolicy.allowsNetwork(true, expectedOwner: "a", actualOwner: "b"), "late account switch rejects publication")
+    check(!OfflinePolicy.allowsNetwork(true, expectedOwner: "a", actualOwner: nil), "logout revokes publishing owner before HTTP logout")
     check(OfflinePolicy.allowsNetwork(true, expectedOwner: "a", actualOwner: "a"), "matching online owner")
     // Relaunch in the same boot uses persisted issuance, not an extended grant.
     let persisted = try JSONDecoder().decode(OfflineClock.self, from: JSONEncoder().encode(issued))

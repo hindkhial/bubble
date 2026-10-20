@@ -85,7 +85,13 @@ private actor SessionTransport {
     try await vault.removeDraft(id, base: base, owner: owner)
   }
   func validateOffline() async throws { guard !networkAllowed else { throw SessionFailure.invalidRequest }; try await vault.validateOffline() }
-  func revokeOffline(_ value: String) async throws { try await vault.revoke(origin(value)) }
+  func revokeOffline(_ value: String) async throws {
+    let base = try origin(value)
+    generation += 1; verifiedOwner = nil
+    // Keep only the cookie/gate needed for the subsequent server logout request.
+    // Owner-scoped publication/cache/draft calls are rejected immediately.
+    try await vault.revoke(base)
+  }
 
   private func origin(_ value: String) throws -> String {
     guard let parts = URLComponents(string: value), parts.scheme == "https",

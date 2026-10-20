@@ -9,7 +9,7 @@ manual checklist. This follow-up does not install an app or mutate live data.
   behavior, serialized immutable drafts, failed-write recovery and publication
   state parsing. Offline requests (GET/POST/PATCH/DELETE) never reached the bridge
   or global fetch in that execution. This is not packet capture on an iPhone.
-- Native: 24 actual CryptoKit/policy checks Passed using synthetic data: encryption
+- Native: 25 actual CryptoKit/policy checks Passed using synthetic data: encryption
   roundtrip, new nonce, wrong key/backend/account/record, tampering/truncation,
   expiry, clock changes, reboot, revoked/future-version grant and network/owner
   guards. No Mac Keychain was accessed by that executable.

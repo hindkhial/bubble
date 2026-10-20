@@ -167,7 +167,7 @@ function useAccountState() {
   };
   const act = async <T,>(operation: () => Promise<T>, apply: (value: T) => void): Promise<T> => {
     if(!user || mode !== 'account')throw new Error('Sign in to use your account.');
-    if(inFlight.current || blocked || loading){const message='Refresh your account before making another change.';setError(message);throw new Error(message);}
+    if(authPending.current || inFlight.current || blocked || loading){const message='Refresh your account before making another change.';setError(message);throw new Error(message);}
     inFlight.current = true;setBusy(true);setError('');const ticket = generation.current;
     try { const value=await operation();if(ticket !== generation.current)throw new Error('Your workspace changed. Refresh to confirm this change.');apply(value);return value; }
     catch(problem) { throw fail(problem); }

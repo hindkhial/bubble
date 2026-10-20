@@ -133,7 +133,7 @@ typecheck using the existing Pods/Expo frameworks without signing or installing.
 | --- | --- |
 | Existing frontend + new offline/draft tests | 114 Passed; zero failed/skipped |
 | TypeScript | Passed |
-| Actual native CryptoKit/policy executable | 24 checks Passed |
+| Actual native CryptoKit/policy executable | 25 checks Passed |
 | Full native session/vault Swift typecheck against iOS SDK + actual Expo frameworks | Passed |
 | CocoaPods deployment-mode source refresh | Passed; app project/lockfile unchanged |
 | iOS Hermes export | Passed; not native compilation |
