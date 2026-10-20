@@ -4,7 +4,7 @@ Branch `offline-account-protection` starts at reviewed PR #13 head 77b14cf.
 OFFLINE-ACCOUNT-PROTECTION.md records scope, security policy, limits and native
 manual checklist. This follow-up does not install an app or mutate live data.
 
-- Local frontend: 114 tests Passed, zero failed/skipped; TypeScript Passed.
+- Local frontend: 116 tests Passed, zero failed/skipped; TypeScript Passed.
   New tests execute offline transport locks with request spies, schema/search
   behavior, serialized immutable drafts, failed-write recovery and publication
   state parsing. Offline requests (GET/POST/PATCH/DELETE) never reached the bridge
@@ -23,6 +23,8 @@ manual checklist. This follow-up does not install an app or mutate live data.
   settings, installed app, provisioning, trust or firewall changes.
 - iOS Hermes/assets export Passed; not native compilation. Full agent Simulator
   build still exits 66 before compilation because of existing session restrictions.
+- Owner-run Xcode Simulator Product → Build: Passed (reported October 20).
+  Build only; new-feature runtime remains untested.
 - New-feature Simulator and physical-device Face ID/Keychain/cache/draft runtime,
   unavailable-key runtime, real logout/reboot/expiry and interrupted-publication
   scenarios remain Not Tested. Previous physical reports are baseline evidence

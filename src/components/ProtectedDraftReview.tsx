@@ -23,11 +23,15 @@ export function ProtectedDraftReview(){
     if(!selected||publishing.current||selected.publication)return;
     if(selected.kind==='NOTE'?!selected.body.trim():!selected.rows.some(r=>r.text.trim())){setError('This draft has no content to publish. Nothing was sent.');return;}
     publishing.current=true;setBusy(true);setError('');
+    const ticket=epoch.current;
     // Persist the uncertainty marker BEFORE HTTP. Interrupted requests never auto-retry.
     const pending:ProtectedDraft={...selected,publication:{state:'pending'}};
     try{
-      await saveProtectedDraft(base,owner,pending);setSelected(pending);setDrafts(values=>values.map(d=>d.id===pending.id?pending:d));setConfirm(false);
+      await saveProtectedDraft(base,owner,pending);
+      if(ticket!==epoch.current)return; // Never continue a confirmation across authentication unmount/relaunch.
+      setSelected(pending);setDrafts(values=>values.map(d=>d.id===pending.id?pending:d));setConfirm(false);
       const result=await account.publishDraftCopy(owner,selected);
+      if(ticket!==epoch.current)return; // Retain pending if a request was interrupted after dispatch.
       const receipt:ProtectedDraft={...pending,publication:{state:'confirmed',itemId:result.id}};
       await saveProtectedDraft(base,owner,receipt);setSelected(receipt);setDrafts(values=>values.map(d=>d.id===receipt.id?receipt:d));
     }catch{setError('Publishing was not confirmed. Review Home after reconnecting before taking further action. The protected draft is retained; no automatic retry will occur.');}

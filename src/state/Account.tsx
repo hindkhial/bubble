@@ -38,7 +38,7 @@ function useAccountState() {
   const [blocked,setBlocked] = useState(false);
   const generation = useRef(0);
   const inFlight = useRef(false);
-  const clear = useCallback(() => { setUser(null);setProfile(null);setPreferences(null);setItems([]);setLibrary([]);setPins([]);setProfileAssets({}); },[]);
+  const clear = useCallback(() => { setUser(null);setProfile(null);setPreferences(null);setItems([]);setLibrary([]);setPins([]);setProfileAssets({});setLoading(false); },[]);
   const remember = (next: 'local' | 'account') => { try { browserStorage()?.setItem(MODE_KEY,next); } catch { /* Mode is session-only when browser storage is blocked. */ } setMode(next); };
   const fail = (value: unknown) => {
     const problem = value instanceof Error ? value : new Error('The request could not be completed.');
@@ -53,6 +53,7 @@ function useAccountState() {
     const ticket = ++generation.current;setLoading(true);setError('');
     try {
       const me = await repository.me();
+      if(ticket !== generation.current)return false;
       const [accountProfile,accountPreferences,content,entries,placements] = await Promise.all([
         repository.api.request<ServerProfile>('GET','/profile'),repository.api.request<Preferences>('GET','/preferences'),repository.content(),
         libraryPages<LibraryEntry>(repository.api,'/library'),libraryPages<Placement>(repository.api,'/library/placements'),

@@ -131,13 +131,14 @@ typecheck using the existing Pods/Expo frameworks without signing or installing.
 
 | Verification | Result at preparation |
 | --- | --- |
-| Existing frontend + new offline/draft tests | 114 Passed; zero failed/skipped |
+| Existing frontend + new offline/draft tests | 116 Passed; zero failed/skipped |
 | TypeScript | Passed |
 | Actual native CryptoKit/policy executable | 25 checks Passed |
 | Full native session/vault Swift typecheck against iOS SDK + actual Expo frameworks | Passed |
 | CocoaPods deployment-mode source refresh | Passed; app project/lockfile unchanged |
 | iOS Hermes export | Passed; not native compilation |
 | Agent full Simulator build | Blocked before compilation by existing CoreSimulator/workspace restrictions; exit 66 |
+| Owner-run Simulator Product → Build | Passed, owner-reported October 20; Build only |
 | New-feature Simulator runtime/Face ID/Keychain | Not Tested |
 | New-feature physical iPhone runtime | Not Tested |
 | Actual seven-day wait, phone reboot, unavailable Keychain and corrupt on-device records | Not Tested on-device; pure policy/crypto boundaries tested |

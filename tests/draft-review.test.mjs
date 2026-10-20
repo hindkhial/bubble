@@ -5,14 +5,15 @@ import ts from 'typescript';
 
 // Execute the real review component and callbacks with host hooks/native stubs.
 // Crypto, Keychain and real uploads are deliberately not performed here.
-function harness({fail=false,empty=false}={}){
+function harness({fail=false,empty=false,pausePending=false}={}){
   const draft={version:1,id:'d237847b-5e6e-4c66-ac09-247ac61b120c',kind:'NOTE',title:'Synthetic',body:empty?'':'Protected text',rows:[],updatedAt:100};
   const records=new Map([[draft.id,draft]]),events=[],cells=[];let cursor=0,nodes=[];
+  let cleanup,releasePending;const waiting=new Promise(resolve=>{releasePending=resolve;});
   const jsx=(type,props)=>{const n={type,props};nodes.push(n);return n;};
   const state=initial=>{const index=cursor++;if(!(index in cells))cells[index]=typeof initial==='function'?initial():initial;return [cells[index],value=>{cells[index]=typeof value==='function'?value(cells[index]):value;}];};
   const account={user:{id:'owner-a'},publishDraftCopy:async(owner,value)=>{events.push(['publish',owner,value]);if(fail)throw new Error('uncertain response');return {id:'new-copy'};}};
   const dependencies={
-    react:{useState:state,useRef:value=>{const [ref]=state(()=>({current:value}));return ref;},useEffect:()=>{}},
+    react:{useState:state,useRef:value=>{const [ref]=state(()=>({current:value}));return ref;},useEffect:effect=>{if(!cleanup)cleanup=effect();}},
     'react/jsx-runtime':{jsx,jsxs:jsx},
     'react-native':{Pressable:'button',ScrollView:'scroll',Text:'text',View:'view'},
     './MotionAwareModal':{MotionAwareModal:'modal'},
@@ -21,7 +22,7 @@ function harness({fail=false,empty=false}={}){
     '../theme/Theme':{useTheme:()=>({colors:{}})},
     '../api/transport':{
       protectedDrafts:async(base,owner)=>{events.push(['list',base,owner]);return [...records.values()].map(d=>structuredClone(d));},
-      saveProtectedDraft:async(base,owner,d)=>{events.push(['save',owner,d.publication?.state]);records.set(d.id,structuredClone(d));},
+      saveProtectedDraft:async(base,owner,d)=>{events.push(['save',owner,d.publication?.state]);records.set(d.id,structuredClone(d));if(pausePending&&d.publication?.state==='pending')await waiting;},
       removeProtectedDraft:async(base,owner,id)=>{events.push(['remove',owner,id]);records.delete(id);},
     },
   };
@@ -31,7 +32,7 @@ function harness({fail=false,empty=false}={}){
   const render=()=>{cursor=0;nodes=[];module.exports.ProtectedDraftReview();};
   const text=n=>Array.isArray(n)?n.map(text).join(''):typeof n==='string'?n:n?.props?text(n.props.children):'';
   const click=async label=>{render();const n=nodes.find(n=>n.type==='button'&&text(n)===label);assert.ok(n,'Missing button '+label);n.props.onPress();for(let i=0;i<5;i++)await new Promise(resolve=>setImmediate(resolve));render();};
-  render();return {events,records,render,click,buttons:()=>nodes.filter(n=>n.type==='button').map(text)};
+  render();return {events,records,render,click,unmount:()=>cleanup?.(),releasePending,buttons:()=>nodes.filter(n=>n.type==='button').map(text)};
 }
 
 test('draft review requires selection plus confirmation and persists uncertainty before publishing a new copy',async()=>{
@@ -59,4 +60,12 @@ test('discard requires confirmation and affects only the selected recovery draft
   await h.click('Keep protected draft');assert.equal(h.records.size,1);
   await h.click('Discard protected draft…');await h.click('Confirm: discard this protected draft');assert.equal(h.records.size,0);
   assert.equal(h.events.filter(e=>e[0]==='publish').length,0);
+});
+
+test('authentication interruption cancels a confirmed publication before HTTP even for the same account',async()=>{
+  const h=harness({pausePending:true});await h.click('Review protected drafts');await h.click('Review Synthetic');await h.click('Publish as a new copy…');await h.click('Confirm: publish a new copy to my account');
+  assert.equal([...h.records.values()][0].publication.state,'pending');
+  h.unmount();h.releasePending();for(let i=0;i<5;i++)await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(h.events.filter(e=>e[0]==='publish').length,0);
+  assert.equal([...h.records.values()][0].publication.state,'pending');
 });
