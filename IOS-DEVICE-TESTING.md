@@ -1,5 +1,13 @@
 # Physical iPhone validation
 
+**Current status, October 20, 2026:** the owner has since installed/launched a
+standalone Release build on iPhone 13 and reported successful login, content
+workflows, session restoration and logout/relogin with retained changes. See
+PERSONAL-IPHONE.md for the current evidence matrix and free-signing procedure.
+The older deferral and Not Tested entries below are historical, not the current
+installation status. Unexecuted photo, isolation, expiry, backup and accessibility
+checks remain open. Public distribution is deferred.
+
 **Owner-deferred (2026-10-17):** the physical phone is not connecting to the Mac. Continue Simulator work; all physical tests remain Not Tested. No signing, provisioning, Developer Mode or installation approval is inferred from this deferral. See IOS-SIMULATOR-TESTING.md for the active scope.
 
 ## Entry checks — 2026-10-17
