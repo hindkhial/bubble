@@ -20,11 +20,12 @@ The two-bubble Welcome logo, mandatory authentication, You Log Out, Security Cha
 
 | Check | Status | Evidence |
 | --- | --- | --- |
-| Frontend tests | Passed | 101 local tests; includes actual announcement hook, flexible form styles, long-dialog structure/actions, scalable navigation labels/actions, Appearance states and Release gate UI |
+| Frontend tests | Passed | 103 local tests, including two helper-command regressions using isolated fake tools (not native signing proof) |
 | TypeScript | Passed | Local `tsc --noEmit` |
-| Native Release compilation | Blocked | Agent attempt exited 66 before compilation; CoreSimulator services unavailable and Xcode rejected the existing workspace in this restricted session |
-| Embedded bundle in a native Release app | Not Tested | No successful native Release artifact produced |
-| Native Simulator launch, layout and persistence after these changes | Not Tested | Owner execution required below |
+| Original unsigned Release compilation and embedded bundle | Passed | Owner reported build success; agent read the produced Release Info.plist and main.jsbundle |
+| Original unsigned Release startup | Passed | Owner reported Login screen; authentication failed with generic connection feedback |
+| Signed Release compilation | Blocked / Pending owner | Agent exits 66 before compilation due to session workspace/service restrictions; local ad hoc rebuild awaits owner |
+| Post-login native layout and persistence after these changes | Not Tested | Owner execution required below |
 | Metro stopped during standalone test | Not Tested | No launch test performed; existing development server was not stopped by the agent |
 | Physical iPhone pairing/signing/install | Not Tested | Deferred until standalone Simulator verification passes; local signing settings untouched |
 | VoiceOver, largest Dynamic Type, Reduced Motion and native visual review | Not Tested | Execute the matrix below; static checks are not a native usability pass |
@@ -33,7 +34,7 @@ Local logs/artifacts live outside Git in the task's `work` directory. Hosted res
 
 ## Run on the Mac: build first
 
-Use the existing generated workspace and installed Pods. Do not run a clean Expo prebuild, uninstall Bubble, erase Simulator, change signing or import a certificate.
+Use the existing generated workspace and installed Pods. Do not run a clean Expo prebuild, uninstall Bubble, erase Simulator, change project-wide/physical-device signing or import a certificate.
 
 ```sh
 cd "/Users/macbookpro/Documents/Codex/2026-10-13/hey-can-you-please-access-to/Bubble"
@@ -41,7 +42,7 @@ git branch --show-current
 sh scripts/build-ios-simulator-release.sh
 ```
 
-The branch should be `ios-ux-polish`. The script builds only for Simulator, with Simulator signing disabled at the command level; it does not alter physical-device signing. It sets the existing HTTPS loopback backend and public tester-UI flag. Stop on a build error and report the first actual error. A successful JavaScript export is not a native build.
+The branch should be `ios-ux-polish`. The owner approved local ad hoc Simulator signing on October 20. The script uses command-only `CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= PROVISIONING_PROFILE= PROVISIONING_PROFILE_SPECIFIER=` with `-sdk iphonesimulator` and a generic Simulator destination. It does not edit project settings, use Apple signing certificates, register anything or modify macOS keychains. It checks both the embedded bundle and `Signature=adhoc` / `TeamIdentifier=not set`, then verifies the signature strictly, including nested code. It stops on a mismatch. It sets the existing HTTPS loopback backend and public tester-UI flag. Stop on a build error and report the first actual error. A successful JavaScript export is not a native build.
 
 If Terminal is blocked but Xcode works, open `ios/Bubble.xcworkspace`, select Bubble and the existing **Bubble Auth Test** Simulator. Product → Scheme → Edit Scheme → Run → Info → Build Configuration → Release. Set `EXPO_PUBLIC_API_URL=https://localhost:8443` and `EXPO_PUBLIC_PRIVATE_BETA_ACCESS=1` in the environment from which Xcode is launched for bundling (Run-only environment variables do not configure the build bundle). Prefer the Terminal script for reproducible build-time values; do not change signing to solve this.
 
@@ -53,7 +54,7 @@ If Terminal is blocked but Xcode works, open `ios/Bubble.xcworkspace`, select Bu
 4. In Terminal, set `SIMULATOR_UUID` to that exact UUID, then run:
 
 ```sh
-APP="$PWD/../work/ios-ux-release/Build/Products/Release-iphonesimulator/Bubble.app"
+APP="$PWD/../work/ios-ux-release-adhoc/Build/Products/Release-iphonesimulator/Bubble.app"
 test -s "$APP/main.jsbundle"
 xcrun simctl terminate "$SIMULATOR_UUID" com.hindkhial.bubble
 # A "not running" response is harmless; do not uninstall the existing application.
@@ -89,4 +90,14 @@ Record candidate SHA, Simulator model/runtime, tester, date and Passed/Failed/No
 
 ## Release gates
 
-Existing node-forge/braces High findings and uuid Moderate finding remain tracked in DEPENDENCY-RISKS.md. A green runtime scan does not clear build-tool findings. Manual accessibility, physical-iPhone and standalone checks stay open. No Apple identifier registration, signing/provisioning changes, TestFlight/App Store submission, release tag, public deployment or automatic merge is authorized by this work. Phase 3 device preparation waits for actual standalone results.
+Existing node-forge/braces High findings and uuid Moderate finding remain tracked in DEPENDENCY-RISKS.md. A green runtime scan does not clear build-tool findings. Manual accessibility, physical-iPhone and standalone checks stay open. No Apple identifier registration, project-wide/physical-device signing or provisioning changes, TestFlight/App Store submission, release tag, public deployment or automatic merge is authorized. The separately approved Simulator-only command overrides are described above. Phase 3 device preparation waits for actual standalone results.
+
+## Simulator authentication investigation
+
+- Owner reported Login on the original Release artifact, followed by “Cannot reach your account.” Metro-off status and post-login behavior are not inferred from startup alone.
+- Existing HTTPS service was healthy; explicit-CA verification from the Mac succeeded. Owner reported the private-tester prompt in Safari on the same Bubble Auth Test Simulator. No TLS exception or new trust import was used.
+- Release Info.plist contains normal ATS (`NSAllowsArbitraryLoads=false`, local networking permitted); embedded bundle contains `https://localhost:8443`, with no Markdown-wrapped URL.
+- Earlier working Debug artifact: local `Signature=adhoc`, `TeamIdentifier=not set`, empty displayed entitlements. Original Release: unsigned (`CODE_SIGNING_ALLOWED=NO` in the initial helper). The Swift transport reads Keychain before HTTP; the generic UI message cannot identify the exact native exception. Signing/Keychain is a hypothesis, not a confirmed cause or fixed login claim.
+- Owner approved Simulator-only ad hoc rebuild, with no Apple account/certificate/profile changes. New output is `work/ios-ux-release-adhoc`; original unsigned artifact is retained for comparison. The helper builds/verifies only and never installs, terminates apps, deletes data or stops Metro.
+- Signed artifact verification, Keychain access, login, session restoration, logout and comparison with Debug remain **Not Tested** until actual execution. Native cookies remain exclusively in Keychain; do not print/read them to prove access. Successful login plus process-restart restoration without the Bubble password can demonstrate functionality indirectly. Re-enter tester access after restart because it is memory-only.
+- After signed installation into the same test Simulator, confirm Metro fully stopped, log in using only a synthetic account and verify Home/content. Terminate/relaunch; enter tester credentials locally and choose Restore existing session. Verify saved content/profile assets. If the error persists, collect only native error domain/code or a safe classification—never passwords, Authorization/Cookie headers or response bodies—and investigate further. Do not add entitlements, disable TLS, change Keychain groups or reset data as a workaround.
