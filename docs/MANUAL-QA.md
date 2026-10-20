@@ -1,6 +1,8 @@
+> Current scope: personal native iPhone use. Browser and Android rows below are retained as historical/future-reference checks. Current physical results are in [the offline iPhone record](IOS-OFFLINE-VERIFICATION.md); their status does not automatically complete the accessibility rows below.
+
 # Private candidate manual verification
 
-All results below start **Not Tested**. Automated assertions, exports and simulated viewport sizes do not establish human usability or physical-device passes. Keep PR #8 draft and all release gates open until evidence is recorded.
+Results in this matrix remain **Not Tested** unless execution is recorded here. Automated assertions, exports and simulated viewport sizes do not establish human usability or physical-device passes. Use the current physical verification record for the specific iPhone scenarios already completed; do not treat historical PR instructions as current merge status.
 
 ## Setup and evidence
 
@@ -27,7 +29,7 @@ All results below start **Not Tested**. Automated assertions, exports and simula
 
 ## What automation can establish
 
-Codex can run TypeScript, frontend unit/persistence tests, Java/PostgreSQL tests, web/backend builds, nine sandboxed HTTPS browser scenarios, image scans, and synthetic migration/backup/restore/restart/compatible-rollback checks on disposable CI infrastructure. See TESTING.md for commands and exact run evidence. Those checks do not replace the matrix above. VoiceOver/TalkBack usability, full visual assessment and physical devices require a person with the actual tools; no such execution is claimed here.
+Available automated checks cover TypeScript, frontend unit/persistence tests, Java/PostgreSQL tests, web/backend builds, sandboxed HTTPS browser scenarios, image scans, and synthetic migration/backup/restore/restart/compatible-rollback checks on disposable CI infrastructure. See [the testing record](TESTING.md) for current counts, commands and exact evidence. Those checks do not replace the matrix above. VoiceOver/TalkBack usability, full visual assessment and physical devices require a person with the actual tools; no such execution is claimed by this matrix alone.
 
 ## Result record template
 

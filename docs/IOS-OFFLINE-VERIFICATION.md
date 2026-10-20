@@ -9,7 +9,7 @@ Team, bundle identifier `com.hindkhial.bubble`. PR #13 (`ios-ux-polish`,
 2d7e3bb7e38a6e447574b813454b23365620f960). Both remain unmerged.
 
 All physical outcomes below were executed and reported by the owner in chat,
-not by agent device automation. Source/build review is separate evidence.
+not by automated device control. Source/build review is separate evidence.
 Simulator compilation was previously owner-reported Passed; the new offline
 Simulator runtime was not exercised. Existing browser tests are not iPhone tests.
 
@@ -17,7 +17,7 @@ The owner reported the Release helper completed with embedded-origin/signature
 verification. The resulting app was located in `work/ios-personal-release`, not
 the initially requested alternate output directory. Read-only artifact checks
 found the offline JS entry, native vault/unlock symbols, expected origin, bundle
-identifier, display name and existing team identifier. The agent could not verify
+identifier, display name and existing team identifier. the restricted session could not verify
 certificate trust in its restricted session; the owner's separate strict
 codesign verification returned no output (Passed). No trust workaround was used.
 

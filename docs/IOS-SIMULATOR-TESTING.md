@@ -74,7 +74,7 @@ The polish is implemented and automated verification is in progress; it is not c
 
 ## Verified Simulator follow-up — 2026-10-17
 
-This record supersedes pending statuses above for the executed checks only. Application source: 560197b1aada29e0ea7bba1bc0896c282a272b5d. These are owner-operated Xcode/Simulator results, not agent UI automation.
+This record supersedes pending statuses above for the executed checks only. Application source: 560197b1aada29e0ea7bba1bc0896c282a272b5d. These are owner-operated Xcode/Simulator results, not automated UI control.
 
 - Passed: fresh native Debug build. Inspected Xcode activity log 5DFE4794-9EFA-4919-899F-1C3E82FAB4A0 (2026-10-17T21:56:24Z, after final application edits) contains Build succeeded and 122 targets.
 - Passed: updated Home opens, iPhone 17 Pro Simulator / iOS 26.5.
@@ -86,7 +86,7 @@ This record supersedes pending statuses above for the executed checks only. Appl
 - Failed: whole browser CI job twice, after scenarios passed, at scan-private-staging.mjs. Protected logs withhold details; vulnerability versus scanner/infrastructure cause is unconfirmed. No clean image scan or overall CI pass is claimed. Evidence: https://github.com/hindkhial/bubble/actions/runs/39073153574. Documentation-only follow-up heads need their own checks.
 - Not Tested: native no-internet check (explicitly skipped by owner); standalone cold-start without Metro; VoiceOver/full focus management; Dynamic Type/Reduced Motion; complete visual/safe-area review; every System/accent combination; photo replacement/removal/denial; full native search filter/empty combinations; every native discard/gesture path; physical-device tests.
 
-The agent CLI remains blocked by CoreSimulator/XPC restrictions; owner build/launch evidence resolves the compilation prerequisite without implying CLI access. A debugger probe returned no usable runtime evidence and wrote no databases. Debug tests used localhost Metro; no standalone offline claim is made. Core workflows passed without reported crashes/data loss; broader unexecuted gates remain open. Native accounts remain disabled. No dependencies, backend/schema, signing, trust stores or user data were changed. No merges, TestFlight or deployment occurred. Existing security findings and the image-scan failure remain release blockers. This record is not release approval.
+The restricted CLI remains blocked by CoreSimulator/XPC restrictions; owner build/launch evidence resolves the compilation prerequisite without implying CLI access. A debugger probe returned no usable runtime evidence and wrote no databases. Debug tests used localhost Metro; no standalone offline claim is made. Core workflows passed without reported crashes/data loss; broader unexecuted gates remain open. Native accounts remain disabled. No dependencies, backend/schema, signing, trust stores or user data were changed. No merges, TestFlight or deployment occurred. Existing security findings and the image-scan failure remain release blockers. This record is not release approval.
 
 
 ## Offline verification and CI diagnosis — 2026-10-18
@@ -95,7 +95,7 @@ Owner-executed iPhone 17 Pro Simulator / iOS 26.5 check Passed: Mac Wi-Fi disabl
 
 At a9b54e5e30f3d1adddacc41b3a379c9e85969fc8, GitHub run 39075069382 Passed frontend checks, 62 PostgreSQL backend tests and all nine browser scenarios (zero skipped/unexpected/flaky). The image scanner completed and exited 2 because backend and web each had one High and one Medium vulnerability; PostgreSQL had none. This identifies a real vulnerability gate failure, not a scanner/registry failure. Findings remain unsuppressed. Follow-up diagnostics retain only public package/advisory fields and classified scanner failures, never raw reports or staging credentials. Final remediation/check results must be recorded separately.
 
-Local rerun: 72 frontend tests Passed, TypeScript Passed, iOS Hermes export Passed. Native application source and storage formats are unchanged from the successfully built/owner-tested Simulator source. No fresh native compilation is inferred from the export. Agent CoreSimulator restrictions and standalone/physical-device/accessibility gates remain unchanged.
+Local rerun: 72 frontend tests Passed, TypeScript Passed, iOS Hermes export Passed. Native application source and storage formats are unchanged from the successfully built/owner-tested Simulator source. No fresh native compilation is inferred from the export. Session CoreSimulator restrictions and standalone/physical-device/accessibility gates remain unchanged.
 
 
 Image remediation candidate: a fresh local scan of the existing backend image identified libexpat 2.8.5-r0: CVE-2026-77214 (High) and CVE-2026-102633 (Medium), fixed by 2.9.0-r0. Upstream evidence: https://github.com/libexpat/libexpat/blob/master/expat/Changes (2.9.0 security fixes). Backend/web Dockerfiles now require libexpat>=2.9.0-r0 from their existing Alpine repositories; base digests and security gate remain unchanged. Rebuilt candidate scans and hosted results must confirm remediation; the historical local image is not the final CI candidate.

@@ -1,46 +1,91 @@
-# Bubble — personal iPhone edition
+# Bubble
 
-Active scope: the owner's iPhone 13 with free Xcode Personal Team signing. See
-[personal installation, weekly renewal, backups and current limitations](PERSONAL-IPHONE.md).
-TestFlight, App Store, paid membership, public web/hosting and Android distribution
-are deferred. Existing browser tooling and release documents are retained for
-regression checks and future reference. Native iOS requires online authentication;
-it does not currently provide offline account access.
+[![CI](https://github.com/hindkhial/bubble/actions/workflows/ci.yml/badge.svg?branch=integration)](https://github.com/hindkhial/bubble/actions/workflows/ci.yml)
 
-An Expo / React Native / TypeScript notes and lists application, with a Spring Boot/PostgreSQL account backend. This integration lives on `integration`; the original `frontend` and `backend` branches are preserved. See [integration setup, safety rules and test results](INTEGRATION.md).
+A personal iPhone app for notes, checklists, photos and collections called
+**Bubbles**. A calm cream-and-lavender interface keeps everyday thoughts and
+lists together, with customizable colors and light or dark appearance.
 
-## Run and check
+## What Bubble does
 
-Use Node.js 22.6+ and run `pnpm install`, then `pnpm web` for browser preview or `pnpm start` for Expo. If file watching reaches platform limits, use `CI=1 pnpm web` and restart after edits.
+- Organize notes, checklists and photos inside Bubbles, or keep them on Home.
+- Find content through Search and keep important items pinned.
+- Personalize your profile, avatar, photo and app appearance.
+- Read previously downloaded notes and checklists offline after Face ID or
+  device-passcode unlock.
+- Protect unsaved note/checklist drafts and review them before explicitly
+  publishing a new copy.
 
-Checks: `pnpm typecheck`, `pnpm test`, and `pnpm export:mobile`. No lint script is configured.
+Bubble is currently maintained for personal iPhone installation through Xcode.
+App Store, TestFlight, public web hosting and Android distribution are deferred.
+Browser tooling remains available for development and regression testing.
 
-## Home, search and local storage
+## Accounts and offline access
 
-Home keeps the personalized welcome and original Bubble grid, with pinned notes/lists using the same existing file cards. Recent Activity and hero quick-create buttons are removed; creation remains in Add. Search works locally across Bubble titles/descriptions, note/photo titles and text, previews, metadata, and checklist items. All/Bubbles/Notes/Lists filters, clear, empty states, pinned-first results, and the original Bubble/file card grid are used. New checklists have an optional Add title control and a compact plus button; completion checkboxes appear only when editing existing lists.
+First-time login and registration require the trusted HTTPS backend. Account
+content is stored by the Spring Boot/PostgreSQL backend; existing device content
+is never uploaded automatically.
 
-Versioned browser-local storage keys keep content, Bubbles, pins, profile customization, and Appearance mode/accent between refreshes. Storage code lives in `src/storage`; it can be replaced independently of the UI. Failed reads preserve the raw stored value instead of overwriting it; failed writes show an error and retain current session state. In local mode, nothing is sent to a server. Account mode never uploads local content on sign-in. Browser localStorage is specific to its browser and origin. Native legacy device content uses SQLite; signed-in content uses the backend and is not an offline SQLite account cache.
+After successful online verification, account-specific encrypted snapshots allow
+**read-only notes/checklist access and local search for up to seven days**.
+Face ID or device passcode is required at launch and after backgrounding.
+Offline unlocks do not extend that allowance. Reboot, expiry, suspicious clock
+changes, logout or a known authentication rejection require online verification.
 
-New browsers begin empty. Existing stored data is not replaced with sample data. New notes/photos/checklists receive creation and modification timestamps; edits and checklist toggles update modification time. Legacy items without timestamps retain stable ordering; historical dates are not invented.
+Offline mode does not create or edit server content, synchronize automatically,
+or cache Bubble/photo images. Draft recovery requires explicit review and
+confirmation to publish a new copy. Device-only encryption keys cannot be
+recovered from a downloaded app container alone.
 
-Photos selected in the browser are stored as data URLs and may exceed localStorage capacity. Native profile photos use persistent private app files; account profile metadata uses account/origin-scoped Keychain records. Account Bubble/content photos use PostgreSQL. See PERSONAL-IPHONE.md for backup limitations.
+See [offline protection](docs/OFFLINE-ACCOUNT-PROTECTION.md) and the
+[physical iPhone verification record](docs/IOS-OFFLINE-VERIFICATION.md) for
+the tested behavior, security trade-offs and remaining checks.
 
-## Account mode
+## Technology
 
-iOS opens Welcome/Login/Signup and requires a verified native session before protected screens mount. Log Out is on You; Change Password is inside Security. Native account mode needs the reachable trusted HTTPS backend at startup and re-verification. Browser local/account workspaces remain supported for regression purposes. Copying legacy notes/lists requires separate selection and explicit consent; originals stay local. This is not offline synchronization. See [native accounts](IOS-ACCOUNTS.md) and [integration setup](INTEGRATION.md).
+| Area | Stack |
+| --- | --- |
+| iPhone interface | Expo SDK 57, React Native 0.86.3, TypeScript, Expo Router |
+| Native storage and protection | SQLite for legacy device content; Swift, CryptoKit and device-only Keychain for account snapshots/drafts; private app files for photos |
+| Backend | Java 21, Spring Boot, Spring Security, Spring Data JPA, PostgreSQL, Flyway |
+| Development and checks | pnpm, Maven, Docker, GitHub Actions, Playwright |
 
-## Testing
+## Development
 
-See [TESTING.md](TESTING.md) for isolated browser tests, full-stack checks and current verification limits.
+The complete application is on **`integration`**, the default branch. The
+original `frontend` and `backend` branches are preserved as development history.
 
-## Performance
+For JavaScript checks, use Node.js 22.6+ and pnpm 10.18.3:
 
-See [PERFORMANCE.md](PERFORMANCE.md) for measured improvements, repeatable synthetic benchmarks and remaining limits.
+```sh
+git clone https://github.com/hindkhial/bubble.git
+cd bubble
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm test
+```
 
-## Private staging preparation
+For native builds, follow the [iPhone setup and installation guide](docs/PERSONAL-IPHONE.md)
+and [native development notes](docs/IOS-NATIVE.md). Xcode, the compatible iOS SDK,
+CocoaPods and your existing signing configuration are required. A JavaScript
+export or browser preview does not establish native compilation.
 
-See [STAGING.md](STAGING.md) for loopback-only HTTPS containers, protected configuration, testing, backup/restore and rollback. No public deployment is configured or authorized.
+The backend needs Java 21, Maven and PostgreSQL. Its integration tests use
+disposable PostgreSQL containers. See [backend setup](backend/README.md) and
+[private staging](docs/STAGING.md). Keep credentials outside Git and never embed
+them in public Expo configuration.
 
-The [controlled local staging record](PRIVATE-STAGING.md) covers the tester password gate, running-service verification, image scans, restart/recovery evidence and the outstanding browser limitation.
+## Verification and documentation
 
-The [private beta testing guide](BETA-TESTING.md) provides the manual UX/accessibility matrix, current blockers and tester reporting process.
+CI checks frontend types/tests/builds, Java/PostgreSQL tests and packaging,
+sandboxed private-HTTPS browser scenarios, recovery/rollback and runtime images.
+Native and physical-device results are recorded separately; automated checks
+do not imply that unexecuted device or accessibility tests passed.
+
+- [Documentation index](docs/README.md)
+- [Personal installation, signing renewal and data precautions](docs/PERSONAL-IPHONE.md)
+- [Current iPhone offline results](docs/IOS-OFFLINE-VERIFICATION.md)
+- [Detailed test history](docs/TESTING.md)
+- [Known dependency findings](docs/DEPENDENCY-RISKS.md)
+- [Security reporting](SECURITY.md)
+- [Changelog](CHANGELOG.md)
