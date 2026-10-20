@@ -62,7 +62,7 @@ These identify this executed candidate, not arbitrary future builds. Final follo
 
 ## Manual QA execution record
 
-Only synthetic data may be used. The in-app browser attempted `https://localhost:8443` and failed with `ERR_CERT_AUTHORITY_INVALID`. No warning bypass, TLS-ignore option or host keychain import was used. This prevents execution of the actual private staging interface through that browser. VoiceOver/TalkBack control and physical devices are not available to this agent. Automated browser assertions do not count as the following manual passes.
+Only synthetic data may be used. The in-app browser attempted `https://localhost:8443` and failed with `ERR_CERT_AUTHORITY_INVALID`. No warning bypass, TLS-ignore option or host keychain import was used. This prevents execution of the actual private staging interface through that browser. VoiceOver/TalkBack control and physical devices are not available to this automation. Automated browser assertions do not count as the following manual passes.
 
 | Required check | Result | Human checklist and expected outcome |
 | --- | --- | --- |

@@ -156,7 +156,7 @@ for its original scope.
 
 Physical results below are owner-executed reports on iPhone 13 / iOS 26.1,
 confirmed after correcting an initial 16.1 typo. The artifact minimum is iOS 16.4;
-26.1 is compatible. These reports are separate from agent automated tests.
+26.1 is compatible. These reports are separate from automated tests.
 
 | Check | Current evidence |
 | --- | --- |

@@ -22,11 +22,11 @@ The two-bubble Welcome logo, mandatory authentication, You Log Out, Security Cha
 | --- | --- | --- |
 | Frontend tests | Passed | 103 local tests, including two helper-command regressions using isolated fake tools (not native signing proof) |
 | TypeScript | Passed | Local `tsc --noEmit` |
-| Original unsigned Release compilation and embedded bundle | Passed | Owner reported build success; agent read the produced Release Info.plist and main.jsbundle |
+| Original unsigned Release compilation and embedded bundle | Passed | Owner reported build success; artifact inspection verified the produced Release Info.plist and main.jsbundle |
 | Original unsigned Release startup | Passed | Owner reported Login screen; authentication failed with generic connection feedback |
-| Signed Release compilation | Blocked / Pending owner | Agent exits 66 before compilation due to session workspace/service restrictions; local ad hoc rebuild awaits owner |
+| Signed Release compilation | Blocked / Pending owner | The restricted CLI exits 66 before compilation due to session workspace/service restrictions; local ad hoc rebuild awaits owner |
 | Post-login native layout and persistence after these changes | Not Tested | Owner execution required below |
-| Metro stopped during standalone test | Not Tested | No launch test performed; existing development server was not stopped by the agent |
+| Metro stopped during standalone test | Not Tested | No launch test performed; existing development server was not stopped automatically |
 | Physical iPhone pairing/signing/install | Not Tested | Deferred until standalone Simulator verification passes; local signing settings untouched |
 | VoiceOver, largest Dynamic Type, Reduced Motion and native visual review | Not Tested | Execute the matrix below; static checks are not a native usability pass |
 
@@ -37,7 +37,7 @@ Local logs/artifacts live outside Git in the task's `work` directory. Hosted res
 Use the existing generated workspace and installed Pods. Do not run a clean Expo prebuild, uninstall Bubble, erase Simulator, change project-wide/physical-device signing or import a certificate.
 
 ```sh
-cd "/Users/macbookpro/Documents/Codex/2026-10-13/hey-can-you-please-access-to/Bubble"
+cd /path/to/bubble
 git branch --show-current
 sh scripts/build-ios-simulator-release.sh
 ```

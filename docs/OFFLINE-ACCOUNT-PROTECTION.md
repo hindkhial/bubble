@@ -138,7 +138,7 @@ typecheck using the existing Pods/Expo frameworks without signing or installing.
 | Full native session/vault Swift typecheck against iOS SDK + actual Expo frameworks | Passed |
 | CocoaPods deployment-mode source refresh | Passed; app project/lockfile unchanged |
 | iOS Hermes export | Passed; not native compilation |
-| Agent full Simulator build | Blocked before compilation by existing CoreSimulator/workspace restrictions; exit 66 |
+| Restricted-session Simulator build | Blocked before compilation by existing CoreSimulator/workspace restrictions; exit 66 |
 | Owner-run Simulator Product → Build | Passed, owner-reported October 20; Build only |
 | New-feature Simulator runtime/Face ID/Keychain | Not Tested |
 | New-feature physical iPhone runtime | Core read/unlock/locking/search/draft/publication/logout/online-return checks Passed, owner-executed; see IOS-OFFLINE-VERIFICATION.md for scope and exclusions |
