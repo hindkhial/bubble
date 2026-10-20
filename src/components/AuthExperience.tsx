@@ -9,6 +9,7 @@ import { createFormStyles } from './AddPreview';
 import { ApiError } from '../api/client';
 import { normalizedEmail, validateAuthentication } from '../api/authValidation';
 import { nativeTransportAvailable, setPrivateBetaAccess } from '../api/transport';
+import { useAnnouncement } from '../accessibility/useAnnouncement';
 
 export function AuthExperience({kind}:{kind:'welcome'|'login'|'signup'}) {
  const account=useAccount();const router=useRouter();const {colors}=useTheme();const styles=createFormStyles(colors);
@@ -16,6 +17,8 @@ export function AuthExperience({kind}:{kind:'welcome'|'login'|'signup'}) {
  const [password,setPassword]=useState('');const [confirmation,setConfirmation]=useState('');const [shown,setShown]=useState(false);
  const [pending,setPending]=useState(false);const submitted=useRef(false);const [error,setError]=useState('');
  const [beta,setBeta]=useState(false);const [tester,setTester]=useState('');const [testerPassword,setTesterPassword]=useState('');
+ const privateBetaEnabled=__DEV__ || process.env.EXPO_PUBLIC_PRIVATE_BETA_ACCESS==='1';
+ useAnnouncement(error || account.error || account.authNotice);
  const go=(path:string)=>router.replace(path as Href);
  const submit=async()=>{
    if(submitted.current||account.busy||account.loading)return;
@@ -55,7 +58,7 @@ export function AuthExperience({kind}:{kind:'welcome'|'login'|'signup'}) {
     <Text style={styles.label}>Password</Text><TextInput accessibilityLabel="Password" editable={!pending} value={password} onChangeText={setPassword} secureTextEntry={!shown} autoCapitalize="none" autoCorrect={false} autoComplete={signup?'new-password':'current-password'} textContentType={signup?'newPassword':'password'} style={styles.input}/>
     {signup?<><Text style={styles.label}>Confirm password</Text><TextInput accessibilityLabel="Confirm password" editable={!pending} value={confirmation} onChangeText={setConfirmation} secureTextEntry={!shown} autoCapitalize="none" autoCorrect={false} autoComplete="new-password" textContentType="newPassword" style={styles.input}/><Text style={styles.intro}>Use at least 12 characters, up to 72 UTF-8 bytes.</Text></>:null}
     <Pressable accessibilityRole="checkbox" accessibilityLabel="Show password" accessibilityState={{checked:shown,disabled:pending}} disabled={pending} onPress={()=>setShown(!shown)} style={{minHeight:44,justifyContent:'center'}}><Text style={{color:colors.action}}>{shown?'Hide password':'Show password'}</Text></Pressable>
-    {__DEV__?<>{button(beta?'Hide private beta access':'Private beta access',()=>setBeta(!beta))}{beta?<><Text style={styles.intro}>Use your private beta invitation credentials if this environment requires them. These stay in memory.</Text><TextInput accessibilityLabel="Private beta username" value={tester} onChangeText={setTester} autoCapitalize="none" autoCorrect={false} editable={!pending} style={styles.input}/><TextInput accessibilityLabel="Private beta password" value={testerPassword} onChangeText={setTesterPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} editable={!pending} style={styles.input}/></>:null}</>:null}
+    {privateBetaEnabled?<>{button(beta?'Hide private beta access':'Private beta access',()=>setBeta(!beta))}{beta?<><Text style={styles.intro}>Use your private beta invitation credentials if this environment requires them. These stay in memory.</Text><TextInput accessibilityLabel="Private beta username" value={tester} onChangeText={setTester} autoCapitalize="none" autoCorrect={false} editable={!pending} style={styles.input}/><TextInput accessibilityLabel="Private beta password" value={testerPassword} onChangeText={setTesterPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} editable={!pending} style={styles.input}/></>:null}</>:null}
     {pending?<ActivityIndicator accessibilityLabel="Signing in" color={colors.action}/>:null}
     {button(pending?'Please wait…':signup?'Create Account':'Log In',()=>void submit(),true)}
     {!signup?button('Restore existing session',()=>void restore()):null}

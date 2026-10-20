@@ -15,6 +15,7 @@ import { createFormStyles } from './AddPreview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ConfirmDialog } from './ConfirmDialog';
 import { ProfileAvatar } from './ProfileAvatar';
+import { useAnnouncement } from '../accessibility/useAnnouncement';
 
 const avatarColors = accentPalette;
 
@@ -35,6 +36,7 @@ export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profil
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const [error, setError] = useState('');
+  useAnnouncement(error);
   const [discardOpen, setDiscardOpen] = useState(false);
   const blockedAction = useRef<Parameters<typeof navigation.dispatch>[0] | null>(null);
   const bypass = useRef(false);
@@ -85,7 +87,7 @@ export function EditProfileSheet({ profile, onSave, onClose }: { profile: Profil
   };
 
   return <Modal visible transparent animationType="slide" onRequestClose={attemptClose}>
-    <KeyboardAvoidingView style={styles.scrim} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={[styles.scrim, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Pressable style={StyleSheet.absoluteFill} onPress={attemptClose} />
       <View style={[styles.sheet, local.sheet, { paddingBottom: Math.max(30, insets.bottom) }]} accessibilityViewIsModal={!discardOpen} accessibilityElementsHidden={discardOpen} importantForAccessibility={discardOpen ? 'no-hide-descendants' : 'auto'}>
         <View style={styles.handle} />

@@ -1,5 +1,10 @@
 # Controlled beta release readiness
 
+**Deferred public-distribution roadmap (October 20, 2026):** active work targets
+the owner's free-signed iPhone only; see PERSONAL-IPHONE.md. TestFlight, App Store,
+public hosting/web and Android distribution are not active requirements. Preserve
+the evidence below; security and personal-data safeguards still apply.
+
 Preparation only: no deployment, publication, tag, or automatic merge is performed.
 
 ## Automated checks

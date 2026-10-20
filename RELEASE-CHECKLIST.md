@@ -1,5 +1,9 @@
 # Controlled beta checklist
 
+**Public distribution deferred:** PERSONAL-IPHONE.md is the active personal-use
+checklist. Entries below retain their historical statuses; no unexecuted test is
+converted to Passed or deleted. Relevant security/data-safety checks still apply.
+
 Proposed version: **0.1.0-beta.1**. Status: **not approved for release**. Complete evidence against the exact candidate SHA; never infer a pass from a script existing.
 
 | Gate | Status | Evidence / action |

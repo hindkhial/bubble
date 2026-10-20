@@ -1,3 +1,48 @@
+## Personal iPhone verification — October 20, 2026
+
+Active scope: PERSONAL-IPHONE.md. Public distribution is deferred. Fetched
+integration remains ed80addc932535caf3d841d108af7d5bf0111402; PR #13 is unmerged.
+
+- Passed locally: 106 frontend tests, zero failed/skipped; TypeScript; personal
+  helper shell syntax. Three new tests execute the real helper with isolated
+  fake native tools, checking fresh public settings, no signing overrides/install,
+  invalid-origin rejection, missing/stale bundles and invalid signatures. They
+  are not native installation tests. An initial temp-directory permission failure
+  was resolved with a workspace TMPDIR; the complete final run passed.
+- Passed locally: iOS Hermes/assets export with the private HTTPS origin. This
+  is not compilation. The existing owner-built physical artifact contains that
+  origin and embedded JavaScript and passes strict/deep signature verification.
+- Fresh native build: blocked before compilation, xcodebuild exit 66 with session
+  CoreSimulator/workspace/output permission failures. No agent build pass claimed.
+  Owner previously supplied actual successful physical Release build output,
+  installation and launch reports. Embedded profile metadata: one-device local
+  provision, October 20 to October 27, 2026, 01:02:16 UTC. No new provisioning.
+- Owner confirmed iPhone 13 / iOS 26.1 and Xcode Personal Team. Artifact minimum
+  iOS is 16.4; no deployment target or signing setting was changed.
+- Owner-reported physical iPhone 13 passes: login to Home; requested note/edit,
+  checklist/search, bio/accent workflow; close/reopen, gateway credentials plus
+  session restore; logout/relogin and retained content. Physical photo replacement,
+  signup/password changes, isolation and actual session expiry remain Not Tested
+  separately. Account persistence is server evidence, not legacy SQLite evidence.
+- Earlier owner-reported Simulator passes: signed standalone Release launch with
+  no listener on tested Metro ports; login/session restoration and saved content;
+  SQLite notes/checklists/completion, profile/photo and Appearance retention.
+  Historical no-internet local-mode tests predate mandatory login and do not
+  establish offline account access.
+- Source confirms online verification at startup/background return and a
+  15-minute foreground window. Unavailable-Mac cold start, real expiry, controlled
+  same-identity update preservation, full device backup/recovery and physical
+  accessibility remain Not Tested. The independent second-LAN-device blocking
+  check is explicitly owner-deferred, not Passed. Dependency findings remain open.
+- Backend/schema unchanged; backend, browser and image scans not rerun locally
+  for this helper/documentation change. Previous hosted run 39356645990 at
+  54123e5 passed 103 frontend tests, 71 PostgreSQL/backend tests and 11 browser
+  scenarios. Those historical results do not certify the new follow-up head.
+
+No app installation/uninstall, data migration/restore, signing/security changes,
+firewall action, merge or deployment occurred in this follow-up. See
+PERSONAL-IPHONE.md for backup limitations and the current operational blockers.
+
 ## Full-diff review follow-up
 
 At b97a0b5, all three hosted CI jobs Passed (run 39175806182): 94 frontend tests, 71 PostgreSQL backend tests, eleven sandboxed HTTPS browser scenarios and recovery/image gates. Full review reproduced an inherited synchronous local-checklist storage-error escape. The actual event-handler regression failed before the catch fix and Passed afterward; the frontend suite now has 95 passing tests and TypeScript passes. No backend/schema/dependency changes were made by the review fix. RELEASE-OPERATIONS.md now names V1–V3 and all nine tables already covered by recovery.mjs. See AUTH-PROFILE.md for the 124-versus-28 file reconciliation, branch dependencies, review limitations and merge-order recommendation. Correction-head CI evidence is recorded on PR #12; earlier results are not transferred to an untested head.

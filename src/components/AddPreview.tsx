@@ -174,7 +174,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
   return <>
     <Pressable accessibilityRole="button" accessibilityLabel={quickAction === 'note' ? 'New note' : quickAction === 'checklist' ? 'New checklist' : 'Add content'} onPress={open} style={styles.button}><Text style={styles.buttonText}>{quickAction === 'note' ? '＋ Note' : quickAction === 'checklist' ? '＋ Checklist' : '＋ Add'}</Text></Pressable>
     <Modal animationType="slide" transparent visible={visible} onRequestClose={attemptClose}>
-      <KeyboardAvoidingView style={styles.scrim} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={[styles.scrim, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Pressable style={StyleSheet.absoluteFill} onPress={attemptClose} />
         <View style={[styles.sheet, { paddingBottom: Math.max(30, insets.bottom) }]} accessibilityViewIsModal={!discardOpen} accessibilityElementsHidden={discardOpen} importantForAccessibility={discardOpen ? 'no-hide-descendants' : 'auto'}>
           <View style={styles.handle} />
@@ -182,10 +182,10 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
             {step === 'menu' && <>
               <Text style={styles.title}>Add something</Text>
               <Text style={styles.intro}>Choose what you want to keep.</Text>
-              {<Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('bubble'); }} style={styles.choice}><Text style={styles.choiceIcon}>◌</Text><View><Text style={styles.choiceTitle}>Bubble</Text><Text style={styles.choiceHelp}>A collection for things that belong together</Text></View><Text style={styles.chevron}>›</Text></Pressable>}
-              <Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('note'); }} style={styles.choice}><Text style={styles.choiceIcon}>✎</Text><View><Text style={styles.choiceTitle}>Note</Text><Text style={styles.choiceHelp}>Write a thought, list, or link</Text></View><Text style={styles.chevron}>›</Text></Pressable>
-              {<Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('photo'); }} style={styles.choice}><Text style={styles.choiceIcon}>▧</Text><View><Text style={styles.choiceTitle}>Photo</Text><Text style={styles.choiceHelp}>Keep an image with its details</Text></View><Text style={styles.chevron}>›</Text></Pressable>}
-              <Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('checklist'); }} style={styles.choice}><Text style={styles.choiceIcon}>☑</Text><View><Text style={styles.choiceTitle}>Checklist</Text><Text style={styles.choiceHelp}>A list to work through, together in one Bubble</Text></View><Text style={styles.chevron}>›</Text></Pressable>
+              {<Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('bubble'); }} style={styles.choice}><Text accessible={false} allowFontScaling={false} style={styles.choiceIcon}>◌</Text><View style={styles.choiceText}><Text style={styles.choiceTitle}>Bubble</Text><Text style={styles.choiceHelp}>A collection for things that belong together</Text></View><Text accessible={false} allowFontScaling={false} style={styles.chevron}>›</Text></Pressable>}
+              <Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('note'); }} style={styles.choice}><Text accessible={false} allowFontScaling={false} style={styles.choiceIcon}>✎</Text><View style={styles.choiceText}><Text style={styles.choiceTitle}>Note</Text><Text style={styles.choiceHelp}>Write a thought, list, or link</Text></View><Text accessible={false} allowFontScaling={false} style={styles.chevron}>›</Text></Pressable>
+              {<Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('photo'); }} style={styles.choice}><Text accessible={false} allowFontScaling={false} style={styles.choiceIcon}>▧</Text><View style={styles.choiceText}><Text style={styles.choiceTitle}>Photo</Text><Text style={styles.choiceHelp}>Keep an image with its details</Text></View><Text accessible={false} allowFontScaling={false} style={styles.chevron}>›</Text></Pressable>}
+              <Pressable accessibilityRole="button" onPress={() => { setError(''); setStep('checklist'); }} style={styles.choice}><Text accessible={false} allowFontScaling={false} style={styles.choiceIcon}>☑</Text><View style={styles.choiceText}><Text style={styles.choiceTitle}>Checklist</Text><Text style={styles.choiceHelp}>A list to work through, together in one Bubble</Text></View><Text accessible={false} allowFontScaling={false} style={styles.chevron}>›</Text></Pressable>
             </>}
             {step === 'bubble' && <>
               <Text style={styles.title}>New Bubble</Text>
@@ -208,7 +208,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
             {step === 'note' && <>
               <Text style={styles.title}>New note</Text>
               <Text style={styles.label}>Save to</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Choose Home or a destination Bubble" onPress={() => {setDestinationReturn('note');setError('');setStep('destination');}} style={styles.destination}><Text style={styles.destinationText}>{destination==='__pending__'?pendingBubble?.title:destination&&destination!==HOME?bubbleById(destination)?.title??'Home':'Home · outside Bubbles'}</Text><Text style={styles.chevron}>›</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Choose Home or a destination Bubble" onPress={() => {setDestinationReturn('note');setError('');setStep('destination');}} style={styles.destination}><Text style={styles.destinationText}>{destination==='__pending__'?pendingBubble?.title:destination&&destination!==HOME?bubbleById(destination)?.title??'Home':'Home · outside Bubbles'}</Text><Text accessible={false} allowFontScaling={false} style={styles.chevron}>›</Text></Pressable>
               <Text style={styles.label}>Title (optional)</Text>
               <TextInput accessibilityLabel="Note title" style={styles.input} placeholder="Untitled note" placeholderTextColor={colors.muted} value={noteTitle} onChangeText={setNoteTitle} maxLength={100} />
               <Text style={styles.label}>Your note *</Text>
@@ -219,7 +219,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
             {step === 'photo' && <>
               <Text style={styles.title}>New photo</Text>
               <Text style={styles.label}>Save to</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Choose Home or a destination Bubble" onPress={() => {setDestinationReturn('photo');setError('');setStep('destination');}} style={styles.destination}><Text style={styles.destinationText}>{destination==='__pending__'?pendingBubble?.title:destination&&destination!==HOME?bubbleById(destination)?.title??'Home':'Home · outside Bubbles'}</Text><Text style={styles.chevron}>›</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Choose Home or a destination Bubble" onPress={() => {setDestinationReturn('photo');setError('');setStep('destination');}} style={styles.destination}><Text style={styles.destinationText}>{destination==='__pending__'?pendingBubble?.title:destination&&destination!==HOME?bubbleById(destination)?.title??'Home':'Home · outside Bubbles'}</Text><Text accessible={false} allowFontScaling={false} style={styles.chevron}>›</Text></Pressable>
               <Text style={styles.label}>Photo *</Text>
               {photo && <Image source={{ uri: photo.uri }} style={[styles.imagePreview,{height:undefined,aspectRatio:1/photo.ratio}]} resizeMode="contain" accessibilityLabel="Selected photo" />}
               <Pressable accessibilityRole="button" onPress={() => pickImage('photo')} style={styles.pick}><Text style={styles.pickText}>{photo ? 'Change photo' : 'Choose photo'}</Text></Pressable>
@@ -233,7 +233,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
             {step === 'checklist' && <>
               <Text style={styles.title}>New checklist</Text>
               <Text style={styles.label}>Save to</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Choose Home or a destination Bubble" onPress={() => {setDestinationReturn('checklist');setError('');setStep('destination');}} style={styles.destination}><Text style={styles.destinationText}>{destination==='__pending__'?pendingBubble?.title:destination&&destination!==HOME?bubbleById(destination)?.title??'Home':'Home · outside Bubbles'}</Text><Text style={styles.chevron}>›</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Choose Home or a destination Bubble" onPress={() => {setDestinationReturn('checklist');setError('');setStep('destination');}} style={styles.destination}><Text style={styles.destinationText}>{destination==='__pending__'?pendingBubble?.title:destination&&destination!==HOME?bubbleById(destination)?.title??'Home':'Home · outside Bubbles'}</Text><Text accessible={false} allowFontScaling={false} style={styles.chevron}>›</Text></Pressable>
               <Pressable accessibilityRole="button" onPress={() => setShowChecklistTitle((value) => !value)} style={styles.titleToggle}><Text style={styles.pickText}>{showChecklistTitle ? 'Hide title' : 'Add title'}</Text></Pressable>
               {showChecklistTitle ? <TextInput accessibilityLabel="Checklist title" style={styles.input} placeholder="Give your list a title" placeholderTextColor={colors.muted} value={checklistTitle} onChangeText={setChecklistTitle} maxLength={100} /> : null}
               <Text style={styles.intro}>What would you like to get done?</Text>
@@ -264,18 +264,19 @@ export const createFormStyles = (colors: ThemeColors) => StyleSheet.create({
   handle: { width: 42, height: 5, borderRadius: 3, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 20 },
   title: { color: colors.text, fontSize: 24, fontWeight: '700', marginBottom: 7 },
   intro: { color: colors.muted, fontSize: 14, lineHeight: 20, marginBottom: 18 },
-  choice: { minHeight: 74, borderWidth: 1, borderColor: colors.border, borderRadius: 20, paddingHorizontal: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  choice: { minHeight: 74, paddingVertical: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 20, paddingHorizontal: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
   choiceIcon: { color: colors.action, backgroundColor: colors.lavenderSoft, borderRadius: 18, overflow: 'hidden', width: 38, height: 38, lineHeight: 38, textAlign: 'center', fontSize: 24 },
+  choiceText: { flex: 1, minWidth: 0 },
   choiceTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
   choiceHelp: { color: colors.muted, fontSize: 11, marginTop: 3 },
   chevron: { color: colors.action, marginLeft: 'auto', fontSize: 25 },
   label: { color: colors.text, fontWeight: '700', fontSize: 13, marginBottom: 7, marginTop: 12 },
   input: { borderWidth: 1, borderColor: colors.border, borderRadius: 16, backgroundColor: colors.input, paddingHorizontal: 14, paddingVertical: 12, color: colors.text, fontSize: 15, minHeight: 48 },
-  description: { height: 86 }, noteBody: { height: 160 },
+  description: { minHeight: 86 }, noteBody: { minHeight: 160 },
   imagePreview: { width: '100%', height: 130, borderRadius: 18, marginBottom: 8, backgroundColor: colors.lavenderSoft },
   pick: { minHeight: 48, borderRadius: 16, borderWidth: 1, borderColor: colors.action, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.lavenderSoft },
   pickText: { color: colors.action, fontSize: 14, fontWeight: '700' },
-  remove: { paddingVertical: 8, alignSelf: 'center' }, removeText: { color: colors.muted, fontSize: 12 },
+  remove: { minWidth: 44, minHeight: 44, paddingVertical: 8, paddingHorizontal: 12, alignSelf: 'center', justifyContent: 'center' }, removeText: { color: colors.muted, fontSize: 12 },
   swatches: { flexWrap: 'wrap', flexDirection: 'row', gap: 12, marginTop: 4 },
   swatch: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },
   swatchSelected: { borderWidth: 2, borderColor: colors.action },
@@ -284,9 +285,9 @@ export const createFormStyles = (colors: ThemeColors) => StyleSheet.create({
   error: { color: colors.destructive, fontSize: 13, marginTop: 12 },
   destination: { minHeight: 50, borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center' },
   destinationChoice: { minHeight: 51, borderBottomWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center' },
-  destinationText: { color: colors.text, fontSize: 15, fontWeight: '600' }, selected: { color: colors.action, marginLeft: 'auto', fontSize: 18 },
-  save: { backgroundColor: colors.action, minHeight: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
-  saveText: { color: colors.onAction, fontSize: 16, fontWeight: '700' },
-  cancel: { backgroundColor: colors.lavenderSoft, minHeight: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
-  cancelText: { color: colors.action, fontSize: 15, fontWeight: '700' },
+  destinationText: { flex: 1, minWidth: 0, color: colors.text, fontSize: 15, fontWeight: '600' }, selected: { color: colors.action, marginLeft: 'auto', fontSize: 18 },
+  save: { backgroundColor: colors.action, minHeight: 50, borderRadius: 25, paddingHorizontal: 16, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
+  saveText: { color: colors.onAction, fontSize: 16, fontWeight: '700', textAlign: 'center' },
+  cancel: { backgroundColor: colors.lavenderSoft, minHeight: 48, borderRadius: 24, paddingHorizontal: 16, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
+  cancelText: { color: colors.action, fontSize: 15, fontWeight: '700', textAlign: 'center' },
 });
