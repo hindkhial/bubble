@@ -1,5 +1,10 @@
 # iPhone accounts and library
 
+**Candidate offline policy:** see OFFLINE-ACCOUNT-PROTECTION.md for the separate
+encrypted reader and protected drafts. Online sessions retain the controls below;
+offline local unlock never sets the online-verification flag or sends HTTP.
+Native runtime verification of this new feature remains pending.
+
 ## Authentication and privacy
 
 iOS starts at Welcome, Log In or Create Account until the existing Spring session

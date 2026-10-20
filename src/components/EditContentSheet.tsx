@@ -11,6 +11,8 @@ import type { Bubble, ChecklistRow, SampleItem } from '../data/sample';
 import { bubblePalette, createFormStyles } from './AddPreview';
 import { ChecklistEditorRows } from './ChecklistEditorRows';
 import { ConfirmDialog } from './ConfirmDialog';
+import { useProtectedDraft } from '../storage/useProtectedDraft';
+import { useAccount } from '../state/Account';
 
 type Draft = { title: string; description: string; color: string; body: string; rows: ChecklistRow[] };
 
@@ -44,6 +46,8 @@ export function EditContentSheet({ entry, onSave, onClose }: {
   const bypass = useRef(false);
   const saving = useRef(false);
   const dirty = title !== initial.title || description !== initial.description || color !== initial.color || body !== initial.body || JSON.stringify(rows) !== JSON.stringify(initial.rows);
+  const account=useAccount();
+  const protectedDraft=useProtectedDraft(dirty&&!isBubble&&(entry.type==='NOTE'||isChecklist),isChecklist?'CHECKLIST':'NOTE',title,body,rows);
 
   usePreventRemove(dirty, ({ data }) => {
     if (bypass.current) { navigation.dispatch(data.action); return; }
@@ -59,7 +63,8 @@ export function EditContentSheet({ entry, onSave, onClose }: {
     if (dirty) { blockedAction.current = null; Keyboard.dismiss(); setDiscardOpen(true); }
     else leave();
   };
-  const discard = () => {
+  const discard = async () => {
+    try { await protectedDraft.finish(); } catch { setError('Could not remove the protected draft. Nothing was erased.');return; }
     bypass.current = true;
     setDiscardOpen(false);
     onClose();
@@ -71,7 +76,7 @@ export function EditContentSheet({ entry, onSave, onClose }: {
     if (isChecklist && !rows.some((row) => row.text.trim())) { setError('Add at least one checklist item before saving.'); return; }
     if (!isBubble && !isChecklist && entry.type==='NOTE' && !body.trim()) { setError('Write a little text before saving your note.'); return; }
     saving.current = true;
-    try { await onSave({ title, description, color, body, rows });bypass.current=true; }
+    try { await onSave({ title, description, color, body, rows });bypass.current=true;await protectedDraft.finish().catch(()=>account.setError('Item saved; protected draft cleanup failed. Review drafts before publishing another copy.')); }
     catch(problem){setError(problem instanceof Error?problem.message:'Could not save.');}
     finally {saving.current=false;}
 
@@ -83,6 +88,7 @@ export function EditContentSheet({ entry, onSave, onClose }: {
         <Pressable style={StyleSheet.absoluteFill} onPress={attemptClose} />
         <View style={[styles.sheet, { paddingBottom: Math.max(30, insets.bottom) }]} accessibilityViewIsModal={!discardOpen} accessibilityElementsHidden={discardOpen} importantForAccessibility={discardOpen ? 'no-hide-descendants' : 'auto'}>
           <View style={styles.handle} />
+          {protectedDraft.status?<Text accessibilityLiveRegion="polite" style={{color:colors.muted,paddingHorizontal:16}}>{protectedDraft.status}</Text>:null}
           <ScrollView keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <Text style={styles.title}>{isBubble ? 'Edit Bubble' : isChecklist ? 'Edit checklist' : isPhoto ? 'Edit photo' : 'Edit note'}</Text>
             <Text style={styles.intro}>Your changes will appear right away.</Text>

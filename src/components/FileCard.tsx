@@ -9,7 +9,7 @@ import { CoverPhoto } from './CoverPhoto';
 import { coverHeight } from '../utils/bubbleCover';
 import { PinnedMarker } from './PinnedMarker';
 
-export function FileCard({ item, pinned, onOpenActions }: { item: SampleItem; pinned: boolean; onOpenActions: () => void }) {
+export function FileCard({ item, pinned, onOpenActions, onRead }: { item: SampleItem; pinned: boolean; onOpenActions: () => void; onRead?:()=>void }) {
   const { colors } = useTheme();
   const styles = createStyles(colors);
   const router = useRouter();
@@ -27,12 +27,12 @@ export function FileCard({ item, pinned, onOpenActions }: { item: SampleItem; pi
       {...webContextMenu}
       accessibilityRole="button"
       accessibilityLabel={`Open ${item.title} ${item.type.toLowerCase()}`}
-      onPress={() => router.push(`/file/${item.id}`)}
-      onLongPress={onOpenActions}
+      onPress={() => onRead ? onRead() : router.push(`/file/${item.id}`)}
+      onLongPress={onRead ? undefined : onOpenActions}
       delayLongPress={450}
       style={({ pressed }) => [pressed && styles.pressed]}
     >
-      {!isNote && item.image ? <CoverPhoto source={item.image} style={[styles.photo, { aspectRatio:photoRatio }]} /> : null}
+      {!onRead && !isNote && item.image ? <CoverPhoto source={item.image} style={[styles.photo, { aspectRatio:photoRatio }]} /> : null}
       <View style={styles.body}>
         <View style={styles.header}>
           <Text style={styles.type}>{isNote ? '✎  NOTE' : isChecklist ? '☑  CHECKLIST' : '▧  PHOTO'}</Text>
@@ -44,7 +44,7 @@ export function FileCard({ item, pinned, onOpenActions }: { item: SampleItem; pi
         <Text style={[styles.meta, item.type === 'PHOTO' && { color: colors.text }]}>{item.meta}</Text>
       </View>
     </Pressable>
-      <PinnedMarker pinned={pinned} title={`${item.title} ${item.type.toLowerCase()}`} onPress={onOpenActions} />
+      {!onRead && <PinnedMarker pinned={pinned} title={`${item.title} ${item.type.toLowerCase()}`} onPress={onOpenActions} />}
     </View>
   );
 }

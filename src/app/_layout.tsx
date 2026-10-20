@@ -9,10 +9,12 @@ export default function RootLayout() {
 }
 function Routes() {
   const account=useAccount();const {colors,mode,reduceMotion}=useTheme();
-  if(!account.ready)return <View style={{flex:1,justifyContent:'center',backgroundColor:colors.background}}><ActivityIndicator accessibilityLabel="Verifying your session" color={colors.action}/></View>;
+  if(!account.ready)return <View style={{flex:1,justifyContent:'center',backgroundColor:colors.background}}><ActivityIndicator accessibilityLabel="Opening Bubble" color={colors.action}/></View>;
   const authenticated=Platform.OS!=='ios'||account.nativeVerified;
+  const offline=Platform.OS==='ios'&&!!account.offlineSnapshot;
   return <><StatusBar style={mode==='dark'?'light':'dark'}/><Stack screenOptions={{headerShown:false,contentStyle:{backgroundColor:colors.background},...(reduceMotion?{animation:'none' as const}:{})}}>
-    <Stack.Protected guard={!authenticated}><Stack.Screen name="(auth)"/></Stack.Protected>
+    <Stack.Protected guard={!authenticated&&!offline}><Stack.Screen name="(auth)"/></Stack.Protected>
     <Stack.Protected guard={authenticated}><Stack.Screen name="(app)"/></Stack.Protected>
+    <Stack.Protected guard={offline}><Stack.Screen name="offline"/></Stack.Protected>
   </Stack></>;
 }

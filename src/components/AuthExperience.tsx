@@ -66,8 +66,9 @@ export function AuthExperience({kind}:{kind:'welcome'|'login'|'signup'}) {
     {button('Back to welcome',()=>go('/welcome'))}
    </>}
    {account.authNotice?<Text accessibilityLiveRegion="polite" style={[styles.intro,{color:colors.action}]}>{account.authNotice}</Text>:null}
+   {Platform.OS==='ios'?button('Read cached notes offline',()=>{if(submitted.current)return;submitted.current=true;setPending(true);setError('');void account.unlockOffline().catch(problem=>setError(problem instanceof Error?problem.message:'Offline access unavailable.')).finally(()=>{submitted.current=false;setPending(false);});}):null}
    {error||account.error?<Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={[styles.intro,{color:colors.destructive}]}>{error||account.error}</Text>:null}
-   <Text style={styles.intro}>An internet connection is required to verify your account when opening Bubble. Existing device content is never uploaded automatically.</Text>
+   <Text style={styles.intro}>{Platform.OS==='ios'?'Online account access requires verification. Previously verified cached notes can be unlocked locally for up to seven days using Face ID or your device passcode. Offline access makes no network requests. Existing device content is never uploaded automatically.':'Account mode requires the backend. Existing local content is never uploaded automatically.'}</Text>
   </ScrollView>
  </KeyboardAvoidingView></SafeAreaView>;
 }

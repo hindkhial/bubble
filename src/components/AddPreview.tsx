@@ -18,6 +18,7 @@ import type { ChecklistRow } from '../data/sample';
 import { useContent } from '../state/Content';
 import { colors as baseColors } from '../theme/tokens';
 import { ChecklistEditorRows } from './ChecklistEditorRows';
+import { useProtectedDraft } from '../storage/useProtectedDraft';
 
 type Step = 'menu' | 'bubble' | 'note' | 'photo' | 'checklist' | 'destination';
 type PickedPhoto = { uri: string; ratio: number };
@@ -61,6 +62,8 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
     hasImage: Boolean(photo || coverPhoto), changedColor: color !== baseColors.lavender,
     rows: checklistRows, hasPendingBubble: Boolean(pendingBubble),
   });
+  const draftKind=step==='checklist'||(step==='destination'&&destinationReturn==='checklist')?'CHECKLIST':'NOTE';
+  const protectedDraft=useProtectedDraft(visible&&dirty&&(step==='note'||step==='checklist'||(step==='destination'&&destinationReturn!=='photo')),draftKind,draftKind==='NOTE'?noteTitle:checklistTitle,draftKind==='NOTE'?body:'',draftKind==='CHECKLIST'?checklistRows:[]);
   usePreventRemove(visible && dirty, ({ data }) => {
     if (bypass.current) { navigation.dispatch(data.action); return; }
     if (saving.current) return;
@@ -81,7 +84,8 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
     else close();
   };
   const keepEditing = () => { blockedAction.current = null; setDiscardOpen(false); };
-  const discard = () => {
+  const discard = async () => {
+    try { await protectedDraft.finish(); } catch {setError('Could not remove the protected draft. Nothing was erased.');return;}
     const action = blockedAction.current;
     blockedAction.current = null;
     close();
@@ -139,6 +143,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
     try {
     const destinationId = await resolveDestination();
     await createNote({ title: noteTitle, body, bubbleId: destinationId });
+    await protectedDraft.finish().catch(()=>account.setError('Note saved; protected draft cleanup failed. Review drafts before publishing another copy.'));
     close();
     if(destinationId===HOME){if(pathname!=='/')router.replace('/');}
     else if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
@@ -165,6 +170,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
     try {
     const destinationId = await resolveDestination();
     await createChecklist({ title: checklistTitle, rows: checklistRows, bubbleId: destinationId });
+    await protectedDraft.finish().catch(()=>account.setError('Checklist saved; protected draft cleanup failed. Review drafts before publishing another copy.'));
     close();
     if(destinationId===HOME){if(pathname!=='/')router.replace('/');}
     else if (destinationId !== parentId) router.push(`/bubble/${destinationId}`);
@@ -178,6 +184,7 @@ export function AddPreview({ parentId = null, quickAction }: { parentId?: string
         <Pressable style={StyleSheet.absoluteFill} onPress={attemptClose} />
         <View style={[styles.sheet, { paddingBottom: Math.max(30, insets.bottom) }]} accessibilityViewIsModal={!discardOpen} accessibilityElementsHidden={discardOpen} importantForAccessibility={discardOpen ? 'no-hide-descendants' : 'auto'}>
           <View style={styles.handle} />
+          {protectedDraft.status?<Text accessibilityLiveRegion="polite" style={{color:colors.muted,paddingHorizontal:16}}>{protectedDraft.status}</Text>:null}
           <ScrollView keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {step === 'menu' && <>
               <Text style={styles.title}>Add something</Text>

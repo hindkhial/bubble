@@ -2,6 +2,7 @@ import ExpoModulesCore
 import Foundation
 import Security
 import CryptoKit
+import UIKit
 
 private enum SessionFailure: Error { case invalidRequest, keychain, invalidResponse }
 
@@ -26,8 +27,65 @@ private actor SessionTransport {
   }()
   private var generation = 0
   private var gate: (origin: String, value: String)?
-  private var verifiedOwner: (base: String, id: String)?
+  private var verifiedOwner: (base: String, id: String, clock: OfflineClock)?
   private var loginInProgress = false
+  private let vault = OfflineVault()
+  private var networkAllowed = false
+  private var vaultEpoch = -1
+  private var snapshotSequence = 0
+
+  func lockForBackground() async {
+    networkAllowed = false; generation += 1; verifiedOwner = nil
+    await vault.lock()
+  }
+  func prepareOnline() async throws {
+    networkAllowed = false; generation += 1; verifiedOwner = nil
+    let ticket = generation
+    let unlockedEpoch = try await vault.authenticate()
+    guard ticket == generation else { throw SessionFailure.invalidRequest }
+    vaultEpoch = unlockedEpoch
+    networkAllowed = true
+  }
+  func unlockOffline(_ value: String) async throws -> String {
+    let base = try origin(value)
+    networkAllowed = false; generation += 1; verifiedOwner = nil
+    let ticket = generation
+    let snapshot = try await vault.unlock(base)
+    guard ticket == generation else { await vault.lock(); throw SessionFailure.invalidRequest }
+    return snapshot
+  }
+  func cacheSnapshot(_ value: String, json: String) async throws {
+    let base = try origin(value)
+    guard networkAllowed, let owner = verifiedOwner, owner.base == base, try cookie(base) != nil else { throw SessionFailure.invalidRequest }
+    guard let data = json.data(using: .utf8), let snapshot = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+      snapshot["version"] as? Int == 1, let account = snapshot["owner"] as? [String: Any],
+      account["id"] as? String == owner.id else { throw SessionFailure.invalidRequest }
+    let ticket = generation
+    let epoch = vaultEpoch
+    snapshotSequence += 1; let sequence = snapshotSequence
+    try await vault.verified(base, owner: owner.id, issued: owner.clock, expectedEpoch: epoch, sequence: sequence)
+    guard ticket == generation, networkAllowed else { await vault.lock(); throw SessionFailure.invalidRequest }
+    try await vault.save("snapshot", json: json, base: base, owner: owner.id, expectedEpoch: epoch, sequence: sequence)
+  }
+  func saveDraft(_ base: String, owner: String, id: String, json: String) async throws {
+    guard networkAllowed, let current = verifiedOwner, current.base == base, current.id == owner else { throw SessionFailure.invalidRequest }
+    guard let data = json.data(using: .utf8), let draft = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+      draft["id"] as? String == id, draft["version"] as? Int == 1 else { throw SessionFailure.invalidRequest }
+    try await vault.save("draft-" + id, json: json, base: base, owner: owner, expectedEpoch: vaultEpoch)
+  }
+  func drafts(_ base: String, owner: String) async throws -> [String] {
+    guard networkAllowed, let current = verifiedOwner, current.base == base, current.id == owner else { throw SessionFailure.invalidRequest }
+    let ticket = generation
+    let result = try await vault.drafts(base: base, owner: owner)
+    guard ticket == generation else { throw SessionFailure.invalidRequest }
+    return result
+  }
+  func removeDraft(_ base: String, owner: String, id: String) async throws {
+    guard networkAllowed, let current = verifiedOwner, current.base == base, current.id == owner else { throw SessionFailure.invalidRequest }
+    try await vault.removeDraft(id, base: base, owner: owner)
+  }
+  func validateOffline() async throws { guard !networkAllowed else { throw SessionFailure.invalidRequest }; try await vault.validateOffline() }
+  func revokeOffline(_ value: String) async throws { try await vault.revoke(origin(value)) }
 
   private func origin(_ value: String) throws -> String {
     guard let parts = URLComponents(string: value), parts.scheme == "https",
@@ -76,15 +134,20 @@ private actor SessionTransport {
     guard !username.contains(":"), !username.contains("\n"), !password.contains("\n") else { throw SessionFailure.invalidRequest }
     gate = username.isEmpty ? nil : (base, Data("\(username):\(password)".utf8).base64EncodedString())
   }
-  func clear(_ value: String) throws {
+  func clear(_ value: String) async throws {
     let base = try origin(value); generation += 1
+    networkAllowed = false
     verifiedOwner = nil
     gate = nil
+    do { try await vault.revoke(base) } catch { try remove(base); await vault.lock(); throw error }
     try remove(base)
   }
-  func request(_ value: String, path: String, method: String, body: String?, csrf: String?) async throws -> [String: Any] {
-    guard !loginInProgress else { throw SessionFailure.invalidRequest }
+  func request(_ value: String, path: String, method: String, body: String?, csrf: String?, expectedOwner: String?) async throws -> [String: Any] {
+    guard OfflinePolicy.allowsNetwork(networkAllowed, expectedOwner: expectedOwner, actualOwner: verifiedOwner?.id), !loginInProgress else { throw SessionFailure.invalidRequest }
     let base = try origin(value)
+    if let expectedOwner = expectedOwner {
+      guard verifiedOwner?.base == base, verifiedOwner?.id == expectedOwner else { throw SessionFailure.invalidRequest }
+    }
     guard path.hasPrefix("/api/v1/"), !path.contains("#"), !path.contains("\\"),
       ["GET", "POST", "PATCH", "PUT", "DELETE"].contains(method),
       let url = URL(string: base + path), url.host == URL(string: base)?.host,
@@ -108,7 +171,16 @@ private actor SessionTransport {
     // The outer tester gate is not an application-session rejection. Preserve
     // the session until the tester unlocks the gate and /users/me verifies it.
     let testerGate = response.value(forHTTPHeaderField: "WWW-Authenticate")?.lowercased().hasPrefix("basic") ?? false
-    if response.statusCode == 401 && !testerGate { verifiedOwner = nil; try remove(base) }
+    if response.statusCode == 401 && !testerGate {
+      generation += 1; networkAllowed = false
+      verifiedOwner = nil
+      // Preserve HTTP rejection classification even if local cleanup fails.
+      // Vault also denies in memory before attempting durable revocation.
+      try? remove(base)
+      do { try await vault.revoke(base) } catch { await vault.lock() }
+      // A rejected login/session cannot silently fall back to the offline grant.
+      networkAllowed = false
+    }
     // No cookie/header material is returned to JavaScript.
     var headers: [String: String] = [:]
     response.allHeaderFields.forEach { headers[String(describing: $0.key)] = String(describing: $0.value) }
@@ -122,7 +194,9 @@ private actor SessionTransport {
     if method == "GET" && path == "/api/v1/users/me" && response.statusCode == 200 {
       guard let identity = try JSONSerialization.jsonObject(with: data) as? [String: Any],
         let id = identity["id"] as? String, UUID(uuidString: id) != nil else { throw SessionFailure.invalidResponse }
-      verifiedOwner = (base, id)
+      let clock = try await vault.currentClock()
+      guard ticket == generation else { throw SessionFailure.invalidRequest }
+      verifiedOwner = (base, id, clock)
     }
     return ["status": response.statusCode, "body": String(data: data, encoding: .utf8) ?? "", "privateGate": testerGate]
   }
@@ -191,10 +265,27 @@ private actor SessionTransport {
 
 public class BubbleSessionModule: Module {
   private let transport = SessionTransport()
+  private var backgroundObserver: NSObjectProtocol?
   public func definition() -> ModuleDefinition {
     Name("BubbleSession")
-    AsyncFunction("request") { (base: String, path: String, method: String, body: String?, csrf: String?) async throws -> [String: Any] in
-      try await self.transport.request(base, path: path, method: method, body: body, csrf: csrf)
+    OnCreate {
+      self.backgroundObserver = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
+        guard let self = self else { return }
+        Task { await self.transport.lockForBackground() }
+      }
+    }
+    OnDestroy { if let observer = self.backgroundObserver { NotificationCenter.default.removeObserver(observer) }; self.backgroundObserver = nil }
+    AsyncFunction("lock") { () async in await self.transport.lockForBackground() }
+    AsyncFunction("validateOffline") { () async throws in try await self.transport.validateOffline() }
+    AsyncFunction("revokeOffline") { (base: String) async throws in try await self.transport.revokeOffline(base) }
+    AsyncFunction("prepareOnline") { () async throws in try await self.transport.prepareOnline() }
+    AsyncFunction("unlockOffline") { (base: String) async throws -> String in try await self.transport.unlockOffline(base) }
+    AsyncFunction("cacheSnapshot") { (base: String, json: String) async throws in try await self.transport.cacheSnapshot(base, json: json) }
+    AsyncFunction("saveDraft") { (base: String, owner: String, id: String, json: String) async throws in try await self.transport.saveDraft(base, owner: owner, id: id, json: json) }
+    AsyncFunction("drafts") { (base: String, owner: String) async throws -> [String] in try await self.transport.drafts(base, owner: owner) }
+    AsyncFunction("removeDraft") { (base: String, owner: String, id: String) async throws in try await self.transport.removeDraft(base, owner: owner, id: id) }
+    AsyncFunction("request") { (base: String, path: String, method: String, body: String?, csrf: String?, expectedOwner: String?) async throws -> [String: Any] in
+      try await self.transport.request(base, path: path, method: method, body: body, csrf: csrf, expectedOwner: expectedOwner)
     }
     AsyncFunction("clear") { (base: String) async throws in try await self.transport.clear(base) }
     AsyncFunction("setGate") { (base: String, username: String, password: String) async throws in

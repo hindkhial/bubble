@@ -1,0 +1,22 @@
+import { readdirSync, mkdirSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+const repo=fileURLToPath(new URL('../',import.meta.url));
+process.chdir(repo);
+if(process.platform!=='darwin')throw new Error('Existing macOS/Xcode/Pods required; no tool installation is performed.');
+const require=createRequire(import.meta.url);
+const developer=process.env.DEVELOPER_DIR||'/Applications/Xcode.app/Contents/Developer';
+const output=resolve(repo,'../work/offline-native-typecheck');mkdirSync(join(output,'tmp'),{recursive:true});mkdirSync(join(output,'modules'),{recursive:true});
+const frameworks=new Set();
+function scan(dir){for(const entry of readdirSync(dir,{withFileTypes:true})){const path=join(dir,entry.name);if(entry.isDirectory()){if(entry.name.endsWith('.framework')){if(path.includes('ios-arm64_x86_64-simulator'))frameworks.add(dirname(path));}else scan(path);}}}
+scan('ios/Pods');
+const jsi=dirname(require.resolve('expo-modules-jsi/package.json',{paths:[require.resolve('expo/package.json')]}));
+frameworks.add(join(jsi,'apple/Products/ExpoModulesJSI.xcframework/ios-arm64_x86_64-simulator'));
+const args=['-typecheck','-target','arm64-apple-ios16.4-simulator','-sdk',join(developer,'Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk'),'-module-cache-path',join(output,'modules'),'-I','ios/Pods/Headers/Public'];
+for(const path of frameworks)args.push('-F',path);
+args.push(...['OfflinePolicy','OfflineCipher','OfflineVault','BubbleSessionModule'].map(name=>`modules/bubble-session/ios/${name}.swift`));
+const result=spawnSync(join(developer,'Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc'),args,{stdio:'inherit',env:{...process.env,TMPDIR:join(output,'tmp')}});
+if(result.status!==0)process.exit(result.status||1);
+console.log('PASS: complete native session/vault typecheck with existing iOS SDK and Expo frameworks. Not a linked build or runtime test.');

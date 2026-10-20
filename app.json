@@ -34,6 +34,9 @@
     },
     "ios": {
       "bundleIdentifier": "com.hindkhial.bubble",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Unlock your private Bubble notes and protected drafts on this iPhone."
+      },
       "supportsTablet": false,
       "buildNumber": "1"
     }

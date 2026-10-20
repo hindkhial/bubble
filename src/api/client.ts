@@ -22,12 +22,13 @@ export class ApiClient {
     if (!this.tokenRequest) this.tokenRequest = this.request<{token: string}>('GET', '/auth/csrf').then(value => { this.csrf = value.token; return value.token; }).finally(() => { this.tokenRequest = null; });
     return this.tokenRequest;
   }
-  async request<T>(method: string, path: string, input?: unknown, signal?: AbortSignal): Promise<T> {
+  async request<T>(method: string, path: string, input?: unknown, signal?: AbortSignal, expectedOwner?: string): Promise<T> {
     if(this.configurationError)throw new ApiError('Account service address is invalid. Your device content is unchanged.');
     if (!path.startsWith('/') || path.startsWith('//')) throw new Error('Invalid API path.');
     const mutation = method !== 'GET';
     if (signal?.aborted) throw new DOMException('Request cancelled.', 'AbortError');
     const headers: Record<string, string> = { Accept: 'application/json' };
+    if(expectedOwner)headers['X-Bubble-Expected-Owner']=expectedOwner;
     if (mutation) headers['X-CSRF-TOKEN'] = await this.token();
     if (input !== undefined) headers['Content-Type'] = 'application/json';
     const controller = new AbortController();

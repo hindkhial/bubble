@@ -2,8 +2,14 @@ import { useRouter } from 'expo-router';
 import { Platform, Pressable, Text, View } from 'react-native';
 import { useAccount } from '../state/Account';
 import { useTheme } from '../theme/Theme';
+import { ProtectedDraftReview } from './ProtectedDraftReview';
 export function AccountNotice() {
   const account=useAccount();const router=useRouter();const {colors}=useTheme();
+  if(Platform.OS==='ios')return <View style={{backgroundColor:colors.surface,paddingHorizontal:16,paddingVertical:7}}>
+    {account.protectionError?<Text accessibilityRole="alert" style={{color:colors.destructive}}>{account.protectionError}</Text>:null}
+    {account.error?<Text accessibilityRole="alert" style={{color:colors.destructive}}>{account.error}</Text>:null}
+    <ProtectedDraftReview/>
+  </View>;
   if(Platform.OS!=='web')return null;
   return <View style={{backgroundColor:colors.surface,paddingHorizontal:16,paddingVertical:7}}>
     <Pressable style={{minHeight:44,justifyContent:'center'}} accessibilityRole="button" accessibilityLabel="Open account and workspace settings" onPress={()=>router.push('/account')}>

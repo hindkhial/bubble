@@ -1,3 +1,36 @@
+## Offline account protection candidate — October 20, 2026
+
+Branch `offline-account-protection` starts at reviewed PR #13 head 77b14cf.
+OFFLINE-ACCOUNT-PROTECTION.md records scope, security policy, limits and native
+manual checklist. This follow-up does not install an app or mutate live data.
+
+- Local frontend: 114 tests Passed, zero failed/skipped; TypeScript Passed.
+  New tests execute offline transport locks with request spies, schema/search
+  behavior, serialized immutable drafts, failed-write recovery and publication
+  state parsing. Offline requests (GET/POST/PATCH/DELETE) never reached the bridge
+  or global fetch in that execution. This is not packet capture on an iPhone.
+- Native: 24 actual CryptoKit/policy checks Passed using synthetic data: encryption
+  roundtrip, new nonce, wrong key/backend/account/record, tampering/truncation,
+  expiry, clock changes, reboot, revoked/future-version grant and network/owner
+  guards. No Mac Keychain was accessed by that executable.
+- Full SessionTransport + vault/cipher/policy Swift typecheck Passed against the
+  actual iOS Simulator SDK and installed Expo frameworks; Swift syntax Passed.
+  Standalone probe initially lacked ExpoModulesJSI; adding its existing framework
+  search path resolved it without changing dependencies or toolchains.
+- Existing workspace CocoaPods `--deployment` source refresh Passed; app project
+  and Podfile.lock hashes unchanged. Only the required Face ID usage description
+  was added to the ignored local Info.plist, matching tracked app.json. No signing
+  settings, installed app, provisioning, trust or firewall changes.
+- iOS Hermes/assets export Passed; not native compilation. Full agent Simulator
+  build still exits 66 before compilation because of existing session restrictions.
+- New-feature Simulator and physical-device Face ID/Keychain/cache/draft runtime,
+  unavailable-key runtime, real logout/reboot/expiry and interrupted-publication
+  scenarios remain Not Tested. Previous physical reports are baseline evidence
+  only, not passes for this new feature. Destructive recovery not performed.
+- Backend/schema unchanged. New PR CI must provide its own frontend/backend,
+  browser, recovery and runtime-scan evidence. Existing dependency advisories
+  remain open; no finding was suppressed or assumed fixed by this change.
+
 ## Personal iPhone verification — October 20, 2026
 
 Active scope: PERSONAL-IPHONE.md. Public distribution is deferred. Fetched
