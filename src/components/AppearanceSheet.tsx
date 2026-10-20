@@ -11,21 +11,21 @@ export function AppearanceSheet({ onClose }: { onClose: () => void }) {
   const account=useAccount();
   const styles = createStyles(colors);
   return <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-    <View style={styles.scrim}>
+    <View style={[styles.scrim, { paddingTop: insets.top }]}>
       <View style={[styles.sheet, { paddingBottom: Math.max(30, insets.bottom) }]} accessibilityViewIsModal>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <Text accessibilityRole="header" style={styles.title}>Appearance</Text>
           <Text style={styles.description}>A little more you, in every Bubble.</Text>
           <Text accessibilityRole="header" style={styles.label}>Mode</Text>
           <View style={styles.modes}>
-            {(['light','dark','system'] as const).map((option) => <Pressable key={option} accessibilityRole="radio" accessibilityState={{ checked: selectedMode === option }} aria-checked={selectedMode === option} disabled={account.busy || account.loading} onPress={() => setMode(option)} style={[styles.mode, selectedMode === option && styles.selected]}>
+            {(['light','dark','system'] as const).map((option) => <Pressable key={option} accessibilityRole="radio" accessibilityLabel={`${option} appearance`} accessibilityState={{ checked: selectedMode === option, disabled: account.busy || account.loading }} aria-checked={selectedMode === option} disabled={account.busy || account.loading} onPress={() => setMode(option)} style={[styles.mode, selectedMode === option && styles.selected]}>
               <Text style={styles.modeText}>{option === 'light' ? 'Light' : option === 'dark' ? 'Dark' : 'System'}{selectedMode === option ? ' ✓' : ''}</Text>
             </Pressable>)}
           </View>
           <Text accessibilityRole="header" style={styles.label}>Customize your app</Text>
           <Text style={styles.description}>Choose your accent. Dark mode uses a deeper shade of the same color.</Text>
           <View style={styles.palette}>
-            {accentPalette.map((option) => <Pressable key={option.name} accessibilityRole="radio" accessibilityLabel={`${option.name} app color`} accessibilityState={{ checked: accent === option.name }} aria-checked={accent === option.name} disabled={account.busy || account.loading} onPress={() => setAccent(option.name)} style={[styles.colorOption, accent === option.name && styles.selected]}>
+            {accentPalette.map((option) => <Pressable key={option.name} accessibilityRole="radio" accessibilityLabel={`${option.name} app color`} accessibilityState={{ checked: accent === option.name, disabled: account.busy || account.loading }} aria-checked={accent === option.name} disabled={account.busy || account.loading} onPress={() => setAccent(option.name)} style={[styles.colorOption, accent === option.name && styles.selected]}>
               <View style={[styles.swatch, { backgroundColor: mode === 'dark' ? option.dark : option.value }]}><Text style={styles.check}>{accent === option.name ? '✓' : ''}</Text></View>
               <Text style={styles.colorName}>{option.name}</Text>
             </Pressable>)}
@@ -46,8 +46,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   title: { fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 8 },
   description: { fontSize: 14, lineHeight: 21, color: colors.muted, marginBottom: 16 },
   label: { fontSize: 16, fontWeight: '700', color: colors.text, marginTop: 8, marginBottom: 12 },
-  modes: { flexDirection: 'row', gap: 10, marginBottom: 20 },
-  mode: { flex: 1, minHeight: 52, borderRadius: 26, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  modes: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
+  mode: { flexGrow: 1, flexBasis: 100, minHeight: 52, padding: 12, borderRadius: 26, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   modeText: { color: colors.text, fontSize: 15, fontWeight: '600' },
   selected: { backgroundColor: colors.lavenderSoft, borderColor: colors.action },
   palette: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

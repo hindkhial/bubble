@@ -23,6 +23,7 @@ function render(path, props = {}, mode = 'light') {
       if (name.endsWith('/Account')) return { useAccount: () => account, configuredApi: () => 'https://localhost' };
       if (name.endsWith('/Theme')) return { useTheme: () => ({ colors: getThemeColors(mode, 'Lavender') }) };
       if (name.endsWith('/AddPreview')) return { createFormStyles: () => ({}) };
+      if (name.endsWith('/useAnnouncement')) return { useAnnouncement: () => {} };
       if (name.endsWith('/BubbleLogo')) return load('../src/components/BubbleLogo.tsx');
       if (name.endsWith('/LogoutButton')) return load('../src/components/LogoutButton.tsx');
       if (name.endsWith('/Profile')) return { useProfile: () => ({ profile: { displayName: 'Synthetic name', bio: 'Synthetic bio' } }) };
@@ -53,6 +54,22 @@ test('Welcome, login and signup render the shared brand logo without Appearance 
     const html = render('../src/components/AuthExperience.tsx', { kind }, mode);
     assert.match(html, /Bubble logo/); assert.doesNotMatch(html, /Appearance|ProfileAvatar|◌/);
     assert.match(html, /Log In/); assert.match(html, /Create Account/);
+  }
+});
+test('Release authentication exposes private tester access only with the explicit build flag', () => {
+  const previous = process.env.EXPO_PUBLIC_PRIVATE_BETA_ACCESS;
+  try {
+    delete process.env.EXPO_PUBLIC_PRIVATE_BETA_ACCESS;
+    assert.doesNotMatch(render('../src/components/AuthExperience.tsx', { kind: 'login' }), /Private beta access/);
+    process.env.EXPO_PUBLIC_PRIVATE_BETA_ACCESS = '1';
+    for (const kind of ['login', 'signup']) {
+      const html = render('../src/components/AuthExperience.tsx', { kind });
+      assert.match(html, /Private beta access/);
+      assert.doesNotMatch(html, /Appearance/);
+    }
+  } finally {
+    if (previous === undefined) delete process.env.EXPO_PUBLIC_PRIVATE_BETA_ACCESS;
+    else process.env.EXPO_PUBLIC_PRIVATE_BETA_ACCESS = previous;
   }
 });
 test('You retains Appearance and the actual avatar while displaying standalone Log Out', () => {

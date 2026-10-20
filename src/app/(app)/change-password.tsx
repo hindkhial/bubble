@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useAnnouncement } from '../../accessibility/useAnnouncement';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -11,6 +12,7 @@ export default function ChangePasswordScreen() {
   const account = useAccount(); const router = useRouter(); const { colors } = useTheme(); const styles = createFormStyles(colors);
   const [current, setCurrent] = useState(''); const [next, setNext] = useState(''); const [confirmation, setConfirmation] = useState('');
   const [shown, setShown] = useState(false); const [pending, setPending] = useState(false); const [error, setError] = useState(''); const running = useRef(false);
+  useAnnouncement(error || account.error);
   const unavailable = !account.user || account.mode !== 'account';
   const disabled = pending || account.busy || account.blocked || unavailable;
   const save = async () => {

@@ -79,7 +79,7 @@ export function EditContentSheet({ entry, onSave, onClose }: {
 
   return <>
     <Modal visible animationType="slide" transparent onRequestClose={attemptClose}>
-      <KeyboardAvoidingView style={styles.scrim} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={[styles.scrim, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Pressable style={StyleSheet.absoluteFill} onPress={attemptClose} />
         <View style={[styles.sheet, { paddingBottom: Math.max(30, insets.bottom) }]} accessibilityViewIsModal={!discardOpen} accessibilityElementsHidden={discardOpen} importantForAccessibility={discardOpen ? 'no-hide-descendants' : 'auto'}>
           <View style={styles.handle} />
