@@ -10,13 +10,20 @@ lists together, with customizable colors and light or dark appearance.
 
 Screenshots from Bubble running on iPhone 13. Tap an image to view it at full size.
 
-| Welcome | Bubble collections | Add something |
-| :---: | :---: | :---: |
-| [<img src="docs/screenshots/welcome.jpg" width="220" alt="Bubble welcome screen with login, account creation and cached offline reading.">](docs/screenshots/welcome.jpg) | [<img src="docs/screenshots/collection.jpg" width="220" alt="A Books Bubble with its cover photo, description and collection navigation.">](docs/screenshots/collection.jpg) | [<img src="docs/screenshots/add.jpg" width="220" alt="The Add sheet offers Bubble, Note, Photo and Checklist.">](docs/screenshots/add.jpg) |
+<p align="center">
+  <a href="docs/screenshots/welcome.jpg"><img src="docs/screenshots/welcome.jpg" width="240" alt="Bubble welcome screen with login, account creation and cached offline reading." title="Welcome"></a>
+  <a href="docs/screenshots/collection.jpg"><img src="docs/screenshots/collection.jpg" width="240" alt="A Books Bubble with its cover photo, description and collection navigation." title="Bubble collections"></a>
+</p>
 
-| Notes | Checklists | Appearance |
-| :---: | :---: | :---: |
-| [<img src="docs/screenshots/new-note.jpg" width="220" alt="A new note can be saved directly on Home, outside a Bubble.">](docs/screenshots/new-note.jpg) | [<img src="docs/screenshots/new-checklist.jpg" width="220" alt="A new checklist with an optional title, an item field and a plus button.">](docs/screenshots/new-checklist.jpg) | [<img src="docs/screenshots/appearance-light.jpg" width="220" alt="Appearance settings offer Light, Dark and System modes and seven accent colors.">](docs/screenshots/appearance-light.jpg) |
+<p align="center">
+  <a href="docs/screenshots/add.jpg"><img src="docs/screenshots/add.jpg" width="240" alt="The Add sheet offers Bubble, Note, Photo and Checklist." title="Add something"></a>
+  <a href="docs/screenshots/new-note.jpg"><img src="docs/screenshots/new-note.jpg" width="240" alt="A new note can be saved directly on Home, outside a Bubble." title="Notes"></a>
+</p>
+
+<p align="center">
+  <a href="docs/screenshots/new-checklist.jpg"><img src="docs/screenshots/new-checklist.jpg" width="240" alt="A new checklist with an optional title, an item field and a plus button." title="Checklists"></a>
+  <a href="docs/screenshots/appearance-light.jpg"><img src="docs/screenshots/appearance-light.jpg" width="240" alt="Appearance settings offer Light, Dark and System modes and seven accent colors." title="Appearance"></a>
+</p>
 
 ## What Bubble does
 
