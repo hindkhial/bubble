@@ -6,6 +6,25 @@ A personal iPhone app for notes, checklists, photos and collections called
 **Bubbles**. A calm cream-and-lavender interface keeps everyday thoughts and
 lists together, with customizable colors and light or dark appearance.
 
+## A look inside
+
+Screenshots from Bubble running on iPhone 13. Tap an image to view it at full size.
+
+<p align="center">
+  <a href="docs/screenshots/welcome.jpg"><img src="docs/screenshots/welcome.jpg" width="240" alt="Bubble welcome screen with login, account creation and cached offline reading." title="Welcome"></a>
+  <a href="docs/screenshots/collection.jpg"><img src="docs/screenshots/collection.jpg" width="240" alt="A Books Bubble with its cover photo, description and collection navigation." title="Bubble collections"></a>
+</p>
+
+<p align="center">
+  <a href="docs/screenshots/add.jpg"><img src="docs/screenshots/add.jpg" width="240" alt="The Add sheet offers Bubble, Note, Photo and Checklist." title="Add something"></a>
+  <a href="docs/screenshots/new-note.jpg"><img src="docs/screenshots/new-note.jpg" width="240" alt="A new note can be saved directly on Home, outside a Bubble." title="Notes"></a>
+</p>
+
+<p align="center">
+  <a href="docs/screenshots/new-checklist.jpg"><img src="docs/screenshots/new-checklist.jpg" width="240" alt="A new checklist with an optional title, an item field and a plus button." title="Checklists"></a>
+  <a href="docs/screenshots/appearance-light.jpg"><img src="docs/screenshots/appearance-light.jpg" width="240" alt="Appearance settings offer Light, Dark and System modes and seven accent colors." title="Appearance"></a>
+</p>
+
 ## What Bubble does
 
 - Organize notes, checklists and photos inside Bubbles, or keep them on Home.
