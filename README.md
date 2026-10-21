@@ -8,7 +8,7 @@ lists together, with customizable colors and light or dark appearance.
 
 ## A look inside
 
-Screenshots from Bubble running on iPhone 13. Tap an image to view it at full size.
+Follow the walkthrough below, captured on iPhone 13. Tap any screenshot to view it at full size.
 
 <p align="center"><strong>1. Welcome / login · 2. Home · 3. Inside a Bubble</strong></p>
 
