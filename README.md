@@ -8,21 +8,30 @@ lists together, with customizable colors and light or dark appearance.
 
 ## A look inside
 
-Screenshots from Bubble running on iPhone 13. Tap an image to view it at full size.
+Follow the walkthrough below, captured on iPhone 13. Tap any screenshot to view it at full size.
+
+<p align="center"><strong>1. Welcome / login · 2. Home · 3. Inside a Bubble</strong></p>
 
 <p align="center">
-  <a href="docs/screenshots/welcome.jpg"><img src="docs/screenshots/welcome.jpg" width="240" alt="Bubble welcome screen with login, account creation and cached offline reading." title="Welcome"></a>
-  <a href="docs/screenshots/collection.jpg"><img src="docs/screenshots/collection.jpg" width="240" alt="A Books Bubble with its cover photo, description and collection navigation." title="Bubble collections"></a>
+  <a href="docs/screenshots/welcome.jpg"><img src="docs/screenshots/welcome.jpg" width="240" alt="Welcome screen with Log In, Create Account and cached offline reading." title="Welcome / login"></a>
+  <a href="docs/screenshots/home.jpg"><img src="docs/screenshots/home.jpg" width="240" alt="Home with photo-covered Bubbles and a checklist in two columns of varied-height cards." title="Home"></a>
+  <a href="docs/screenshots/collection.jpg"><img src="docs/screenshots/collection.jpg" width="240" alt="The Books Bubble cover, title, description and navigation." title="Inside a Bubble"></a>
 </p>
 
+<p align="center"><strong>4. Bubble contents · 5. Add something · 6. Add note</strong></p>
+
 <p align="center">
+  <a href="docs/screenshots/collection-contents.jpg"><img src="docs/screenshots/collection-contents.jpg" width="240" alt="Inside Books: a reading checklist, photo cards and nested Bubbles in a two-column layout." title="Bubble contents"></a>
   <a href="docs/screenshots/add.jpg"><img src="docs/screenshots/add.jpg" width="240" alt="The Add sheet offers Bubble, Note, Photo and Checklist." title="Add something"></a>
-  <a href="docs/screenshots/new-note.jpg"><img src="docs/screenshots/new-note.jpg" width="240" alt="A new note can be saved directly on Home, outside a Bubble." title="Notes"></a>
+  <a href="docs/screenshots/new-note.jpg"><img src="docs/screenshots/new-note.jpg" width="240" alt="The new note form with Home selected as the destination." title="Add note"></a>
 </p>
 
+<p align="center"><strong>7. Add checklist · 8. Profile · 9. Appearance</strong></p>
+
 <p align="center">
-  <a href="docs/screenshots/new-checklist.jpg"><img src="docs/screenshots/new-checklist.jpg" width="240" alt="A new checklist with an optional title, an item field and a plus button." title="Checklists"></a>
-  <a href="docs/screenshots/appearance-light.jpg"><img src="docs/screenshots/appearance-light.jpg" width="240" alt="Appearance settings offer Light, Dark and System modes and seven accent colors." title="Appearance"></a>
+  <a href="docs/screenshots/new-checklist.jpg"><img src="docs/screenshots/new-checklist.jpg" width="240" alt="The new checklist form with an optional title and add-item control." title="Add checklist"></a>
+  <a href="docs/screenshots/you.jpg"><img src="docs/screenshots/you.jpg" width="240" alt="The You page with a profile, activity, Appearance, Security and Log Out." title="Profile"></a>
+  <a href="docs/screenshots/appearance-light.jpg"><img src="docs/screenshots/appearance-light.jpg" width="240" alt="Light, Dark and System appearance modes and seven accent colors." title="Appearance"></a>
 </p>
 
 ## What Bubble does

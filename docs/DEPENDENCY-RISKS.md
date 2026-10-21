@@ -1,5 +1,7 @@
 # Remaining dependency security assessment
 
+Historical assessment, retained for its evidence. These counts describe that review, not a new scan.
+
 Reviewed against source head `bf9daf57199e49a3b4815114006ebb3cb0971942`. Fresh full pnpm audit: **0 critical, 2 high, 1 moderate**, no muted findings. Registry latest tags were checked independently: Forge 1.4.0, braces 3.0.3, xcode 3.0.1 (a nightly is not a reviewed stable replacement). Dependencies are classified by actual consumers, not merely package.json placement: Expo is a production dependency and audit marks these chains `dev: false`.
 
 ## node-forge 1.4.0 — High, unresolved release blocker
@@ -29,4 +31,4 @@ Reviewed against source head `bf9daf57199e49a3b4815114006ebb3cb0971942`. Fresh f
 
 Read installed source, lockfile and app configuration; rerun full audit; consult the linked reviewed advisories and official npm registry metadata. The prior production source-map inventory is documented in RELEASE-CANDIDATE-QA.md; it is not native-bundle or build-tool certification. Final-image OS/JAR scans and JavaScript dependency audit cover different surfaces. No new vulnerability is claimed fixed by this documentation-only assessment. The decoder fix already present at the reviewed head is unchanged.
 
-PR #8 may be reviewed as code, but must remain draft under the owner's approval rule. Candidate approval remains blocked by both High findings and the open human gates in MANUAL-QA.md. Recheck advisory ranges and published fixes at each candidate; successful CI is not risk acceptance.
+PR #8 has since been merged into integration. Its earlier draft requirement is superseded; the unresolved High findings and manual gates remain documented and were not resolved or accepted by that merge. Recheck advisory ranges and published fixes before any distribution decision; successful CI is not risk acceptance.

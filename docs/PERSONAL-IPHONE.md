@@ -1,12 +1,30 @@
 # Personal iPhone edition
 
-**Offline-protection feature candidate:** OFFLINE-ACCOUNT-PROTECTION.md describes
-the encrypted read-only cache and protected drafts on its separate branch. Its
-owner approved a same-identity update and reported the core offline and draft
-workflows Passed on iPhone 13 / iOS 26.1 on October 20, 2026. See
-IOS-OFFLINE-VERIFICATION.md for the separate physical results and open gates.
-The original installed-build limitations below remain historical baseline evidence;
-the offline candidate does not change the public-distribution roadmap.
+## Current personal-use status
+
+The encrypted read-only account cache and protected drafts are merged into
+`integration`. The owner reported core offline and draft workflows Passed on
+iPhone 13 / iOS 26.1 on October 20, 2026. See
+[offline protection](OFFLINE-ACCOUNT-PROTECTION.md) and the
+[physical verification record](IOS-OFFLINE-VERIFICATION.md) for exact coverage.
+
+Previously verified notes/checklists can be unlocked using Face ID or device
+passcode within seven days of the last successful online verification. Offline
+unlocks do not extend the window. Reboot, expiry, suspicious clock changes,
+logout or known server rejection require online verification. Offline content is
+read-only; Bubble/photo images and server changes require the backend.
+
+The approved temporary HTTPS renewal was verified by the owner on October 21:
+Safari reached the tester gate without a warning, Bubble showed saved content,
+and the old iPhone CA profile was removed. The replacement expires
+**October 27, 2026 at 23:54:09 UTC (October 28 at 00:54:09 Casablanca)**.
+The proxy still stops after four hours. Free signing expiry is independent.
+No keys, credentials or operator files belong in this repository.
+
+The sections below retain the original pre-offline installed-build assessment;
+its online-only limitations and October 23 certificate date are historical.
+They do not supersede the current policy or renewal above. Unexecuted tests stay
+unexecuted; no backup/restore or destructive test is newly claimed.
 
 Active direction, October 20, 2026: Bubble is for the owner's iPhone 13 using a
 free Xcode Personal Team and `com.hindkhial.bubble`. TestFlight, App Store,
@@ -80,7 +98,7 @@ certificate changes, the owner reviews them. Verify the newly issued expiration
 and retained content. Expiry prevents launch; it is not permission to uninstall.
 Apple's seven-day profile limit and TLS expiry are separate clocks.
 
-## Authentication and availability
+## Historical authentication and availability
 
 `modules/bubble-session/ios/BubbleSessionModule.swift` uses normal URLSession TLS,
 rejects redirects, stores the cookie in `WhenUnlockedThisDeviceOnly` Keychain and
@@ -110,7 +128,7 @@ The backend can remain on the Mac for same-network personal use, with trusted
 HTTPS, source restrictions, tester gate, Mac awake and Docker/services running.
 Away from that private network, with the Mac asleep/off, an expired certificate,
 or the four-hour temporary proxy stopped, account verification/operations fail.
-The current phone certificate expires October 23, 2026 at 02:54:44 UTC; renewals,
+The original phone certificate had an expiry of October 23, 2026 at 02:54:44 UTC; renewals,
 trust changes and firewall changes need separate approval. Do not rely on this
 temporary setup as unattended permanent service. No public endpoint is needed or
 authorized. A secure offline account cache/unlock/write-reconciliation design is
