@@ -11,6 +11,11 @@ lists together, with customizable colors and light or dark appearance.
 Screenshots from Bubble running on iPhone 13. Tap an image to view it at full size.
 
 <p align="center">
+  <a href="docs/screenshots/home.jpg"><img src="docs/screenshots/home.jpg" width="240" alt="Home shows photo-covered Bubbles and a pinned checklist in two columns with varied card heights." title="Home"></a>
+  <a href="docs/screenshots/you.jpg"><img src="docs/screenshots/you.jpg" width="240" alt="The You page shows a personal profile, activity totals, Appearance, Security and Log Out." title="You"></a>
+</p>
+
+<p align="center">
   <a href="docs/screenshots/welcome.jpg"><img src="docs/screenshots/welcome.jpg" width="240" alt="Bubble welcome screen with login, account creation and cached offline reading." title="Welcome"></a>
   <a href="docs/screenshots/collection.jpg"><img src="docs/screenshots/collection.jpg" width="240" alt="A Books Bubble with its cover photo, description and collection navigation." title="Bubble collections"></a>
 </p>
